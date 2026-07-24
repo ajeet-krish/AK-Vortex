@@ -88,8 +88,13 @@ inline int node_index(int x, int y) {
 // Describes the obstacle surface for computing q = boundary distance
 // ------------------------------------------------------------------
 struct BounceBackGeometry {
-    // Cylinder
+    // Cylinder (single cylinder mode, used by most cases)
     double cx = 0.0, cy = 0.0, radius = 0.0;
+
+    // Multi-cylinder support (for side-by-side cylinders)
+    struct CylinderInfo { double cx, cy, radius; };
+    std::vector<CylinderInfo> cylinders;
+
     // Polygon vertices (closed polygon, first != last)
     std::vector<std::pair<double,double>> poly_vertices;
     bool is_polygon = false;
@@ -99,7 +104,7 @@ struct BounceBackGeometry {
     double omega = 0.0;           // angular velocity (rad/lattice-time)
     double rot_cx = 0.0, rot_cy = 0.0;  // rotation center
 
-    bool is_valid() const { return radius > 0.0 || is_polygon; }
+    bool is_valid() const { return radius > 0.0 || !cylinders.empty() || is_polygon; }
 
     // Compute wall velocity at a point for rotating cylinder
     // u_wall = omega * r_hat (tangential velocity)
@@ -113,17 +118,17 @@ struct BounceBackGeometry {
         u_wall_y =  omega * dx;
     }
 
-    // Compute normalized boundary distance q along direction i
-    // from fluid node (xf, yf) toward the obstacle
-    double q_cylinder(double xf, double yf, int i) const {
-        double dx = xf - cx;
-        double dy = yf - cy;
+    // Compute q for a single cylinder centered at (cx0, cy0) with radius r0
+    static double q_cylinder_at(double xf, double yf, int i,
+                                 double cx0, double cy0, double r0) {
+        double dx = xf - cx0;
+        double dy = yf - cy0;
         double ex = static_cast<double>(::cx[i]);
         double ey = static_cast<double>(::cy[i]);
         double len2 = ex*ex + ey*ey;
 
         double b = 2.0 * (dx*ex + dy*ey);
-        double c = dx*dx + dy*dy - radius*radius;
+        double c = dx*dx + dy*dy - r0*r0;
         double disc = b*b - 4.0*len2*c;
 
         if (disc < 0.0) return 1.0;
@@ -135,6 +140,22 @@ struct BounceBackGeometry {
         if (t1 > 0.0 && t1 <= 1.0) return t1;
         if (t2 > 0.0 && t2 <= 1.0) return t2;
         return 1.0;
+    }
+
+    // Compute normalized boundary distance q along direction i
+    // from fluid node (xf, yf) toward the obstacle
+    double q_cylinder(double xf, double yf, int i) const {
+        // Multi-cylinder mode: find nearest cylinder (smallest q)
+        if (!cylinders.empty()) {
+            double q_min = 1.0;
+            for (const auto& cyl : cylinders) {
+                double q = q_cylinder_at(xf, yf, i, cyl.cx, cyl.cy, cyl.radius);
+                if (q < q_min) q_min = q;
+            }
+            return q_min;
+        }
+        // Single cylinder mode (legacy)
+        return q_cylinder_at(xf, yf, i, cx, cy, radius);
     }
 
     // Compute q for a polygon boundary using line-segment intersection
@@ -229,6 +250,10 @@ struct LBMCapabilities {
 // Used for Van Driest LES damping and wall function BCs.
 // ------------------------------------------------------------------
 inline void compute_wall_distance(LBMCapabilities& sys) {
+    static bool cached = false;
+    if (cached) return;
+    cached = true;
+
     int n_nodes = NX * NY;
     auto& dist = sys.wall_dist;
     for (int i = 0; i < n_nodes; ++i) {

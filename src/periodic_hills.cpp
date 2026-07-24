@@ -36,7 +36,7 @@
 //
 // Parameters:
 //   H = channel half-height = NY * 2/3
-//   h_max = hill height = H * hmax_frac (default 1/6; was 1/2 which nearly
+//   h_max = hill height = H * hmax_frac (default 1/8; was 1/2 which nearly
 //           closes the channel and hides the sinusoidal profile). Keeping
 //           h_max moderate reveals 2-3 full hill-valley periods.
 //   L = NX (periodic domain); 3 hill cycles, each of wavelength NX/3.
@@ -67,9 +67,9 @@ double compute_body_force(double tau, double Re, int H) {
     return a * 28.0;  // hill constriction reduces free area; empirically tuned
 }
 
-HillParams compute_params(double Re, int steps = -1, double hmax_frac = 1.0 / 6.0) {
+HillParams compute_params(double Re, int steps = -1, double hmax_frac = 1.0 / 8.0) {
     double u_lid = 0.1;
-    int H = NY * 2 / 3;
+    int H = NY / 3;
     int h_max = std::max(1, static_cast<int>(H * hmax_frac));
     int L = 9 * H;
 
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
 
     double Re = 100.0;
     int steps = -1;
-    double hmax_frac = 1.0 / 6.0;
+    double hmax_frac = 1.0 / 8.0;
     double force_override = -1.0;
 
     int positional_idx = 1;
@@ -130,6 +130,8 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--cs" && i + 1 < argc) { g_cs = std::stod(argv[++i]);
         } else if (arg == "--hmax" && i + 1 < argc) { hmax_frac = std::stod(argv[++i]);
         } else if (arg == "--force" && i + 1 < argc) { force_override = std::stod(argv[++i]);
+        } else if (arg == "--nx" && i + 1 < argc) { NX = std::stoi(argv[++i]);
+        } else if (arg == "--ny" && i + 1 < argc) { NY = std::stoi(argv[++i]);
         } else if (arg.find("--") != 0) {
             if (positional_idx == 1) Re = std::stod(arg);
             else if (positional_idx == 2) steps = std::stoi(arg);

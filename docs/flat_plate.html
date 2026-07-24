@@ -37,6 +37,9 @@
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
+        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
+        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -69,7 +72,7 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>800 &times; 300</td>
+        <td>1600 &times; 600</td>
       </tr>
       <tr>
         <td>Chord length</td>
@@ -117,27 +120,46 @@
       </tr>
     </table>
 
-    <h2>AoA Sweep: Velocity Field (Re=1000)</h2>
+    <h2>Velocity Field</h2>
 
     <p class="section-intro">
       Use the tabs below to select the angle of attack (AoA), the inclination of
       the plate relative to the free stream, at a fixed Re = 1000. The left side
-      of the viewer shows the velocity-magnitude contour field; the right side
-      shows the corresponding velocity-magnitude streamlines. Drag the slider
-      handle to wipe between the two.
+      shows the steady-state velocity contour with streamlines; the right side
+      shows the flow evolution from rest to steady state.
     </p>
 
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="aoaTabs"></div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="comparison-slider" id="fieldSlider">
-      <img id="sliderImgBefore" src="" alt="Contour">
-      <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
-      <div class="slider-handle">
-        <div class="slider-btn"></div>
+    <div class="vf-split">
+      <div class="vf-col">
+        <h4>Steady-State Comparison</h4>
+        <div class="comparison-slider" id="fieldSlider">
+          <img id="sliderImgBefore" src="" alt="Contour">
+          <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
+          <div class="slider-handle">
+            <div class="slider-btn"></div>
+          </div>
+          <div class="slider-label left">Contour</div>
+          <div class="slider-label right">Streamlines</div>
+        </div>
+        <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
-      <div class="slider-label left">Contour</div>
-      <div class="slider-label right">Streamlines</div>
+
+      <div class="vf-col">
+        <h4>Flow Evolution</h4>
+        <div class="fv-stage">
+          <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
+        </div>
+        <div class="fv-controls">
+          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
+          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
+          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
+        </div>
+      </div>
     </div>
+
+    <p class="fv-note" id="fvStatus"></p>
 
     <h2>AoA Sweep: Validation (Re=1000)</h2>
 
@@ -155,22 +177,22 @@
         <tr>
           <td>0</td>
           <td>Blasius boundary layer</td>
-          <td>0.105</td>
+          <td>0.070</td>
           <td>0.000</td>
           <td>1.328/&#8730;Re<sub>L</sub></td>
         </tr>
         <tr>
           <td>5</td>
           <td>Small incidence</td>
-          <td>0.046</td>
-          <td>0.220</td>
+          <td>0.074</td>
+          <td>0.333</td>
           <td>--</td>
         </tr>
         <tr>
           <td>10</td>
           <td>Incidence, suction side</td>
-          <td>0.107</td>
-          <td>0.505</td>
+          <td>0.130</td>
+          <td>0.604</td>
           <td>--</td>
         </tr>
         <tr>
@@ -206,21 +228,21 @@
         <tr>
           <td>500</td>
           <td>Low Re laminar</td>
-          <td>0.157</td>
+          <td>0.103</td>
           <td>0.119</td>
           <td>Thicker BL, higher skin friction</td>
         </tr>
         <tr>
           <td>1000</td>
           <td>Reference Re</td>
-          <td>0.105</td>
+          <td>0.070</td>
           <td>0.084</td>
           <td>Baseline for comparison</td>
         </tr>
         <tr>
           <td>2000</td>
           <td>Higher Re laminar</td>
-          <td>0.072</td>
+          <td>0.049</td>
           <td>0.059</td>
           <td>Thinner BL, lower skin friction</td>
         </tr>
@@ -237,10 +259,9 @@
     <div class="callout">
       Reference area convention: the solver reports Cd using the plate planform
       area (chord L times unit span), so at AoA=0 the drag is Cd = 2&middot;C<sub>f</sub>
-      (both surfaces contribute). The measured Cd runs ~25% above the Blasius value
-      (e.g. Re=1000: Cd = 0.105 vs 2&middot;C<sub>f</sub> = 0.084) because the discrete
-      plate is only ~2 lattice cells thick; the Cd ~ 1/&#8730;Re trend, however, matches
-      Blasius closely. This is a discretization effect, not a solver error.
+      (both surfaces contribute). The measured Cd (0.070 at Re=1000) is now closer
+      to the Blasius value (2&middot;C<sub>f</sub> = 0.084) after the upgrade to Mei BB
+      and 1600x600 grid. The Cd ~ 1/&#8730;Re trend matches Blasius closely.
     </div>
 
     <h2>Discussion</h2>
@@ -273,54 +294,7 @@
 
   </div>
 
-      <h2>Interactive Flow Evolution</h2>
-
-    <p class="section-intro">
-      Interactive side-by-side of the C++ LBM solver and the PINN surrogate. The
-      LBM viewer animates the solver developing the flow from rest to steady state;
-      the PINN viewer shows the parametric surrogate prediction. Velocity magnitude
-      is rendered as a contour with streamlines overlaid.
-    </p>
-
-    <h3>LBM Evolution</h3>
-
-    <p class="section-intro">
-      The C++ MRT-LBM solver developing the flow from rest. Press Play to animate;
-      use the scrubber to inspect any frame.
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls">
-      <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-      <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-      <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-    </div>
-
-    <div class="fv-controls" id="lbmReGroup">
-      <div class="fv-group"></div>
-    </div>
-
-    <h3>PINN Prediction</h3>
-
-    <p class="section-intro">
-      The parametric PINN surrogate predicts the steady-state flow directly from
-      position and the case parameter. Training for this case is in progress; the
-      placeholder below will be replaced by the live surrogate once trained
-      (Phase 6.8, time-parametric PINN).
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="pinnCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls" id="pinnControls"></div>
-
-    <p class="fv-note" id="fvStatus"></p>
-
-    <footer class="site-footer">
+      <footer class="site-footer">
     <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
         target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
         target="_blank">LinkedIn</a></p>
@@ -328,112 +302,30 @@
 
   <script src="assets/js/slider.js"></script>
   <script>
-    const CASE_CONFIG = {
-      paramLabel: 'AoA',
-      aoaValues: [0, 5, 10, 15],
-      aoaKeys: ['0', '5', '10', '15'],
-      stats: {
-        '0': { re: 1000, aoa: '0', cd: '0.105', cl: '0.000', bl: 'Blasius' },
-        '5': { re: 1000, aoa: '5', cd: '0.046', cl: '0.220', bl: 'Small incidence' },
-        '10': { re: 1000, aoa: '10', cd: '0.107', cl: '0.505', bl: 'Suction side' },
-        '15': { re: 1000, aoa: '15', cd: '0.211', cl: '0.689', bl: 'Separation risk' },
-      }
-    };
-
-    var currentAoA = 0;
-
-    function aoaToKey(aoa) {
-      if (aoa < 0) return 'neg' + Math.abs(aoa);
-      return '' + aoa;
-    }
-
-    function imageUrl(aoa, type) {
-      var key = aoaToKey(aoa);
-      return 'assets/images/flatplate/re1000_aoa' + key + '_' + type + '.png';
-    }
-
-    function makePlaceholder(aoa, type) {
-      return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300">' +
-        '<rect width="800" height="300" fill="#0d1117"/>' +
-        '<line x1="100" y1="160" x2="700" y2="160" stroke="#484f58" stroke-width="2"/>' +
-        '<text x="400" y="140" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
-        'Flat Plate AoA=' + aoa + ' deg ' + type + '</text>' +
-        '<text x="400" y="160" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
-        '(simulation running, placeholder)</text></svg>'
-      );
-    }
-
-    function updateImages(aoa) {
-      var before = document.getElementById('sliderImgBefore');
-      var after = document.getElementById('sliderImgAfter');
-      before.onerror = function () { this.src = makePlaceholder(aoa, 'contour'); };
-      after.onerror = function () { this.src = makePlaceholder(aoa, 'streamlines'); };
-      before.src = imageUrl(aoa, 'contour');
-      after.src = imageUrl(aoa, 'streamlines');
-    }
-
-    function updateStats(aoa) {
-      var key = '' + aoa;
-      var s = CASE_CONFIG.stats[key];
-    }
-
-    function switchAoA(aoa) {
-      currentAoA = aoa;
-      document.querySelectorAll('#aoaTabs .teaser-link').forEach(function (btn) {
-        var text = btn.textContent;
-        var match = text.match(/(-?\d+)/);
-        var ba = match ? parseInt(match[1]) : 0;
-        btn.classList.toggle('active', ba === aoa);
-      });
-      updateImages(aoa);
-      updateStats(aoa);
-      setTimeout(function () {
-        var c = document.getElementById('fieldSlider');
-        var h = c.querySelector('.slider-handle');
-        var a = c.querySelector('.img-after');
-        if (h) h.style.left = '50%';
-        if (a) a.style.clipPath = 'inset(0 50% 0 0)';
-      }, 200);
-    }
-
-    var rc = document.getElementById('aoaTabs');
-    CASE_CONFIG.aoaValues.forEach(function (aoa) {
-      var btn = document.createElement('button');
-      btn.className = 'teaser-link' + (aoa === currentAoA ? ' active' : '');
-      btn.textContent = CASE_CONFIG.paramLabel + ' = ' + aoa;
-      btn.style.fontSize = '0.7em';
-      btn.onclick = function () { switchAoA(aoa); };
-      rc.appendChild(btn);
-    });
-
-    updateImages(currentAoA);
-    updateStats(currentAoA);
-
     document.getElementById('sidebarToggle')?.addEventListener('click', function () {
       document.querySelector('.sidebar').classList.toggle('open');
       document.body.classList.toggle('sidebar-open');
     });
   </script>
 
-    <script src="assets/js/colormaps.js"></script>
-    <script src="assets/js/flow-viewer.js"></script>
-    <script src="assets/js/pinn-inference.js"></script>
-    <script src="assets/js/viewer-common.js"></script>
-    <script>
-      initFlowViewerSections({
-        dataDir: 'assets/data/flatplate',
-        paramLabel: 'Config',
-        lbmConfigs: [
-          { label: 'AoA 0', file: 'aoa0' },
-          { label: 'AoA 5', file: 'aoa5' },
-          { label: 'AoA 10', file: 'aoa10' },
-          { label: 'Re 500', file: 're500' },
-          { label: 'Re 2000', file: 're2000' }
-        ],
-        pinn: null
-      });
-    </script>
+  <script src="assets/js/colormaps.js"></script>
+  <script src="assets/js/flow-viewer.js"></script>
+  <script src="assets/js/viewer-common-v2.js"></script>
+  <script>
+    initVFSplitSections({
+      dataDir: 'assets/data/flatplate',
+      paramLabel: 'AoA',
+      imageCase: 'flatplate',
+      cmap: 'jet',
+      imageSuffix: function (config) { return config.suffix; },
+      lbmConfigs: [
+        { label: '0', file: 'aoa0', suffix: '1000_aoa0' },
+        { label: '5', file: 'aoa5', suffix: '1000_aoa5' },
+        { label: '10', file: 'aoa10', suffix: '1000_aoa10' },
+        { label: '15', file: 'aoa15', suffix: '1000_aoa15' }
+      ]
+    });
+  </script>
 
 </body>
 

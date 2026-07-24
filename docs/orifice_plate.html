@@ -37,6 +37,9 @@
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
+        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
+        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -127,28 +130,45 @@
       </tr>
     </table>
 
-    <h2>Velocity Field</h2>
+        <h2>Velocity Field</h2>
 
     <p class="section-intro">
-      Use the tabs below to select the plate configuration: one plate with one
-      hole, one plate with three holes, or two/three staggered plates with a
-      single hole each at contrasting heights. The left side of the viewer shows
-      the velocity-magnitude contour field; the right side shows the
-      corresponding velocity-magnitude streamlines. Drag the slider handle to
-      wipe between the two.
+      Use the tabs below to select a parameter variant.
+      The left side shows the steady-state velocity contour with streamlines;
+      the right side shows the flow evolution from rest to steady state.
     </p>
 
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="plateTabs"></div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="comparison-slider" id="fieldSlider">
-      <img id="sliderImgBefore" src="" alt="Contour">
-      <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
-      <div class="slider-handle">
-        <div class="slider-btn"></div>
+    <div class="vf-split">
+      <div class="vf-col">
+        <h4>Steady-State Comparison</h4>
+        <div class="comparison-slider" id="fieldSlider">
+          <img id="sliderImgBefore" src="" alt="Contour">
+          <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
+          <div class="slider-handle">
+            <div class="slider-btn"></div>
+          </div>
+          <div class="slider-label left">Contour</div>
+          <div class="slider-label right">Streamlines</div>
+        </div>
+        <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
-      <div class="slider-label left">Contour</div>
-      <div class="slider-label right">Streamlines</div>
+
+      <div class="vf-col">
+        <h4>Flow Evolution</h4>
+        <div class="fv-stage">
+          <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
+        </div>
+        <div class="fv-controls">
+          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
+          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
+          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
+        </div>
+      </div>
     </div>
+
+    <p class="fv-note" id="fvStatus"></p>
 
     <h2>Validation</h2>
 
@@ -242,53 +262,6 @@
 
   </div>
 
-      <h2>Interactive Flow Evolution</h2>
-
-    <p class="section-intro">
-      Interactive side-by-side of the C++ LBM solver and the PINN surrogate. The
-      LBM viewer animates the solver developing the flow from rest to steady state;
-      the PINN viewer shows the parametric surrogate prediction. Velocity magnitude
-      is rendered as a contour with streamlines overlaid.
-    </p>
-
-    <h3>LBM Evolution</h3>
-
-    <p class="section-intro">
-      The C++ MRT-LBM solver developing the flow from rest. Press Play to animate;
-      use the scrubber to inspect any frame.
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls">
-      <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-      <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-      <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-    </div>
-
-    <div class="fv-controls" id="lbmReGroup">
-      <div class="fv-group"></div>
-    </div>
-
-    <h3>PINN Prediction</h3>
-
-    <p class="section-intro">
-      The parametric PINN surrogate predicts the steady-state flow directly from
-      position and the case parameter. Training for this case is in progress; the
-      placeholder below will be replaced by the live surrogate once trained
-      (Phase 6.8, time-parametric PINN).
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="pinnCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls" id="pinnControls"></div>
-
-    <p class="fv-note" id="fvStatus"></p>
-
     <footer class="site-footer">
     <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
         target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
@@ -297,107 +270,27 @@
 
   <script src="assets/js/slider.js"></script>
   <script>
-    // Orifice plate tab configuration
-    const PLATE_CONFIGS = [
-      { id: '1p1h', label: '1 Plate / 1 Hole', re: 100 },
-      { id: '1p3h', label: '1 Plate / 3 Holes', re: 100 },
-      { id: '2p', label: '2 Plates', re: 100 },
-      { id: '3p', label: '3 Plates', re: 100 },
-    ];
-
-    const PLATE_DATA = {
-      '1p1h': { cd: null, cl: null, fx: null, step: null },
-      '1p3h': { cd: null, cl: null, fx: null, step: null },
-      '2p': { cd: null, cl: null, fx: null, step: null },
-      '3p': { cd: null, cl: null, fx: null, step: null },
-    };
-
-    let currentPlateId = '1p3h';
-
-    function plateImagePath(id, type) {
-      return 'assets/images/orifice_plate/' + id + '_' + type + '.png';
-    }
-
-    function renderPlateTabs() {
-      const container = document.getElementById('plateTabs');
-      if (!container) return;
-      container.innerHTML = PLATE_CONFIGS.map(c =>
-        '<button class="teaser-link' + (c.id === currentPlateId ? ' active' : '') +
-        '" data-id="' + c.id + '">' + c.label + '</button>'
-      ).join('');
-      container.querySelectorAll('.teaser-link').forEach(btn => {
-        btn.addEventListener('click', function () {
-          currentPlateId = this.dataset.id;
-          updatePlateDisplay();
-          renderPlateTabs();
-        });
-      });
-    }
-
-    function updatePlateDisplay() {
-      const d = PLATE_DATA[currentPlateId] || {};
-      document.getElementById('sliderImgBefore').src = plateImagePath(currentPlateId, 'contour');
-      document.getElementById('sliderImgAfter').src = plateImagePath(currentPlateId, 'streamlines');
-    }
-
-    renderPlateTabs();
-    updatePlateDisplay();
-
-    // Initialize slider
-    (function () {
-      const slider = document.querySelector('.comparison-slider');
-      if (!slider || typeof initSlider !== 'function') return;
-      const handle = slider.querySelector('.slider-handle');
-      const imgAfter = slider.querySelector('.img-after');
-      let dragging = false;
-
-      function slide(e) {
-        if (!dragging) return;
-        const rect = slider.getBoundingClientRect();
-        const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-        const pct = (x / rect.width) * 100;
-        handle.style.left = pct + '%';
-        imgAfter.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
-      }
-
-      handle.addEventListener('mousedown', function (e) { dragging = true; e.preventDefault(); });
-      document.addEventListener('mousemove', slide);
-      document.addEventListener('mouseup', function () { dragging = false; });
-
-      // Touch support
-      handle.addEventListener('touchstart', function (e) { dragging = true; e.preventDefault(); });
-      document.addEventListener('touchmove', function (e) {
-        if (!dragging) return;
-        const touch = e.touches[0];
-        const rect = slider.getBoundingClientRect();
-        const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
-        const pct = (x / rect.width) * 100;
-        handle.style.left = pct + '%';
-        imgAfter.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
-      });
-      document.addEventListener('touchend', function () { dragging = false; });
-    })();
-
     document.getElementById('sidebarToggle')?.addEventListener('click', function () {
       document.querySelector('.sidebar').classList.toggle('open');
       document.body.classList.toggle('sidebar-open');
     });
   </script>
+
     <script src="assets/js/colormaps.js"></script>
     <script src="assets/js/flow-viewer.js"></script>
-    <script src="assets/js/pinn-inference.js"></script>
-    <script src="assets/js/viewer-common.js"></script>
+    <script src="assets/js/viewer-common-v2.js"></script>
     <script>
-      initFlowViewerSections({
+      initVFSplitSections({
         dataDir: 'assets/data/orifice_plate',
         paramLabel: 'Config',
+        imageCase: 'orifice_plate',
+        cmap: 'jet',
         lbmConfigs: [
           { label: '1p1h', file: '1p1h' },
           { label: '1p3h', file: '1p3h' },
           { label: '2p', file: '2p' },
           { label: '3p', file: '3p' }
-        ],
-        pinn: null
+        ]
       });
     </script>
 

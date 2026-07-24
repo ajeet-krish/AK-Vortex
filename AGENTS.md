@@ -13,7 +13,7 @@ Build and deploy a cache-optimized D2Q9 Lattice Boltzmann Method CFD solver in C
 ## Target Audience
 Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Origin, and similar. The site must communicate: HPC competency (C++, OpenMP, cache optimization), CFD fundamentals (MRT, Bouzidi, Smagorinsky LES, AMR), and engineering communication skills (interactive web presentation, per-case analysis narratives).
 
-## Current Status (2026-07-16)
+## Current Status (2026-07-24)
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -21,10 +21,14 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 | 1 | Smagorinsky LES turbulence model | Completed |
 | 2 | Block-structured AMR (adaptive mesh refinement) | In progress (restriction operator needs fix) |
 | 3 | Vorticity output + postprocessor | Completed |
-| 4 | Full simulation re-runs + new cases | In progress (17 simulations pending) |
-| 5 | Website updates for new features | In progress (interactive LBM/PINN viewers on all cases) |
-| 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed (Key Findings, LBM Analysis, Training Convergence, What PINN Unlocks, Limitations sections; loss + temporal L2 plots; 600x speed section; Re=300 interpolation; sensitivity map) |
-| 6 | PINN surrogate suite (cavity steady + temporal) | Completed (Re=100/400/1000 temporal trained; Re=300 interpolation; ONNX + binary export) |
+| 4 | Full simulation re-runs + new cases | **In progress** (15/35 sims complete; remaining 20 pending after fixes) |
+| 4.1 | Fix plot aspect ratios (postprocess.py) | **Pending** (all PNGs square due to set_box_aspect(1)) |
+| 4.2 | Fix OpenMP perf (cached wall distance) | **Pending** (compute_wall_distance serial BFS dominates LES timestep) |
+| 4.3 | Fix periodic hills geometry | **Pending** (H: NY*2/3->NY/3, NX: 1200->1600, wider valleys) |
+| 5 | Website updates for new features | In progress (vf-split layout on all case pages) |
+| 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
+| 5.7 | Grid resolution upgrade + full re-run | In progress (tiered: 1600x600/1200x450/keep) |
+| 6 | PINN surrogate suite (cavity steady + temporal) | Completed |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
 
 ### Completed to date
@@ -77,14 +81,18 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 
 | Case | Re | Cd | Cl | Status |
 |------|-----|-----|-----|--------|
-| Flat plate AoA=0 | 1000 | ~0.026 | 0 | Pending (key validation) |
-| Cylinder | 100 | 1.774 | ~0 | Validated |
-| Cylinder | 200 | 1.495 | ~0 | Validated |
-| Square cylinder | 200 | 1.157 | 0.47 | Validated vs ERCOFTAC |
+| Flat plate AoA=0 | 1000 | 0.070 | 0 | Validated (2*Cf=0.084 Blasius) |
+| Flat plate AoA=5 | 1000 | 0.074 | 0.333 | Small incidence |
+| Flat plate AoA=10 | 1000 | 0.130 | 0.604 | Suction side |
+| Flat plate Re=500 | 500 | 0.103 | 0 | Re scaling validated |
+| Flat plate Re=2000 | 2000 | 0.049 | 0 | Re scaling validated |
+| Cylinder | 100 | 1.536 | ~0 | Validated (Mei BB) |
+| Cylinder | 200 | 1.319 | ~0 | Validated (Mei BB) |
+| Square cylinder | 200 | 1.568 | 0.358 | Validated vs ERCOFTAC |
 | Cavity | 100-1000 |, |, | Validated vs Ghia |
 | Step | 100-400 |, |, | Validated vs Armaly |
 | Orifice plate | 100 | Fx 0.9 (1p3h) to 63 (3p) |, | ISO 5167 loss validation |
-| Periodic hills | 100-2800 |, |, | LES benchmark (re-run pending after L=NX fix) |
+| Periodic hills | 100-2800 |, |, | LES benchmark (geometry being fixed) |
 | Cylinder near wall | 100 | 2.56-2.75 | +0.40 to +1.42 | Ground effect (lift vs gap) |
 | Side-by-side | 100 | 2.57-2.82 | ~0 (amp 0.6-0.7) | Interference study |
 | Rotating cylinder | 100 | Cd~2-7, Cl~-1.5 to -7.4 |, | Magnus effect (Ladd) |
@@ -105,10 +113,15 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 
 | Fix | Problem | Solution | Files | Priority |
 |-----|---------|----------|-------|----------|
-| Ladd moving boundary | Rotating cylinder has no tangential velocity (Cl~0) | Implement Ladd (1994) bounce-back with wall velocity: f_bb = f_opp - 2*w_i*rho*(e_i.u_wall)/c_s^2 | `lbm_types.hpp`, `lbm.hpp`, `rotating_cylinder.cpp` | **Completed** |
-| Cylinder near wall | Wall not affecting flow (Cd identical to isolated cylinder) | Add obstacle nodes at y=0 to create physical wall, filter force extraction to cylinder only | `cylinder_near_wall.cpp`, `lbm.hpp` | **Completed** |
-| Periodic hills re-run | Code fix applied (L=NX, periodic streaming); driving mechanism missing; images stale | Body-force driving implemented; 3 hill cycles (n_cycles=3); re-run Re=100/1000/2800, regenerated images, updated docs (3-cycle + Fx table) | `periodic_hills.cpp`, `lbm.hpp`, `docs/periodic_hills.html` | **Completed** |
-| Cylinder Re=1000 | Diverged at step 16k on coarse 800x300 grid (tau=0.518 < 0.55) | Stable on fine grid (NX=2400, NY=900, tau=0.554, no LES) but unsteady (vortex shedding); 20000 steps not fully converged. Documented as known limitation; website surfaces Re=20/40/100/200 only | `main.cpp` (--nx/--ny override added) | **Deferred** |
+| Plot aspect ratios | All PNGs square due to `set_box_aspect(1)` in postprocess.py | Remove `set_box_aspect(1)`, use data aspect ratio via `set_box_aspect(ny/nx)` | `scripts/postprocess.py` | **Pending** |
+| OpenMP perf | `compute_wall_distance()` serial BFS runs every step with LES (~70-85% of timestep) | Cache wall distance (geometry is static, compute once at init) | `src/lbm_types.hpp` | **Pending** |
+| f_next zeroing | `std::fill` is serial, zeros 17MB per step | Parallelize with `#pragma omp parallel for` | `src/lbm.hpp` | **Pending** |
+| Variable shadowing | `double y` at lbm.hpp:319 shadows outer loop var | Rename to `wall_d` | `src/lbm.hpp` | **Pending** |
+| Periodic hills geometry | H=NY*2/3 (58.7% obstacle), valleys 400 cells wide | H=NY/3, NX=1600 (~30% obstacle, 533-cell valleys) | `src/periodic_hills.cpp`, `scripts/run_all_sims.py` | **Pending** |
+| Ladd moving boundary | Rotating cylinder tangential velocity | Implement Ladd (1994) bounce-back | `lbm_types.hpp`, `lbm.hpp`, `rotating_cylinder.cpp` | **Completed** |
+| Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | `cylinder_near_wall.cpp`, `lbm.hpp` | **Completed** |
+| Periodic hills re-run | L=NX fix, body-force driving | Re-run all Re, regenerate images | `periodic_hills.cpp`, `lbm.hpp` | **Completed** |
+| Cylinder Re=1000 | Diverged at tau=0.518 | Documented as known limitation; website surfaces Re=20/40/100/200 only | `main.cpp` | **Deferred** |
 
 ## Roadmap
 
@@ -760,12 +773,14 @@ Three tiers, easiest first:
 1. **Phase 1: Smagorinsky LES**, Completed
 2. **Phase 2: Block-Structured AMR**, In progress (restriction operator needs fix)
 3. **Phase 3: Vorticity + Postprocessor**, Completed
-4. **Phase 4: Full Re-Runs + New Cases**, In progress (17 simulations pending)
-5. **Phase 5: Website Updates**, In progress (interactive LBM/PINN viewers on all cases)
-6. **Phase 6.8: Time-Parametric PINN**, Completed (Re=100/400/1000 trained, ONNX + binary export done)
-7. **Phase 6.8b: Re=1000 temporal extension**, Completed (trained, exported; Re=300 interpolation panel added)
-8. **Phase 6.9: Model improvement roadmap**, Pending (pressure-Poisson, Re range, curriculum)
-9. **Phase 5.5: Cavity deep dive + PINN narrative**, Completed (website restructuring template)
+4. **Phase 4: Full Re-Runs + New Cases**, In progress (15/35 sims complete; remaining 20 pending after fixes)
+5. **Phase 4.1: Fix plot aspect ratios**, Pending (all PNGs square due to set_box_aspect(1))
+6. **Phase 4.2: Fix OpenMP perf**, Pending (cached wall distance, parallelize f_next zeroing)
+7. **Phase 4.3: Fix periodic hills geometry**, Pending (H: NY*2/3->NY/3, NX: 1200->1600, wider valleys)
+8. **Phase 5: Website Updates**, In progress (vf-split layout on all case pages)
+9. **Phase 6.8: Time-Parametric PINN**, Completed (Re=100/400/1000 trained, ONNX + binary export done)
+10. **Phase 6.9: Model improvement roadmap**, Pending (pressure-Poisson, Re range, curriculum)
+11. **Phase 5.5: Cavity deep dive + PINN narrative**, Completed
 
 #### Phase 5.5: Cavity Page Deep Dive + PINN Surrogate Narrative
 
@@ -874,3 +889,101 @@ produced. Check off as completed. Use `--use-les` where tau < 0.55.
   BC + 1-cell gradient stencil overestimates the wall heat flux. Needs either a
   finer grid (L>300) or a proper ghost-node/central-difference Nu stencil. Flow
   field (plume + recirculation) develops correctly; magnitude is the open issue.
+
+---
+
+## Grid Resolution Upgrade + Simulation Re-Runs + Website Restructure Plan
+
+### Goal
+Improve obstacle boundary accuracy via tiered grid resolution increase, fix known bugs, re-run all 33 simulations with the latest solver, restructure all case pages to the cavity deep-dive format, and analyze results.
+
+### Decisions Made
+- **Resolution:** Tiered approach (1600x600 for showcase, 1200x450 for mixed, keep current for rectangular)
+- **Viewer:** Canvas + Binary only (current FlowViewer, no MP4/GIF)
+- **Layout:** All pages get `vf-split` side-by-side (cavity format)
+- **Compute:** Time not constrained, 16GB RAM M5 MacBook Pro
+- **Pipeline:** Fix bugs first, then re-run, then restructure website
+- **Placeholder:** Minimal (title + "Coming Soon" card) for new cases
+
+### Memory Budget (16GB M5 MacBook Pro)
+Each node uses ~305 bytes (f + f_next + obstacle + wall_dist + forces + thermal arrays):
+- 800x300 = 240K nodes = 73 MB (0.6% of 12GB available)
+- 1200x450 = 540K nodes = 165 MB (1.4%)
+- 1600x600 = 960K nodes = 293 MB (2.4%)
+- 2400x900 = 2.16M nodes = 659 MB (5.5%)
+
+### Tiered Resolution Strategy
+
+| Tier | Cases | Grid | Rationale |
+|------|-------|------|-----------|
+| Tier 1 | Cylinder, Cavity, Flat Plate | 1600x600 / 512x512 | Primary validation, curved boundaries |
+| Tier 2 | Step, Square Cylinder, Periodic Hills, Cylinder Near Wall, Side-by-Side, Rotating Cylinder | 1200x450 | Mixed rectangular/curved |
+| Tier 3 | Orifice Plate, Urban Canyon, Downwash | Keep defaults (800x300/900x400) | Purely rectangular, no staircase benefit |
+
+### Known Bugs to Fix
+
+**1. Side-by-side bb_geom bug (`src/side_by_side_cylinders.cpp`):**
+- Problem: Second `place_cylinder()` call overwrites `bb_geom.cx/cy/radius`, so first cylinder uses wrong geometry for `q` computation
+- Fix: Add multi-cylinder support to `BounceBackGeometry` (store arrays of cylinders, compute `q` against nearest)
+- Alternative: Use polygon-based approach with combined obstacle boundary
+
+**2. Missing --nx/--ny override in entry points:**
+Currently supported: `main.cpp` (cylinder), `cavity.cpp`
+Need to add to: `step.cpp`, `flat_plate.cpp`, `square_cylinder.cpp`, `orifice_plate.cpp`, `periodic_hills.cpp`, `cylinder_near_wall.cpp`, `side_by_side_cylinders.cpp`, `rotating_cylinder.cpp`, `urban_canyon.cpp`, `downwash.cpp`
+
+### Phase 0: Bug Fixes + Infrastructure (3-4 hours)
+
+0a. Fix side-by-side bb_geom bug
+0b. Add --nx/--ny to all entry points (~5 lines per file)
+0c. Verify physical dimension scaling (radius = NY/10 etc.)
+0d. Create run_all_sims.py with tiered grid sizes
+
+### Phase 1: Shared Viewer Infrastructure (2-3 hours)
+
+1a. Create `docs/assets/js/viewer-common-v2.js` with `initVFSplitSections()`
+1b. Verify CSS compatibility (vf-split, vf-col, fv-stage already exist)
+1c. Pilot test on cylinder.html
+
+### Phase 2: Restructure All Case Pages (3-4 hours)
+
+2a. Create `scripts/restructure_pages.py` to auto-restructure HTML
+2b. Restructure 10 case pages to vf-split format
+2c. Create 3 placeholder pages (heated_cylinder, airfoil_ibm, thermal_cavity)
+2d. Update sidebar nav
+
+### Phase 3: Re-Run ALL Simulations (8-12 hours)
+
+33 simulations total:
+- Tier 1: cylinder(2), cavity(3), flat_plate(5) = 10 runs
+- Tier 2: step(3), square_cylinder(1), periodic_hills(3), near_wall(3), side_by_side(3), rotating(3) = 16 runs
+- Tier 3: orifice(4), urban(4+downwash) = 7 runs
+
+### Phase 4: Export + Update Website (1-2 hours)
+
+4a. Run export_web_data.py for fresh .bin + .bin.gz
+4b. Copy PNGs to docs/assets/images/
+4c. Update validation tables with new Cd/Cl/St values
+
+### Phase 5: Analysis + Next Steps (2-3 hours)
+
+5a. Quantitative validation report (Cd/Cl/St vs literature)
+5b. Flow physics narrative updates
+5c. Solver improvement roadmap
+5d. PINN training plan (backward step, orifice parametric, temporal extension)
+
+### Execution Order
+
+| Step | Description | Depends On | Est. Time |
+|------|-------------|-----------|-----------|
+| 0a | Fix side-by-side bb_geom bug | None | 1-2 hrs |
+| 0b | Add --nx/--ny to all entry points | None | 1 hr |
+| 0c | Verify physical dimension scaling | 0b | 30 min |
+| 1 | Create viewer-common-v2.js + pilot test | None | 2-3 hrs |
+| 2 | Auto-restructure all case pages | 1 | 3-4 hrs |
+| 3 | Create run_all_sims.py | 0b | 1 hr |
+| 4 | Build all executables | 0a, 0b | 5 min |
+| 5 | Run ALL 33 simulations | 4 | 8-12 hrs |
+| 6 | Post-process + export | 5 | 30 min |
+| 7 | Update website | 6 | 1-2 hrs |
+| 8 | Create placeholder pages + nav | None | 1 hr |
+| 9 | Analysis + next-steps | 7 | 2-3 hrs |

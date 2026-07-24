@@ -37,6 +37,9 @@
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
+        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
+        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -114,22 +117,41 @@
     <p class="section-intro">
       Use the tabs below to select a Reynolds number (Re = U&middot;D/&nu;, the
       ratio of inertial to viscous forces, based on the cylinder diameter D).
-      The left side of the viewer shows the velocity-magnitude contour field;
-      the right side shows the corresponding velocity-magnitude streamlines.
-      Drag the slider handle to change between the two.
+      The left side shows the steady-state velocity contour with streamlines;
+      the right side shows the flow evolution from rest to steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="comparison-slider" id="fieldSlider">
-      <img id="sliderImgBefore" src="" alt="Contour">
-      <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
-      <div class="slider-handle">
-        <div class="slider-btn"></div>
+    <div class="vf-split">
+      <div class="vf-col">
+        <h4>Steady-State Comparison</h4>
+        <div class="comparison-slider" id="fieldSlider">
+          <img id="sliderImgBefore" src="" alt="Contour">
+          <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
+          <div class="slider-handle">
+            <div class="slider-btn"></div>
+          </div>
+          <div class="slider-label left">Contour</div>
+          <div class="slider-label right">Streamlines</div>
+        </div>
+        <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
-      <div class="slider-label left">Contour</div>
-      <div class="slider-label right">Streamlines</div>
+
+      <div class="vf-col">
+        <h4>Flow Evolution</h4>
+        <div class="fv-stage">
+          <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
+        </div>
+        <div class="fv-controls">
+          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
+          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
+          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
+        </div>
+      </div>
     </div>
+
+    <p class="fv-note" id="fvStatus"></p>
 
     <h2>Validation</h2>
 
@@ -150,7 +172,7 @@
           <td>Laminar shedding</td>
           <td>0.188</td>
           <td>0.164-0.172</td>
-          <td>1.77</td>
+          <td>1.54</td>
           <td>~1.4</td>
         </tr>
         <tr>
@@ -158,16 +180,17 @@
           <td>Laminar shedding</td>
           <td>0.220</td>
           <td>0.180-0.195</td>
-          <td>1.49</td>
+          <td>1.32</td>
           <td>~1.3</td>
         </tr>
       </tbody>
     </table>
 
     <div class="callout">
-      Validation values will be populated from simulation results when runs complete.
-      Preliminary results with the new grid resolution and Bouzidi bounce-back show
-      improved agreement over the earlier stair-step BGK results.
+      Validation values from simulation results at 1600x600 grid with
+      Mei/Filippova-Hanel interpolated bounce-back (unconditionally stable).
+      Cd is now closer to the Tritton experimental values than the earlier
+      Bouzidi results (1.54 vs 1.77 at Re=100).
     </div>
 
     <h2>Discussion</h2>
@@ -301,53 +324,6 @@
 
   </div>
 
-      <h2>Interactive Flow Evolution</h2>
-
-    <p class="section-intro">
-      Interactive side-by-side of the C++ LBM solver and the PINN surrogate. The
-      LBM viewer animates the solver developing the flow from rest to steady state;
-      the PINN viewer shows the parametric surrogate prediction. Velocity magnitude
-      is rendered as a contour with streamlines overlaid.
-    </p>
-
-    <h3>LBM Evolution</h3>
-
-    <p class="section-intro">
-      The C++ MRT-LBM solver developing the flow from rest. Press Play to animate;
-      use the scrubber to inspect any frame.
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls">
-      <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-      <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-      <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-    </div>
-
-    <div class="fv-controls" id="lbmReGroup">
-      <div class="fv-group"></div>
-    </div>
-
-    <h3>PINN Prediction</h3>
-
-    <p class="section-intro">
-      The parametric PINN surrogate predicts the steady-state flow directly from
-      position and the case parameter. Training for this case is in progress; the
-      placeholder below will be replaced by the live surrogate once trained
-      (Phase 6.8, time-parametric PINN).
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="pinnCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls" id="pinnControls"></div>
-
-    <p class="fv-note" id="fvStatus"></p>
-
     <footer class="site-footer">
     <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
         target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
@@ -356,77 +332,6 @@
 
   <script src="assets/js/slider.js"></script>
   <script>
-    const CASE_CONFIG = {
-      paramLabel: 'Re',
-      reValues: [100, 200],
-      stats: {
-        100: { re: 100, cd: '1.77', cl: '0.00', st: '0.188', xr: '--' },
-        200: { re: 200, cd: '1.49', cl: '0.00', st: '0.220', xr: '--' },
-      }
-    };
-
-    let currentRe = CASE_CONFIG.reValues[0];
-
-    function imageUrl(re, type) {
-      return 'assets/images/cylinder/re' + re + '_' + type + '.png';
-    }
-
-    function makePlaceholder(re, type) {
-      return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300">' +
-        '<rect width="800" height="300" fill="#0d1117"/>' +
-        '<circle cx="200" cy="150" r="30" fill="none" stroke="#484f58" stroke-width="2"/>' +
-        '<text x="400" y="140" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
-        'Cylinder Re=' + re + ' ' + type + '</text>' +
-        '<text x="400" y="160" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
-        '(simulation running, placeholder)</text></svg>'
-      );
-    }
-
-    function updateImages(re) {
-      var before = document.getElementById('sliderImgBefore');
-      var after = document.getElementById('sliderImgAfter');
-      before.onerror = function () { this.src = makePlaceholder(re, 'contour'); };
-      after.onerror = function () { this.src = makePlaceholder(re, 'streamlines'); };
-      before.src = imageUrl(re, 'contour');
-      after.src = imageUrl(re, 'streamlines');
-    }
-
-    function updateStats(re) {
-      var s = CASE_CONFIG.stats[re];
-    }
-
-    function switchRe(re) {
-      currentRe = re;
-      document.querySelectorAll('#reTabs .teaser-link').forEach(function (btn) {
-        var rm = btn.textContent.match(/\d+/);
-        var br = rm ? parseInt(rm[0]) : 0;
-        btn.classList.toggle('active', br === re);
-      });
-      updateImages(re);
-      updateStats(re);
-      setTimeout(function () {
-        var c = document.getElementById('fieldSlider');
-        var h = c.querySelector('.slider-handle');
-        var a = c.querySelector('.img-after');
-        if (h) h.style.left = '50%';
-        if (a) a.style.clipPath = 'inset(0 50% 0 0)';
-      }, 200);
-    }
-
-    var rc = document.getElementById('reTabs');
-    CASE_CONFIG.reValues.forEach(function (re) {
-      var btn = document.createElement('button');
-      btn.className = 'teaser-link' + (re === currentRe ? ' active' : '');
-      btn.textContent = CASE_CONFIG.paramLabel + ' = ' + re;
-      btn.style.fontSize = '0.7em';
-      btn.onclick = function () { switchRe(re); };
-      rc.appendChild(btn);
-    });
-
-    updateImages(currentRe);
-    updateStats(currentRe);
-
     document.getElementById('sidebarToggle')?.addEventListener('click', function () {
       document.querySelector('.sidebar').classList.toggle('open');
       document.body.classList.toggle('sidebar-open');
@@ -435,18 +340,18 @@
 
     <script src="assets/js/colormaps.js"></script>
     <script src="assets/js/flow-viewer.js"></script>
-    <script src="assets/js/pinn-inference.js"></script>
-    <script src="assets/js/viewer-common.js"></script>
+    <script src="assets/js/viewer-common-v2.js"></script>
     <script>
-      initFlowViewerSections({
+      initVFSplitSections({
         dataDir: 'assets/data/cylinder',
         paramLabel: 'Re',
+        imageCase: 'cylinder',
+        cmap: 'jet',
         lbmConfigs: [
           { label: '100', file: '100' },
           { label: '200', file: '200' },
           { label: '1000', file: '1000' }
-        ],
-        pinn: null
+        ]
       });
     </script>
 

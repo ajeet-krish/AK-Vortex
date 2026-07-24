@@ -37,6 +37,9 @@
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
+        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
+        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -125,46 +128,45 @@
       bubble are clearly visible in the viewer.
     </div>
 
-    <h2>Velocity Field</h2>
+        <h2>Velocity Field</h2>
 
     <p class="section-intro">
-      Use the tabs below to select a Reynolds number (Re = U&middot;h/&nu;, based
-      on the hill height h). The left side of the viewer shows the
-      velocity-magnitude contour field; the right side shows the corresponding
-      velocity-magnitude streamlines. Drag the slider handle to wipe between the
-      two.
+      Use the tabs below to select a parameter variant.
+      The left side shows the steady-state velocity contour with streamlines;
+      the right side shows the flow evolution from rest to steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="comparison-slider" id="fieldSlider">
-      <img id="sliderImgBefore" src="" alt="Contour">
-      <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
-      <div class="slider-handle">
-        <div class="slider-btn"></div>
+    <div class="vf-split">
+      <div class="vf-col">
+        <h4>Steady-State Comparison</h4>
+        <div class="comparison-slider" id="fieldSlider">
+          <img id="sliderImgBefore" src="" alt="Contour">
+          <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
+          <div class="slider-handle">
+            <div class="slider-btn"></div>
+          </div>
+          <div class="slider-label left">Contour</div>
+          <div class="slider-label right">Streamlines</div>
+        </div>
+        <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
-      <div class="slider-label left">Contour</div>
-      <div class="slider-label right">Streamlines</div>
+
+      <div class="vf-col">
+        <h4>Flow Evolution</h4>
+        <div class="fv-stage">
+          <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
+        </div>
+        <div class="fv-controls">
+          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
+          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
+          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
+        </div>
+      </div>
     </div>
 
-    <p id="statsLine" class="section-intro"></p>
-
-    <h2>Physics</h2>
-
-    <p class="section-intro">
-      The sinusoidal hill profile is defined as:
-      <code>y<sub>hill</sub>(x) = H - h<sub>max</sub> * [1 - cos(2*pi*3*x/NX)]<sup>2</sup> / 2</code>
-      (three hill periods across the domain, each of wavelength NX/3).
-      Flow accelerates over the hill crest, separates at the summit, and forms a
-      recirculation bubble in the valley. Reattachment occurs downstream, and the
-      flow re-accelerates over the next hill.
-    </p>
-
-    <p class="section-intro">
-      At Re = 1000, transitional effects appear with unsteady separation.
-      At Re = 2800 (DNS reference), the flow is fully turbulent with
-      Reynolds stresses dominating momentum transport.
-    </p>
+    <p class="fv-note" id="fvStatus"></p>
 
     <h2>Validation</h2>
 
@@ -222,53 +224,6 @@
 
   </div>
 
-      <h2>Interactive Flow Evolution</h2>
-
-    <p class="section-intro">
-      Interactive side-by-side of the C++ LBM solver and the PINN surrogate. The
-      LBM viewer animates the solver developing the flow from rest to steady state;
-      the PINN viewer shows the parametric surrogate prediction. Velocity magnitude
-      is rendered as a contour with streamlines overlaid.
-    </p>
-
-    <h3>LBM Evolution</h3>
-
-    <p class="section-intro">
-      The C++ MRT-LBM solver developing the flow from rest. Press Play to animate;
-      use the scrubber to inspect any frame.
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls">
-      <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-      <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-      <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-    </div>
-
-    <div class="fv-controls" id="lbmReGroup">
-      <div class="fv-group"></div>
-    </div>
-
-    <h3>PINN Prediction</h3>
-
-    <p class="section-intro">
-      The parametric PINN surrogate predicts the steady-state flow directly from
-      position and the case parameter. Training for this case is in progress; the
-      placeholder below will be replaced by the live surrogate once trained
-      (Phase 6.8, time-parametric PINN).
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="pinnCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls" id="pinnControls"></div>
-
-    <p class="fv-note" id="fvStatus"></p>
-
     <footer class="site-footer">
     <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
         target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
@@ -277,82 +232,6 @@
 
   <script src="assets/js/slider.js"></script>
   <script>
-    const CASE_CONFIG = {
-      paramLabel: 'Re',
-      reValues: [1000, 2800],
-      stats: {
-        1000: { re: 1000, fx: 0.12, les: 'on', steps: '240k' },
-        2800: { re: 2800, fx: 0.03, les: 'on', steps: '240k' },
-      }
-    };
-
-    let currentRe = CASE_CONFIG.reValues[0];
-
-    function imageUrl(re, type) {
-      return 'assets/images/periodic_hills/re' + re + '_' + type + '.png';
-    }
-
-    function makePlaceholder(re, type) {
-      return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="400" viewBox="0 0 900 400">' +
-        '<rect width="900" height="400" fill="#0d1117"/>' +
-        '<path d="M0,300 Q225,200 450,300 Q675,400 900,300" fill="none" stroke="#484f58" stroke-width="2"/>' +
-        '<text x="450" y="180" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
-        'Periodic Hills Re=' + re + ' ' + type + '</text>' +
-        '<text x="450" y="200" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
-        '(simulation running, placeholder)</text></svg>'
-      );
-    }
-
-    function updateImages(re) {
-      var before = document.getElementById('sliderImgBefore');
-      var after = document.getElementById('sliderImgAfter');
-      before.onerror = function () { this.src = makePlaceholder(re, 'contour'); };
-      after.onerror = function () { this.src = makePlaceholder(re, 'streamlines'); };
-      before.src = imageUrl(re, 'contour');
-      after.src = imageUrl(re, 'streamlines');
-    }
-
-    function updateStats(re) {
-      var s = CASE_CONFIG.stats[re];
-      var el = document.getElementById('statsLine');
-      if (el && s) {
-        el.innerHTML = 'Re = ' + s.re + ' &middot; Fx (total streamwise force) = '
-          + s.fx + ' &middot; LES: ' + s.les + ' &middot; steps: ' + s.steps;
-      }
-    }
-
-    function switchRe(re) {
-      currentRe = re;
-      document.querySelectorAll('#reTabs .teaser-link').forEach(function (btn) {
-        var rm = btn.textContent.match(/\d+/);
-        var br = rm ? parseInt(rm[0]) : 0;
-        btn.classList.toggle('active', br === re);
-      });
-      updateImages(re);
-      updateStats(re);
-      setTimeout(function () {
-        var c = document.getElementById('fieldSlider');
-        var h = c.querySelector('.slider-handle');
-        var a = c.querySelector('.img-after');
-        if (h) h.style.left = '50%';
-        if (a) a.style.clipPath = 'inset(0 50% 0 0)';
-      }, 200);
-    }
-
-    var rc = document.getElementById('reTabs');
-    CASE_CONFIG.reValues.forEach(function (re) {
-      var btn = document.createElement('button');
-      btn.className = 'teaser-link' + (re === currentRe ? ' active' : '');
-      btn.textContent = CASE_CONFIG.paramLabel + ' = ' + re;
-      btn.style.fontSize = '0.7em';
-      btn.onclick = function () { switchRe(re); };
-      rc.appendChild(btn);
-    });
-
-    updateImages(currentRe);
-    updateStats(currentRe);
-
     document.getElementById('sidebarToggle')?.addEventListener('click', function () {
       document.querySelector('.sidebar').classList.toggle('open');
       document.body.classList.toggle('sidebar-open');
@@ -361,18 +240,18 @@
 
     <script src="assets/js/colormaps.js"></script>
     <script src="assets/js/flow-viewer.js"></script>
-    <script src="assets/js/pinn-inference.js"></script>
-    <script src="assets/js/viewer-common.js"></script>
+    <script src="assets/js/viewer-common-v2.js"></script>
     <script>
-      initFlowViewerSections({
+      initVFSplitSections({
         dataDir: 'assets/data/periodic_hills',
         paramLabel: 'Re',
+        imageCase: 'periodic_hills',
+        cmap: 'jet',
         lbmConfigs: [
           { label: '100', file: '100' },
           { label: '1000', file: '1000' },
           { label: '2800', file: '2800' }
-        ],
-        pinn: null
+        ]
       });
     </script>
 

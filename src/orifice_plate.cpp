@@ -131,6 +131,8 @@ int main(int argc, char* argv[]) {
         if (arg == "--use-les") { g_use_les = true;
         } else if (arg == "--cs" && i + 1 < argc) { g_cs = std::stod(argv[++i]);
         } else if (arg == "--hole-w" && i + 1 < argc) { hole_w = std::stoi(argv[++i]);
+        } else if (arg == "--nx" && i + 1 < argc) { NX = std::stoi(argv[++i]);
+        } else if (arg == "--ny" && i + 1 < argc) { NY = std::stoi(argv[++i]);
         } else if (arg.find("--") != 0) {
             if (positional_idx == 1) Re = std::stod(arg);
             else if (positional_idx == 2) config = arg;

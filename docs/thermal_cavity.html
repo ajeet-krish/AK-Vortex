@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AK-Vortex: Thermal Cavity - Natural Convection Benchmark (de Vahl Davis 1983)">
+  <title>Thermal Cavity - AK-Vortex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+
+  <div class="sidebar">
+    <div class="sidebar-brand"><a href="index.html">AK-Vortex</a></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-heading">Project</div>
+        <a href="index.html" class="nav-item">Home</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-heading">Simulations</div>
+        <a href="cylinder.html" class="nav-item">Cylinder</a>
+        <a href="cavity.html" class="nav-item">Lid-Driven Cavity</a>
+        <a href="step.html" class="nav-item">Backward Step</a>
+        <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
+        <a href="urban.html" class="nav-item">Urban Canyon</a>
+        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="flat_plate.html" class="nav-item">Flat Plate</a>
+        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
+        <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
+        <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
+        <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
+        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
+        <a href="thermal_cavity.html" class="nav-item active">Thermal Cavity</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-heading">Reference</div>
+        <a href="theory.html" class="nav-item">Theory &amp; Methodology</a>
+        <a href="implementation.html" class="nav-item">C++ Implementation</a>
+        <a href="pinn.html" class="nav-item">Physics-Informed Neural Networks</a>
+        <a href="https://github.com/ajeet-krish/lbm-2d" class="nav-item" target="_blank">GitHub Repository &nearr;</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="main-content">
+
+    <h1>Thermal Cavity: Natural Convection Benchmark</h1>
+
+    <p class="section-intro">
+      Coming soon. This case will demonstrate natural convection in a differentially
+      heated square cavity (de Vahl Davis 1983 benchmark) at Rayleigh numbers
+      10<sup>3</sup> to 10<sup>6</sup>, with Nusselt number validation and
+      isotherm/velocity contour visualization.
+    </p>
+
+    <div style="text-align:center;margin:3rem 0;padding:3rem;background:var(--bg-canvas);border:1px solid var(--border);border-radius:8px;">
+      <p style="font-size:1.2em;color:var(--fg-muted);margin:0;">Coming Soon</p>
+      <p style="font-size:0.8em;color:var(--fg-muted);margin:0.5rem 0 0;">
+        Ra=10^3-10^6, Nusselt validation, de Vahl Davis 1983 benchmark
+      </p>
+    </div>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
+        target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
+        target="_blank">LinkedIn</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('sidebarToggle')?.addEventListener('click', function () {
+      document.querySelector('.sidebar').classList.toggle('open');
+      document.body.classList.toggle('sidebar-open');
+    });
+  </script>
+
+</body>
+
+</html>

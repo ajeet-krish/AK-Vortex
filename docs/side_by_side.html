@@ -37,6 +37,9 @@
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item active">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
+        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
+        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -124,27 +127,45 @@
       </tr>
     </table>
 
-    <h2>Velocity Field</h2>
+        <h2>Velocity Field</h2>
 
     <p class="section-intro">
-      Use the tabs below to select the transverse spacing ratio S/D (the
-      center-to-center distance S between the two cylinders divided by the
-      diameter D). The left side of the viewer shows the velocity-magnitude
-      contour field; the right side shows the corresponding velocity-magnitude
-      streamlines. Drag the slider handle to wipe between the two.
+      Use the tabs below to select a parameter variant.
+      The left side shows the steady-state velocity contour with streamlines;
+      the right side shows the flow evolution from rest to steady state.
     </p>
 
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="sdTabs"></div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="comparison-slider" id="fieldSlider">
-      <img id="sliderImgBefore" src="" alt="Contour">
-      <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
-      <div class="slider-handle">
-        <div class="slider-btn"></div>
+    <div class="vf-split">
+      <div class="vf-col">
+        <h4>Steady-State Comparison</h4>
+        <div class="comparison-slider" id="fieldSlider">
+          <img id="sliderImgBefore" src="" alt="Contour">
+          <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
+          <div class="slider-handle">
+            <div class="slider-btn"></div>
+          </div>
+          <div class="slider-label left">Contour</div>
+          <div class="slider-label right">Streamlines</div>
+        </div>
+        <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
-      <div class="slider-label left">Contour</div>
-      <div class="slider-label right">Streamlines</div>
+
+      <div class="vf-col">
+        <h4>Flow Evolution</h4>
+        <div class="fv-stage">
+          <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
+        </div>
+        <div class="fv-controls">
+          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
+          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
+          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
+        </div>
+      </div>
     </div>
+
+    <p class="fv-note" id="fvStatus"></p>
 
     <h2>Validation</h2>
 
@@ -213,53 +234,6 @@
 
   </div>
 
-      <h2>Interactive Flow Evolution</h2>
-
-    <p class="section-intro">
-      Interactive side-by-side of the C++ LBM solver and the PINN surrogate. The
-      LBM viewer animates the solver developing the flow from rest to steady state;
-      the PINN viewer shows the parametric surrogate prediction. Velocity magnitude
-      is rendered as a contour with streamlines overlaid.
-    </p>
-
-    <h3>LBM Evolution</h3>
-
-    <p class="section-intro">
-      The C++ MRT-LBM solver developing the flow from rest. Press Play to animate;
-      use the scrubber to inspect any frame.
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls">
-      <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-      <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-      <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-    </div>
-
-    <div class="fv-controls" id="lbmReGroup">
-      <div class="fv-group"></div>
-    </div>
-
-    <h3>PINN Prediction</h3>
-
-    <p class="section-intro">
-      The parametric PINN surrogate predicts the steady-state flow directly from
-      position and the case parameter. Training for this case is in progress; the
-      placeholder below will be replaced by the live surrogate once trained
-      (Phase 6.8, time-parametric PINN).
-    </p>
-
-    <div class="fv-stage">
-      <canvas id="pinnCanvas" class="fv-canvas" width="100" height="38"></canvas>
-    </div>
-
-    <div class="fv-controls" id="pinnControls"></div>
-
-    <p class="fv-note" id="fvStatus"></p>
-
     <footer class="site-footer">
     <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
         target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
@@ -268,81 +242,6 @@
 
   <script src="assets/js/slider.js"></script>
   <script>
-    const CASE_CONFIG = {
-      paramLabel: 'S/D',
-      sdValues: [2, 3, 5],
-      sdKeys: ['sd2', 'sd3', 'sd5'],
-      stats: {
-        2: { re: 100, sd: '2', cd1: '--', cd2: '--', cl1: '--', cl2: '--' },
-        3: { re: 100, sd: '3', cd1: '--', cd2: '--', cl1: '--', cl2: '--' },
-        5: { re: 100, sd: '5', cd1: '--', cd2: '--', cl1: '--', cl2: '--' },
-      }
-    };
-
-    let currentSD = CASE_CONFIG.sdValues[0];
-
-    function imageUrl(sd, type) {
-      var suffix = 'sd' + (sd * 10);
-      return 'assets/images/side_by_side/' + suffix + '_' + type + '.png';
-    }
-
-    function makePlaceholder(sd, type) {
-      return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300">' +
-        '<rect width="800" height="300" fill="#0d1117"/>' +
-        '<circle cx="200" cy="130" r="30" fill="none" stroke="#484f58" stroke-width="2"/>' +
-        '<circle cx="200" cy="170" r="30" fill="none" stroke="#484f58" stroke-width="2"/>' +
-        '<text x="400" y="140" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
-        'Side-by-Side S/D=' + sd + ' ' + type + '</text>' +
-        '<text x="400" y="160" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
-        '(simulation running, placeholder)</text></svg>'
-      );
-    }
-
-    function updateImages(sd) {
-      var before = document.getElementById('sliderImgBefore');
-      var after = document.getElementById('sliderImgAfter');
-      before.onerror = function () { this.src = makePlaceholder(sd, 'contour'); };
-      after.onerror = function () { this.src = makePlaceholder(sd, 'streamlines'); };
-      before.src = imageUrl(sd, 'contour');
-      after.src = imageUrl(sd, 'streamlines');
-    }
-
-    function updateStats(sd) {
-      var s = CASE_CONFIG.stats[sd];
-    }
-
-    function switchSD(sd) {
-      currentSD = sd;
-      document.querySelectorAll('#sdTabs .teaser-link').forEach(function (btn) {
-        var rm = btn.textContent.match(/\d+/);
-        var bs = rm ? parseInt(rm[0]) : 0;
-        btn.classList.toggle('active', bs === sd);
-      });
-      updateImages(sd);
-      updateStats(sd);
-      setTimeout(function () {
-        var c = document.getElementById('fieldSlider');
-        var h = c.querySelector('.slider-handle');
-        var a = c.querySelector('.img-after');
-        if (h) h.style.left = '50%';
-        if (a) a.style.clipPath = 'inset(0 50% 0 0)';
-      }, 200);
-    }
-
-    var rc = document.getElementById('sdTabs');
-    CASE_CONFIG.sdValues.forEach(function (sd) {
-      var btn = document.createElement('button');
-      btn.className = 'teaser-link' + (sd === currentSD ? ' active' : '');
-      btn.textContent = CASE_CONFIG.paramLabel + ' = ' + sd;
-      btn.style.fontSize = '0.7em';
-      btn.onclick = function () { switchSD(sd); };
-      rc.appendChild(btn);
-    });
-
-    updateImages(currentSD);
-    updateStats(currentSD);
-
     document.getElementById('sidebarToggle')?.addEventListener('click', function () {
       document.querySelector('.sidebar').classList.toggle('open');
       document.body.classList.toggle('sidebar-open');
@@ -351,18 +250,18 @@
 
     <script src="assets/js/colormaps.js"></script>
     <script src="assets/js/flow-viewer.js"></script>
-    <script src="assets/js/pinn-inference.js"></script>
-    <script src="assets/js/viewer-common.js"></script>
+    <script src="assets/js/viewer-common-v2.js"></script>
     <script>
-      initFlowViewerSections({
+      initVFSplitSections({
         dataDir: 'assets/data/side_by_side',
         paramLabel: 'S/D',
+        imageCase: 'side_by_side',
+        cmap: 'jet',
         lbmConfigs: [
-          { label: '2', file: 'sd20' },
-          { label: '3', file: 'sd30' },
-          { label: '5', file: 'sd50' }
-        ],
-        pinn: null
+          { label: 'S/D=2', file: 'sd20' },
+          { label: 'S/D=3', file: 'sd30' },
+          { label: 'S/D=5', file: 'sd50' }
+        ]
       });
     </script>
 

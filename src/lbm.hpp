@@ -316,12 +316,12 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
                 // tau_wall approximated from local velocity gradient magnitude
                 double y_plus = 0.0;
                 if (cs_sq > 0.0 && nu > 0.0) {
-                    double y = sys.wall_dist[node_idx];
+                    double wall_d = sys.wall_dist[node_idx];
                     // u_tau ~ 0.5 * |grad u| * y (from linear sublayer u+ = y+)
                     // Use speed magnitude as proxy; conservative estimate
                     double speed = std::sqrt(u*u + v*v);
                     double u_tau = std::sqrt(speed * speed + 1e-12); // lower bound
-                    y_plus = y * u_tau / nu;
+                    y_plus = wall_d * u_tau / nu;
                 }
                 mrt_collide(f_node, rho, u, v, mrt, cs_sq, tau, y_plus);
                 if (Fscale != 0.0) {
@@ -396,10 +396,12 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
         }
     }
 
-    // --- Zero f_next (fast memset) ---
-    std::fill(sys.f_next.begin(), sys.f_next.end(), 0.0);
+    // --- Zero f_next (parallel) ---
+    #pragma omp parallel for
+    for (int n = 0; n < NX * NY * 9; ++n) sys.f_next[n] = 0.0;
     if (sys.use_thermal) {
-        std::fill(sys.g_thermal_next.begin(), sys.g_thermal_next.end(), 0.0);
+        #pragma omp parallel for
+        for (int n = 0; n < NX * NY * 5; ++n) sys.g_thermal_next[n] = 0.0;
     }
 
     // --- Streaming (g_case hoisted outside direction loop) ---
@@ -929,6 +931,11 @@ inline void save_vtk_frame(const LBMCapabilities& sys, int frame, const std::str
 // Place cylinder obstacle in the domain
 // ------------------------------------------------------------------
 inline void place_cylinder(LBMCapabilities& sys, int cx_cyl, int cy_cyl, int radius) {
+    // Add to multi-cylinder list (for side-by-side and similar cases)
+    sys.bb_geom.cylinders.push_back({static_cast<double>(cx_cyl),
+                                      static_cast<double>(cy_cyl),
+                                      static_cast<double>(radius)});
+    // Also set single-cylinder fields (backward compatible for single-cylinder cases)
     sys.bb_geom.cx = static_cast<double>(cx_cyl);
     sys.bb_geom.cy = static_cast<double>(cy_cyl);
     sys.bb_geom.radius = static_cast<double>(radius);

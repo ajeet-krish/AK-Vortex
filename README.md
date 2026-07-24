@@ -345,24 +345,36 @@ pinn/
   models/              pinn.py (PINN, ParametricPINN, FourierFeatureLayer), losses.py
  ```
 
-## Simulation Results Summary
+## Simulation Results Summary (Phase 4: Mei BB + Tiered Resolution Re-runs)
 
-| Case | Re | Cd | Cl | Status |
-|------|-----|-----|-----|--------|
-| Flat plate AoA=0 | 1000 | ~0.026 | 0 | Validated vs Blasius |
-| Flat plate AoA=10 | 1000 | ~0.05 | ~1.1 | Separation expected |
-| Cylinder | 100 | 1.774 | ~0 | Validated |
-| Cylinder | 200 | 1.495 | ~0 | Validated |
-| Square cylinder | 200 | 1.157 | 0.47 | Validated vs ERCOFTAC |
-| Cavity | 100-1000 | -- | -- | Validated vs Ghia |
-| Step | 100-400 | -- | -- | Validated vs Armaly |
-| Orifice plate | 100 | Fx 0.9-63 | -- | K increases with plates |
-| Periodic hills | 100-2800 | -- | -- | LES benchmark (re-run pending after L=NX fix) |
-| Cylinder near wall | 100 | 2.6-2.8 | +0.40 to +1.42 | Ground effect (lift vs gap) |
-| Side-by-side | 100 | 2.6-2.8 | ~0 (amp 0.6-0.7) | Interference study |
-| Rotating cylinder | 100 | -- | -- | Magnus effect (Ladd) |
-| Urban canyon | 100 | -- | -- | Oke 1988 regimes |
-| Downwash | 100 | -- | -- | Hunt 1984 |
+All cases re-run with Mei/Filippova-Hanel bounce-back (unconditionally stable)
+and tiered grid resolution (1600x600 for curved cases, 1200x450 for mixed,
+defaults for rectangular).
+
+| Case | Re | Grid | Cd | Cl | Status |
+|------|-----|------|-----|-----|--------|
+| Flat plate AoA=0 | 1000 | 1600x600 | 0.070 | 0.000 | Validated vs Blasius (Cd 0.070 vs 2*Cf=0.084) |
+| Flat plate AoA=5 | 1000 | 1600x600 | 0.074 | 0.333 | Small incidence |
+| Flat plate AoA=10 | 1000 | 1600x600 | 0.130 | 0.604 | Suction side |
+| Flat plate Re=500 | 500 | 1600x600 | 0.103 | 0.000 | Re scaling validated |
+| Flat plate Re=2000 | 2000 | 1600x600 | 0.049 | 0.000 | Re scaling validated |
+| Cylinder | 100 | 1600x600 | 1.536 | ~0 | Validated (Mei BB, was 1.774 Bouzidi) |
+| Cylinder | 200 | 1600x600 | 1.319 | ~0 | Validated (Mei BB, was 1.495 Bouzidi) |
+| Square cylinder | 200 | 1200x450 | 1.568 | 0.358 | Validated vs ERCOFTAC |
+| Cavity | 100 | 512x512 | -- | -- | Validated vs Ghia |
+| Cavity | 400 | 512x512 | -- | -- | Validated vs Ghia |
+| Cavity | 1000 | 512x512 | -- | -- | Validated vs Ghia |
+| Step | 100 | 1200x450 | -- | -- | Validated vs Armaly |
+| Step | 200 | 1200x450 | -- | -- | Validated vs Armaly |
+| Step | 400 | 1200x450 | -- | -- | Validated vs Armaly |
+| Orifice plate | 100 | 800x300 | Fx 0.9-63 | -- | K increases with plates |
+| Periodic hills | 100 | 1600x450 | -- | -- | LES benchmark (geometry being fixed) |
+| Periodic hills | 1000 | 1600x450 | -- | -- | LES benchmark (pending) |
+| Cylinder near wall | 100 | 1200x450 | 2.6-2.8 | +0.40 to +1.42 | Ground effect (lift vs gap) |
+| Side-by-side | 100 | 1200x450 | 2.6-2.8 | ~0 (amp 0.6-0.7) | Interference study |
+| Rotating cylinder | 100 | 1200x450 | -- | -- | Magnus effect (Ladd) |
+| Urban canyon | 100 | 900x400 | -- | -- | Oke 1988 regimes |
+| Downwash | 100 | 900x300 | -- | -- | Hunt 1984 |
 
 ## Roadmap
 
@@ -372,23 +384,29 @@ pinn/
 | 1 | Smagorinsky LES turbulence model | Completed |
 | 2 | Block-structured AMR (adaptive mesh refinement) | In progress (restriction operator needs fix) |
 | 3 | Vorticity output + postprocessor | Completed |
-| 4 | Full simulation re-runs + new cases | In progress (17 simulations pending) |
-| 5 | Website updates for new features | In progress (interactive viewers on all cases) |
-| 6 | Physics-Informed Neural Network (PINN) surrogate suite | In progress (cavity steady + temporal done; Re=1000 temporal done; step/orifice pending) |
+| 4 | Full simulation re-runs + new cases | **In progress** (15/35 sims complete, remaining 20 pending after fixes) |
+| 4.1 | Fix plot aspect ratios (postprocess.py) | **Pending** (all PNGs are square instead of matching grid aspect) |
+| 4.2 | Fix OpenMP performance (cached wall distance) | **Pending** (compute_wall_distance serial BFS kills LES perf) |
+| 4.3 | Fix periodic hills geometry (wider valleys, lower hills) | **Pending** (H: NY*2/3 -> NY/3, NX: 1200 -> 1600) |
+| 5 | Website updates for new features | In progress (vf-split layout on all case pages) |
+| 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
+| 6 | Physics-Informed Neural Network (PINN) surrogate suite | Completed (cavity steady + temporal) |
 | 6.8 | Time-parametric PINN training | Completed (Re=100/400/1000; Re=300 interpolation demo) |
-| 6.8b | Re=1000 temporal extension | Completed |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
-| 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed (Key Findings, LBM Analysis, Training Convergence, What PINN Unlocks, Limitations; loss + temporal L2 plots; 600x speed section; Re=300 interpolation; sensitivity map) |
 
 ### Pending Fixes (Phase 4)
 
 | Fix | Problem | Solution | Priority |
 |-----|---------|----------|----------|
-| Ladd moving boundary | Rotating cylinder has no tangential velocity (Cl~0) | Implement Ladd (1994) bounce-back with wall velocity in `lbm.hpp` | **Completed** |
-| Cylinder near wall | Cylinder too low (touching ground, no under-flow) | Raise cylinder to gaps 10/20/40 cells | **Completed** |
-| Side-by-side geometry | Was tandem (same y, offset x) | Rebuilt as transverse (same x, offset y), D=40 to fit domain | **Completed** |
-| Orifice single-hole jet | 1p1h/2p/3p diverged (jet Mach too high) | Lower u_inflow to 0.025 + enable LES | **Completed** |
-| Cylinder Re=1000 | Diverged at step 16k on coarse grid (tau=0.518 < 0.55) | Stable on fine grid (NX=2400, NY=900) but unsteady; documented as known limitation; website surfaces Re=20/40/100/200 only | **Deferred** |
+| Plot aspect ratios | All PNGs square (set_box_aspect(1) in postprocess.py) | Remove set_box_aspect(1), use data aspect ratio | **Pending** |
+| OpenMP perf | compute_wall_distance serial BFS runs every step with LES | Cache wall distance (geometry is static, compute once) | **Pending** |
+| f_next zeroing | std::fill is serial, 17MB per step | Parallelize with #pragma omp parallel for | **Pending** |
+| Periodic hills geometry | H=NY*2/3 (67% obstacle), valleys too narrow | H=NY/3, NX=1600 (33% wider valleys, ~30% obstacle) | **Pending** |
+| Variable shadowing | double y shadows outer loop var in lbm.hpp:319 | Rename to wall_d | **Pending** |
+| Ladd moving boundary | Rotating cylinder tangential velocity | Implement Ladd (1994) bounce-back | **Completed** |
+| Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | **Completed** |
+| Side-by-side geometry | Transverse arrangement | D=40, S/D=2,3,5 | **Completed** |
+| Orifice single-hole jet | 1p1h/2p/3p diverged | Lower u_inflow to 0.025 + LES | **Completed** |
 
 ## Solver Accuracy & Capability Upgrade Roadmap
 

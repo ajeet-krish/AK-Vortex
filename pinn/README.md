@@ -1,16 +1,12 @@
 # PINN Surrogate Suite -- Physics-Informed Neural Networks
 
-A parametric surrogate suite in `pinn/`. Trains PyTorch PINNs on C++ LBM
-output as hybrid data-physics surrogates, validated against the solver, and
-deployed as real-time ONNX Runtime Web inference demos. Mirrors the SciML
-R&D pipeline at NASA, Rolls-Royce, and F1 teams.
+A parametric surrogate suite in `pinn/`. Trains PyTorch PINNs on C++ LBM output as hybrid data-physics surrogates, validated against the solver, and deployed as real-time ONNX Runtime Web inference demos. Mirrors the SciML R&D pipeline at NASA, Rolls-Royce, and F1 teams.
 
 **Zero changes to the existing C++ solver.** All code lives under `pinn/`.
 
 ## Hardware
 
-Apple Silicon Mac (tested on M5). Training uses `torch.device("mps")`
-(Metal Performance Shaders). No NVIDIA GPU required.
+Apple Silicon Mac (tested on M5). Training uses `torch.device("mps")` (Metal Performance Shaders). No NVIDIA GPU required.
 
 ## What is a Parametric PINN?
 
@@ -21,9 +17,7 @@ A **parametric PINN** adds physical parameters as inputs:
 [x, y, Re, hole_w, ...] --> [Neural Network] --> [u, v, p]
 ```
 
-This creates a **continuous design-space surrogate**: drag a slider to change
-Reynolds number or orifice diameter, and the network predicts the updated flow
-field instantly -- no retraining needed.
+This creates a **continuous design-space surrogate**: drag a slider to change Reynolds number or orifice diameter, and the network predicts the updated flow field instantly; no retraining needed.
 
 ## Implementation Roadmap
 

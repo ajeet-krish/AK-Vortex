@@ -203,7 +203,7 @@ def _overlay_obstacles(ax, obstacle_mask):
 def render_contour(ax, vel, cmap, vmin, vmax, obstacle=None):
     im = ax.imshow(vel, origin='lower', cmap=cmap, aspect='equal',
                    vmin=vmin, vmax=vmax, interpolation='bilinear')
-    ax.set_box_aspect(1)  # force square axes box so square fields stay square
+    ax.set_box_aspect(vel.shape[0] / vel.shape[1])
     _overlay_obstacles(ax, obstacle)
     ax.axis('off')
     ax.set_facecolor('white')
@@ -222,7 +222,7 @@ def render_streamlines(ax, u, v, cmap, obstacle=None, density=1.0):
     _overlay_obstacles(ax, obstacle)
     ax.axis('off')
     ax.set_aspect('equal')
-    ax.set_box_aspect(1)
+    ax.set_box_aspect(ny / nx_grid)
     ax.set_facecolor('white')
     return sp, vel_mag
 
@@ -283,7 +283,8 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     vmin_val = vel.min() if field == 'rho' else 0
 
     # Contour
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    ny_data, nx_data = vel.shape
+    fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
     im = render_contour(ax, vel, cmap_contour, vmin_val, vmax_val, obs)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
@@ -296,7 +297,8 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     print(f"  Saved {path}")
 
     # Streamlines
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    ny_data, nx_data = u.shape
+    fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
     sp, smag = render_streamlines(ax, u, v, cmap_stream, obs)
     if sp and smag.size > 0:
@@ -489,7 +491,8 @@ def save_vorticity_png(data, output_dir, frame):
     # Symmetric limits around 0
     vmax = max(abs(omega.max()), abs(omega.min()), 1e-6)
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    ny_data, nx_data = omega.shape
+    fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
     im = render_contour(ax, omega, 'RdBu', -vmax, vmax, obs)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
