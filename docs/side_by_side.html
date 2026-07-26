@@ -31,15 +31,11 @@
         <a href="step.html" class="nav-item">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
         <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item active">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -65,9 +61,9 @@
 
     <div class="callout">
       Note: this is a true side-by-side (parallel) arrangement, distinct from
-      tandem cylinders (one behind the other). The diameter is set to D = 40
-      cells so that the largest spacing (S/D = 5, i.e. 200 cells center-to-center)
-      fits within the 300-cell channel height.
+      tandem cylinders (one behind the other). The diameter is set to D = 60
+      cells so that the largest spacing (S/D = 5, i.e. 300 cells center-to-center)
+      fits within the 800-cell channel height.
     </div>
 
     <h2>Setup</h2>
@@ -79,11 +75,11 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>800 &times; 300</td>
+        <td>1200 &times; 800</td>
       </tr>
       <tr>
         <td>Cylinder diameter D</td>
-        <td>40 cells (NY/15)</td>
+        <td>60 cells</td>
       </tr>
       <tr>
         <td>Arrangement</td>
@@ -103,7 +99,7 @@
       </tr>
       <tr>
         <td>Tau (relaxation parameter)</td>
-        <td>0.62</td>
+        <td>0.68</td>
       </tr>
       <tr>
         <td>Number of steps</td>
@@ -111,7 +107,7 @@
       </tr>
       <tr>
         <td>Reference length</td>
-        <td>D = 40 cells</td>
+        <td>D = 60 cells</td>
       </tr>
       <tr>
         <td>Collision</td>
@@ -127,19 +123,20 @@
       </tr>
     </table>
 
-        <h2>Velocity Field</h2>
+        <h2>Flow Field</h2>
 
     <p class="section-intro">
       Use the tabs below to select a parameter variant.
-      The left side shows the steady-state velocity contour with streamlines;
-      the right side shows the flow evolution from rest to steady state.
+      Top left: steady-state velocity contour with streamlines.
+      Top right: flow evolution from rest to steady state.
+      Bottom: pressure and vorticity fields at steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="vf-split">
-      <div class="vf-col">
-        <h4>Steady-State Comparison</h4>
+    <div class="vf-grid">
+      <div class="vf-cell">
+        <h4>Velocity (Contour | Streamlines)</h4>
         <div class="comparison-slider" id="fieldSlider">
           <img id="sliderImgBefore" src="" alt="Contour">
           <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
@@ -152,7 +149,7 @@
         <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
 
-      <div class="vf-col">
+      <div class="vf-cell">
         <h4>Flow Evolution</h4>
         <div class="fv-stage">
           <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
@@ -162,6 +159,26 @@
           <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
           <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
         </div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <img id="cpImg" class="static-field-img" src="" alt="Cp">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -183,22 +200,22 @@
         <tr>
           <td>2</td>
           <td>Biased gap flow, coupled shedding</td>
-          <td>2.82</td>
-          <td>+0.25</td>
+          <td>3.23</td>
+          <td>-0.07</td>
           <td>0.64</td>
         </tr>
         <tr>
           <td>3</td>
           <td>Proximity interference</td>
-          <td>2.57</td>
-          <td>+0.06</td>
+          <td>3.40</td>
+          <td>~0</td>
           <td>0.63</td>
         </tr>
         <tr>
           <td>5</td>
           <td>Weak interference, quasi-independent</td>
-          <td>2.62</td>
-          <td>-0.11</td>
+          <td>2.87</td>
+          <td>~0</td>
           <td>0.74</td>
         </tr>
       </tbody>
@@ -209,7 +226,7 @@
       flow pushing the cylinders apart) toward near-zero and mildly negative as
       the spacing increases and the two wakes decouple. The combined drag stays
       elevated relative to an isolated cylinder due to the blockage of the paired
-      bodies. Values are combined over both cylinders (D = 40 cells, Re = 100).
+      bodies. Values are combined over both cylinders (D = 60 cells, Re = 100).
       Reference: side-by-side circular cylinders at Re=100 (Alam &amp; Zhou 2007).
     </div>
 
@@ -255,8 +272,9 @@
       initVFSplitSections({
         dataDir: 'assets/data/side_by_side',
         paramLabel: 'S/D',
-        imageCase: 'side_by_side',
         cmap: 'jet',
+        imageBasePath: function(config) { return 'side_by_side/simulations/' + config.file; },
+        imageSuffix: function(config) { return 're100_' + config.file; },
         lbmConfigs: [
           { label: 'S/D=2', file: 'sd20' },
           { label: 'S/D=3', file: 'sd30' },

@@ -27,7 +27,7 @@
 // Validation: Zdravkovich 1977, Kim & Durbin 1988
 //
 // Parameters:
-//   Re = u_inflow * D / nu,  D = 2 * NY/15 = 40
+//   Re = u_inflow * D / nu,  D = 2 * radius = 40 (fixed)
 //   S/D = center-to-center spacing / diameter (transverse)
 //   S = center-to-center distance (in y)
 //   D is reduced to NY/15 so that S/D=5 (200 cells) fits the NY=300 domain.
@@ -46,7 +46,7 @@ struct SideBySideParams {
 
 SideBySideParams compute_params(double Re, double sd_ratio, int steps = -1) {
     double u_inflow = 0.1;
-    int radius = NY / 15;
+    int radius = 30;
     int D = 2 * radius;
     double length_scale = static_cast<double>(D);
     double nu = u_inflow * length_scale / Re;

@@ -12,15 +12,15 @@
 // ==========================================================================
 
 // Grid dimensions (runtime variables, set by entry point)
-inline int NX = 800;
-inline int NY = 300;
+inline int NX = 1200;
+inline int NY = 600;
 constexpr int NUM_DIRECTIONS = 9;
 
 // Simulation case type
 enum class CaseType { CYLINDER, CAVITY, STEP, RIBS, URBAN_CANYON, DOWNWASH,
                       SQUARE_CYLINDER, FLAT_PLATE, SPORTS_BALL,
                       PERIODIC_HILLS, CYLINDER_NEAR_WALL, SIDE_BY_SIDE,
-                      ROTATING_CYLINDER, ORIFICE_PLATE };
+                      ROTATING_CYLINDER, ORIFICE_PLATE, URBAN_CITYGRID };
 
 // Collision operator type
 enum class CollisionType { MRT, BGK };
@@ -30,6 +30,13 @@ inline CaseType g_case = CaseType::CYLINDER;
 // Smagorinsky LES subgrid-scale model (Phase 1)
 inline bool g_use_les = false;          // toggle LES on/off (default off)
 inline double g_cs = 0.12;              // Smagorinsky constant (typical 0.1-0.2)
+
+// Step geometry (set by step.cpp main(), used by BC enforcement)
+inline int g_step_h_step = -1;          // step height in cells
+inline int g_step_h_inlet = -1;         // inlet height in cells
+
+// Urban city grid inlet direction (0=East, 1=South, 2=West)
+inline int g_inlet_dir = 0;
 
 // ------------------------------------------------------------------
 // D2Q9 velocity vectors (cx[i], cy[i]) for i = 0..8

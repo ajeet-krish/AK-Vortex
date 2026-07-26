@@ -22,7 +22,7 @@
 // on the cylinder surface to simulate rotation.
 //
 // Parameters:
-//   Re = u_inflow * D / nu,  D = 2 * NY/10 = 60
+//   Re = u_inflow * D / nu,  D = 2 * radius = 60 (fixed)
 //   omega = spin ratio (dimensionless, S = u_surface / u_inflow)
 //   Lattice angular velocity: omega_lat = omega * u_inflow / R
 //   Surface velocity at angle theta: u_theta = omega_lat * R
@@ -44,7 +44,7 @@ struct RotatingParams {
 
 RotatingParams compute_params(double Re, double omega, int steps = -1) {
     double u_inflow = 0.1;
-    int radius = NY / 10;
+    int radius = 30;
     int D = 2 * radius;
     double length_scale = static_cast<double>(D);
     double nu = u_inflow * length_scale / Re;

@@ -31,15 +31,11 @@
         <a href="step.html" class="nav-item">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item active">Orifice Plate</a>
         <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -82,7 +78,7 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>800 &times; 300</td>
+        <td>1600 &times; 1000</td>
       </tr>
       <tr>
         <td>Configurations</td>
@@ -90,11 +86,11 @@
       </tr>
       <tr>
         <td>Plate thickness</td>
-        <td>2 cells</td>
+        <td>8 cells (max(4, NX/100))</td>
       </tr>
       <tr>
         <td>Hole width</td>
-        <td>37 cells (NY/8)</td>
+        <td>125 cells (NY/8)</td>
       </tr>
       <tr>
         <td>Reynolds number</td>
@@ -102,19 +98,19 @@
       </tr>
       <tr>
         <td>Inlet velocity</td>
-        <td>u<sub>inflow</sub> = 0.1 lu/ts</td>
+        <td>u<sub>inflow</sub> = 0.025 lu/ts</td>
       </tr>
       <tr>
         <td>Tau (relaxation parameter)</td>
-        <td>1.40</td>
+        <td>1.25</td>
       </tr>
       <tr>
         <td>Number of steps</td>
-        <td>20,000</td>
-      </tr>
+        <td>30,000</td>
+      </tr>      </tr>
       <tr>
         <td>Reference length</td>
-        <td>H = NY = 300 cells (channel height)</td>
+        <td>H = NY = 1000 cells (channel height)</td>
       </tr>
       <tr>
         <td>Collision</td>
@@ -130,19 +126,20 @@
       </tr>
     </table>
 
-        <h2>Velocity Field</h2>
+        <h2>Flow Field</h2>
 
     <p class="section-intro">
       Use the tabs below to select a parameter variant.
-      The left side shows the steady-state velocity contour with streamlines;
-      the right side shows the flow evolution from rest to steady state.
+      Top left: steady-state velocity contour with streamlines.
+      Top right: flow evolution from rest to steady state.
+      Bottom: pressure and vorticity fields at steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="vf-split">
-      <div class="vf-col">
-        <h4>Steady-State Comparison</h4>
+    <div class="vf-grid">
+      <div class="vf-cell">
+        <h4>Velocity (Contour | Streamlines)</h4>
         <div class="comparison-slider" id="fieldSlider">
           <img id="sliderImgBefore" src="" alt="Contour">
           <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
@@ -155,7 +152,7 @@
         <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
 
-      <div class="vf-col">
+      <div class="vf-cell">
         <h4>Flow Evolution</h4>
         <div class="fv-stage">
           <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
@@ -165,6 +162,26 @@
           <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
           <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
         </div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <img id="cpImg" class="static-field-img" src="" alt="Cp">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -186,29 +203,29 @@
         <tr>
           <td>1 plate, 1 hole</td>
           <td>100</td>
-          <td>14.2</td>
-          <td>151</td>
+          <td>13.1</td>
+          <td>139</td>
           <td>Classic single orifice</td>
         </tr>
         <tr>
           <td>1 plate, 3 holes</td>
           <td>100</td>
-          <td>0.93</td>
-          <td>9.9</td>
+          <td>0.97</td>
+          <td>10.4</td>
           <td>Perforated baffle (lowest loss)</td>
         </tr>
         <tr>
           <td>2 plates</td>
           <td>100</td>
-          <td>34.5</td>
-          <td>369</td>
+          <td>30.4</td>
+          <td>324</td>
           <td>Single serpentine turn</td>
         </tr>
         <tr>
           <td>3 plates</td>
           <td>100</td>
-          <td>56.3</td>
-          <td>602</td>
+          <td>54.0</td>
+          <td>575</td>
           <td>Double serpentine turn (highest loss)</td>
         </tr>
       </tbody>
@@ -283,8 +300,9 @@
       initVFSplitSections({
         dataDir: 'assets/data/orifice_plate',
         paramLabel: 'Config',
-        imageCase: 'orifice_plate',
         cmap: 'jet',
+        imageBasePath: function(config) { return 'orifice_plate/simulations/' + config.file; },
+        imageSuffix: function(config) { return 're100_' + config.file; },
         lbmConfigs: [
           { label: '1p1h', file: '1p1h' },
           { label: '1p3h', file: '1p3h' },

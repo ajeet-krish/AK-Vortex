@@ -2,7 +2,7 @@
 
 Generates compact binary files consumed by docs/assets/js/flow-viewer.js:
 
-  docs/assets/data/{case}/lbm_re{label}.bin   -- N frames, nx*ny, 3 channels (u, v, obstacle)
+  docs/assets/data/{case}/lbm_re{label}.bin   -- N frames, nx*ny, 5 channels (u, v, p, omega, obstacle)
 
 The velocity-magnitude canvas viewer only needs u, v (for the contour + streamlines)
 and the obstacle mask (to keep streamlines from crossing solid walls). Pressure and
@@ -35,7 +35,7 @@ import argparse
 import numpy as np
 from scipy.ndimage import zoom
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATA_ROOT = os.path.join(PROJECT_ROOT, "docs", "assets", "data")
 MAGIC = 0x4C424D31
 DTYPE_FLAG = 1  # float16 (stored as little-endian uint16) keeps files ~half size
@@ -113,11 +113,22 @@ CASES = {
         "src": "urban",
         "max_dim": 128,
         "configs": [
-            ("side_ar0.3_re100", "side_a03"),
-            ("side_ar0.5_re100", "side_a05"),
-            ("side_ar0.8_re100", "side_a08"),
-            ("topdown_re100", "topdown"),
-            ("downwash_re100", "downwash"),
+            ("side/2p_ar0.3_re100", "side_a03"),
+            ("side/2p_ar0.5_re100", "side_a05"),
+            ("side/3p_ar0.6_re100", "side_a06"),
+            ("side/2p_ar0.8_re100", "side_a08"),
+            ("topdown_v/re100", "topdown"),
+            ("topdown_h/re100", "topdown_h"),
+            ("downwash/re100", "downwash"),
+        ],
+    },
+    "urban_citygrid": {
+        "src": "urban/city_grid",
+        "max_dim": 128,
+        "configs": [
+            ("inlet_east", "east"),
+            ("inlet_south", "south"),
+            ("inlet_west", "west"),
         ],
     },
 }
@@ -213,19 +224,28 @@ def export_lbm_case(case_name, cfg):
         nx0, ny0 = first["nx"], first["ny"]
         tnx, tny = compute_target(nx0, ny0, cfg["max_dim"])
 
-        ch_u, ch_v, ch_obs = [], [], []
+        ch_u, ch_v, ch_p, ch_omega, ch_obs = [], [], [], [], []
         for fn, d in loaded:
-            fld = lambda key: np.array(d[key], dtype=np.float32).reshape(d["ny"], d["nx"])
+            nx_d, ny_d = d["nx"], d["ny"]
+            def fld(key):
+                val = d.get(key)
+                if val is None:
+                    return np.zeros((ny_d, nx_d), dtype=np.float32)
+                return np.array(val, dtype=np.float32).reshape(ny_d, nx_d)
             ch_u.append(bilinear_resize(fld("u"), tnx, tny))
             ch_v.append(bilinear_resize(fld("v"), tnx, tny))
+            ch_p.append(bilinear_resize(fld("p"), tnx, tny))
+            ch_omega.append(bilinear_resize(fld("omega"), tnx, tny))
             ch_obs.append(bilinear_resize(fld("obstacle"), tnx, tny))
 
         obs_stack = np.stack(ch_obs, 0)
         combined = np.stack(
-            [np.stack(ch_u, 0), np.stack(ch_v, 0), obs_stack], axis=1
-        )  # (n_frames, 3, ny, nx)
+            [np.stack(ch_u, 0), np.stack(ch_v, 0),
+             np.stack(ch_p, 0), np.stack(ch_omega, 0),
+             obs_stack], axis=1
+        )  # (n_frames, 5, ny, nx)
         out_path = os.path.join(out_dir, f"lbm_{label}.bin")
-        raw, gz = write_binary(out_path, combined, tnx, tny, 3)
+        raw, gz = write_binary(out_path, combined, tnx, tny, 5)
         skipped = len(files) - len(loaded)
         note = f" ({skipped} skipped)" if skipped else ""
         print(f"  {case_name}/lbm_{label}.bin  {combined.shape}  "

@@ -31,15 +31,11 @@
         <a href="step.html" class="nav-item active">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
         <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -72,11 +68,11 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>800 &times; 300</td>
+        <td>2400 &times; 600</td>
       </tr>
       <tr>
         <td>Step height H</td>
-        <td>100 cells (NY/3)</td>
+        <td>300 cells (NY/2, 2:1 expansion)</td>
       </tr>
       <tr>
         <td>Reynolds number Re<sub>H</sub></td>
@@ -88,7 +84,7 @@
       </tr>
       <tr>
         <td>Tau (relaxation parameter)</td>
-        <td>Re=100: 1.30, Re=200: 0.90, Re=400: 0.70</td>
+        <td>Re=100: 1.70, Re=200: 1.10, Re=400: 0.80</td>
       </tr>
       <tr>
         <td>Number of steps</td>
@@ -96,7 +92,7 @@
       </tr>
       <tr>
         <td>Reference length</td>
-        <td>D<sub>h</sub> = 2 &times; H<sub>inlet</sub> = 398 cells</td>
+        <td>D<sub>h</sub> = 2 &times; H<sub>inlet</sub> = 598 cells</td>
       </tr>
       <tr>
         <td>Collision</td>
@@ -112,15 +108,16 @@
 
     <p class="section-intro">
       Use the tabs below to select a parameter variant.
-      The left side shows the steady-state velocity contour with streamlines;
-      the right side shows the flow evolution from rest to steady state.
+      Top left: steady-state velocity contour with streamlines.
+      Top right: flow evolution from rest to steady state.
+      Bottom: pressure and vorticity fields at steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="vf-split">
-      <div class="vf-col">
-        <h4>Steady-State Comparison</h4>
+    <div class="vf-grid">
+      <div class="vf-cell">
+        <h4>Velocity (Contour | Streamlines)</h4>
         <div class="comparison-slider" id="fieldSlider">
           <img id="sliderImgBefore" src="" alt="Contour">
           <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
@@ -133,7 +130,7 @@
         <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
 
-      <div class="vf-col">
+      <div class="vf-cell">
         <h4>Flow Evolution</h4>
         <div class="fv-stage">
           <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
@@ -143,6 +140,26 @@
           <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
           <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
         </div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <img id="cpImg" class="static-field-img" src="" alt="Cp">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -182,9 +199,10 @@
     </table>
 
     <div class="callout">
-      Validation values will be populated from simulation results when runs complete.
-      The step case is run at 800&times;300 resolution (was 400&times;150) with MRT collision,
-      expected to improve reattachment length agreement with Armaly.
+      Simulations completed at 2400&times;600 resolution with MRT collision (2:1 expansion,
+      h_step=NY/2=300, Armaly L/H=6). Computed Xr/H values are systematically lower
+      than Armaly 1983 (2D slice of the 3D experimental data), which is expected since
+      2D simulations over-predict reattachment compared to 3D experiments at the same Re.
     </div>
 
     <h2>Discussion</h2>
@@ -226,8 +244,9 @@
       initVFSplitSections({
         dataDir: 'assets/data/step',
         paramLabel: 'Re',
-        imageCase: 'step',
         cmap: 'jet',
+        imageBasePath: function(config) { return 'step/simulations/re' + config.file; },
+        imageSuffix: function(config) { return 're' + config.file; },
         lbmConfigs: [
           { label: '100', file: '100' },
           { label: '200', file: '200' },

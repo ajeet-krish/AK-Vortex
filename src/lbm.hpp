@@ -4,6 +4,7 @@
 #include "thermal.hpp"
 #include "ibm.hpp"
 #include "wall_functions.hpp"
+#include "scalar_transport.hpp"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -529,12 +530,54 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
         sys.g_thermal.swap(sys.g_thermal_next);
     }
 
+    // --- Passive scalar transport (ONE-WAY coupling: flow carries scalar) ---
+    if (g_scalar.enabled) {
+        // Compute macroscopic velocity for scalar transport
+        std::vector<double> u_scalar(NX * NY, 0.0);
+        std::vector<double> v_scalar(NX * NY, 0.0);
+        std::vector<double> rho_scalar(NX * NY, 1.0);
+
+        #pragma omp parallel for collapse(2)
+        for (int y = 0; y < NY; ++y) {
+            for (int x = 0; x < NX; ++x) {
+                int idx = node_index(x, y);
+                if (sys.obstacle[idx]) continue;
+                double rho, u, v;
+                compute_macros(&sys.f[idx * 9], rho, u, v);
+                u_scalar[idx] = u;
+                v_scalar[idx] = v;
+                rho_scalar[idx] = rho;
+            }
+        }
+
+        // Collide scalar
+        g_scalar.collide(NX, NY, rho_scalar.data(), u_scalar.data(), v_scalar.data());
+
+        // Stream scalar
+        g_scalar.stream(NX, NY);
+
+        // Compute new scalar concentration
+        g_scalar.compute_phi(NX, NY);
+
+        // Apply scalar BCs (inlet fixed concentration)
+        g_scalar.apply_bc(NX, NY, sys.obstacle.data(), 1.0, 0);
+    }
+
     // --- Boundary conditions ---
     if (g_case == CaseType::CAVITY) {
         enforce_lid(sys, u_inflow);
     } else if (g_case == CaseType::STEP) {
-        enforce_step_inflow(sys, NY / 3, NY - 1 - NY / 3, u_inflow);
+        int sh = (g_step_h_step > 0) ? g_step_h_step : NY / 2;
+        int si = (g_step_h_inlet > 0) ? g_step_h_inlet : (NY - 1 - NY / 2);
+        enforce_step_inflow(sys, sh, si, u_inflow);
         enforce_outflow(sys);
+    } else if (g_case == CaseType::URBAN_CITYGRID) {
+        // East inlet only (south/west deferred). Default BCs work: inflow at x=0,
+        // outflow at x=NX-1, no-slip walls at y=0 and y=NY-1.
+        if (g_inlet_dir == 0) {
+            enforce_inflow(sys, u_inflow);
+            enforce_outflow(sys);
+        }
     } else if (g_case != CaseType::RIBS && g_case != CaseType::PERIODIC_HILLS) {
         enforce_inflow(sys, u_inflow);
         enforce_outflow(sys);
@@ -698,7 +741,100 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
         out << obst_arr[i];
     }
 
-    out << "]}";
+    // Write obstacle geometry metadata for vector-geometry overlay
+    out << "],\"obstacle_meta\":{";
+    out << "\"type\":\"" << ([](CaseType c) -> std::string {
+        switch (c) {
+            case CaseType::CYLINDER: return "circle";
+            case CaseType::CAVITY: return "none";
+            case CaseType::STEP: return "rectangle";
+            case CaseType::RIBS: return "ribbed";
+            case CaseType::URBAN_CANYON: return "buildings";
+            case CaseType::DOWNWASH: return "buildings";
+            case CaseType::ORIFICE_PLATE: return "orifice";
+            case CaseType::FLAT_PLATE: return "none";
+            case CaseType::SQUARE_CYLINDER: return "square";
+            case CaseType::PERIODIC_HILLS: return "hill";
+            case CaseType::CYLINDER_NEAR_WALL: return "cylinder_wall";
+            case CaseType::SIDE_BY_SIDE: return "two_circles";
+            case CaseType::ROTATING_CYLINDER: return "circle";
+            case CaseType::URBAN_CITYGRID: return "citygrid";
+            default: return "unknown";
+        }
+    })(g_case) << "\"";
+
+    // Add geometry details based on case type
+    switch (g_case) {
+        case CaseType::CYLINDER:
+        case CaseType::ROTATING_CYLINDER: {
+            // Single cylinder at center-left
+            double cx = NX / 4.0;
+            double cy = NY / 2.0;
+            double r = std::min(NX, NY) * 0.0375;
+            out << ",\"circles\":[{\"cx\":" << cx << ",\"cy\":" << cy << ",\"r\":" << r << "}]";
+            break;
+        }
+        case CaseType::STEP: {
+            // Backward-facing step: rectangle at bottom-left
+            double h_step = NY / 3.0;
+            double w_step = NX / 4.0;
+            out << ",\"rectangles\":[{\"x0\":0,\"y0\":0,\"w\":" << w_step << ",\"h\":" << h_step << "}]";
+            break;
+        }
+        case CaseType::CYLINDER_NEAR_WALL: {
+            // Cylinder above wall
+            double cx = NX / 4.0;
+            double r = std::min(NX, NY) * 0.0375;
+            out << ",\"circles\":[{\"cx\":" << cx << ",\"cy\":" << r << ",\"r\":" << r << "}]";
+            break;
+        }
+        case CaseType::SIDE_BY_SIDE: {
+            out << ",\"circles\":[";
+            for (size_t ci = 0; ci < sys.bb_geom.cylinders.size(); ++ci) {
+                if (ci > 0) out << ",";
+                out << "{\"cx\":" << sys.bb_geom.cylinders[ci].cx
+                    << ",\"cy\":" << sys.bb_geom.cylinders[ci].cy
+                    << ",\"r\":" << sys.bb_geom.cylinders[ci].radius << "}";
+            }
+            out << "]";
+            break;
+        }
+        case CaseType::URBAN_CITYGRID: {
+            // 7 buildings: 4 horizontal + 3 vertical (matching compute_citygrid_params)
+            int bldg_w = 120;
+            int bldg_h = 240;
+            int street_w = 2 * bldg_w;
+            out << ",\"rectangles\":[";
+            bool first = true;
+            // 4 horizontal buildings (long in x)
+            int y_start = NY / 6;
+            int y_spacing = NY / 5;
+            for (int i = 0; i < 4; ++i) {
+                int x0 = NX / 6 + i * (bldg_h + street_w / 2);
+                int y0 = y_start + i * y_spacing;
+                if (!first) out << ",";
+                out << "{\"x0\":" << x0 << ",\"y0\":" << y0
+                    << ",\"w\":" << bldg_h << ",\"h\":" << bldg_w << "}";
+                first = false;
+            }
+            // 3 vertical buildings (long in y)
+            int x_start = NX / 3;
+            int x_spacing = NX / 4;
+            for (int i = 0; i < 3; ++i) {
+                int x0 = x_start + i * x_spacing;
+                int y0 = NY / 4 + i * (bldg_w + street_w / 3);
+                out << ",{\"x0\":" << x0 << ",\"y0\":" << y0
+                    << ",\"w\":" << bldg_w << ",\"h\":" << bldg_h << "}";
+            }
+            out << "]";
+            break;
+        }
+        default:
+            break;
+    }
+
+    out << "}";
+    out << "}";
     out.close();
 }
 

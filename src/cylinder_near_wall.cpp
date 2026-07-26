@@ -26,7 +26,7 @@
 //   - Heat exchanger tube clearance
 //
 // Parameters:
-//   Re = u_inflow * D / nu,  D = 2 * NY/10 = 60
+//   Re = u_inflow * D / nu,  D = 2 * radius = 60 (fixed)
 //   gap = cells between cylinder bottom and wall (default 20)
 //   wall at y=0
 // ==========================================================================
@@ -43,7 +43,7 @@ struct GapParams {
 
 GapParams compute_params(double Re, int gap, int steps = -1) {
     double u_inflow = 0.1;
-    int radius = NY / 10;
+    int radius = 30;
     int D = 2 * radius;
     double length_scale = static_cast<double>(D);
     double nu = u_inflow * length_scale / Re;

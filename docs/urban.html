@@ -28,15 +28,10 @@
         <a href="step.html" class="nav-item">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
         <a href="urban.html" class="nav-item active">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -61,8 +56,6 @@
     skimming flow (&gt; 0.65). Two top-down orientations now cover wind
     travelling in <strong>both</strong> directions through a street network.
   </p>
-
-  <hr class="divider">
 
   <!-- ================================================================ -->
   <h2>1. Side-View Canyon (Cross-Section)</h2>
@@ -90,14 +83,48 @@
     </tbody>
   </table>
 
-  <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="sideTabs"></div>
+  <div id="reTabs_side" style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;"></div>
 
-  <div class="comparison-slider" id="sideSlider">
-    <img id="sideImgBefore" src="" alt="Contour">
-    <img id="sideImgAfter" class="img-after" src="" alt="Streamlines">
-    <div class="slider-handle"><div class="slider-btn"></div></div>
-    <div class="slider-label left">Contour</div>
-    <div class="slider-label right">Streamlines</div>
+  <div class="vf-grid">
+    <div class="vf-cell">
+      <h4>Steady-State Comparison</h4>
+      <div class="comparison-slider" id="fieldSlider_side">
+        <img id="sliderImgBefore_side" src="" alt="Contour">
+        <img id="sliderImgAfter_side" class="img-after" src="" alt="Streamlines">
+        <div class="slider-handle"><div class="slider-btn"></div></div>
+        <div class="slider-label left">Contour</div>
+        <div class="slider-label right">Streamlines</div>
+      </div>
+      <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Flow Evolution</h4>
+      <div class="fv-stage"><canvas id="lbmCanvas_side"></canvas></div>
+      <div class="fv-controls">
+        <button id="lbmPlay_side">&#9654; Play</button>
+        <input id="lbmScrubber_side" type="range" min="0" max="50" value="0" class="fv-slider">
+        <span id="lbmFrameLabel_side">Frame 0 / 50</span>
+      </div>
+    </div>
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <img id="cpImg_side" class="static-field-img" src="" alt="Cp">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <div class="fv-stage"><canvas id="cpCanvas_side"></canvas></div>
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <img id="vortImg_side" class="static-field-img" src="" alt="Vorticity">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <div class="fv-stage"><canvas id="vorticityCanvas_side"></canvas></div>
+    </div>
   </div>
 
   <hr class="divider">
@@ -113,14 +140,48 @@
     high-speed flow in the gaps and low-speed recirculation in the wakes.
   </p>
 
-  <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="topdownTabs"></div>
+  <div id="reTabs_topdown" style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;"></div>
 
-  <div class="comparison-slider" id="topdownSlider">
-    <img id="topdownImgBefore" src="" alt="Contour">
-    <img id="topdownImgAfter" class="img-after" src="" alt="Streamlines">
-    <div class="slider-handle"><div class="slider-btn"></div></div>
-    <div class="slider-label left">Contour</div>
-    <div class="slider-label right">Streamlines</div>
+  <div class="vf-grid">
+    <div class="vf-cell">
+      <h4>Steady-State Comparison</h4>
+      <div class="comparison-slider" id="fieldSlider_topdown">
+        <img id="sliderImgBefore_topdown" src="" alt="Contour">
+        <img id="sliderImgAfter_topdown" class="img-after" src="" alt="Streamlines">
+        <div class="slider-handle"><div class="slider-btn"></div></div>
+        <div class="slider-label left">Contour</div>
+        <div class="slider-label right">Streamlines</div>
+      </div>
+      <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Flow Evolution</h4>
+      <div class="fv-stage"><canvas id="lbmCanvas_topdown"></canvas></div>
+      <div class="fv-controls">
+        <button id="lbmPlay_topdown">&#9654; Play</button>
+        <input id="lbmScrubber_topdown" type="range" min="0" max="50" value="0" class="fv-slider">
+        <span id="lbmFrameLabel_topdown">Frame 0 / 50</span>
+      </div>
+    </div>
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <img id="cpImg_topdown" class="static-field-img" src="" alt="Cp">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <div class="fv-stage"><canvas id="cpCanvas_topdown"></canvas></div>
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <img id="vortImg_topdown" class="static-field-img" src="" alt="Vorticity">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <div class="fv-stage"><canvas id="vorticityCanvas_topdown"></canvas></div>
+    </div>
   </div>
 
   <hr class="divider">
@@ -138,14 +199,48 @@
     a city network are now covered.
   </p>
 
-  <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="topdownHTabs"></div>
+  <div id="reTabs_topdownH" style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;"></div>
 
-  <div class="comparison-slider" id="topdownHSlider">
-    <img id="topdownHImgBefore" src="" alt="Contour">
-    <img id="topdownHImgAfter" class="img-after" src="" alt="Streamlines">
-    <div class="slider-handle"><div class="slider-btn"></div></div>
-    <div class="slider-label left">Contour</div>
-    <div class="slider-label right">Streamlines</div>
+  <div class="vf-grid">
+    <div class="vf-cell">
+      <h4>Steady-State Comparison</h4>
+      <div class="comparison-slider" id="fieldSlider_topdownH">
+        <img id="sliderImgBefore_topdownH" src="" alt="Contour">
+        <img id="sliderImgAfter_topdownH" class="img-after" src="" alt="Streamlines">
+        <div class="slider-handle"><div class="slider-btn"></div></div>
+        <div class="slider-label left">Contour</div>
+        <div class="slider-label right">Streamlines</div>
+      </div>
+      <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Flow Evolution</h4>
+      <div class="fv-stage"><canvas id="lbmCanvas_topdownH"></canvas></div>
+      <div class="fv-controls">
+        <button id="lbmPlay_topdownH">&#9654; Play</button>
+        <input id="lbmScrubber_topdownH" type="range" min="0" max="50" value="0" class="fv-slider">
+        <span id="lbmFrameLabel_topdownH">Frame 0 / 50</span>
+      </div>
+    </div>
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <img id="cpImg_topdownH" class="static-field-img" src="" alt="Cp">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <div class="fv-stage"><canvas id="cpCanvas_topdownH"></canvas></div>
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <img id="vortImg_topdownH" class="static-field-img" src="" alt="Vorticity">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <div class="fv-stage"><canvas id="vorticityCanvas_topdownH"></canvas></div>
+    </div>
   </div>
 
   <hr class="divider">
@@ -161,20 +256,81 @@
     developments.
   </p>
 
-  <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="downwashTabs"></div>
+  <div id="reTabs_downwash" style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;"></div>
 
-  <div class="comparison-slider" id="downwashSlider">
-    <img id="downwashImgBefore" src="" alt="Contour">
-    <img id="downwashImgAfter" class="img-after" src="" alt="Streamlines">
-    <div class="slider-handle"><div class="slider-btn"></div></div>
-    <div class="slider-label left">Contour</div>
-    <div class="slider-label right">Streamlines</div>
+  <div class="vf-grid">
+    <div class="vf-cell">
+      <h4>Steady-State Comparison</h4>
+      <div class="comparison-slider" id="fieldSlider_downwash">
+        <img id="sliderImgBefore_downwash" src="" alt="Contour">
+        <img id="sliderImgAfter_downwash" class="img-after" src="" alt="Streamlines">
+        <div class="slider-handle"><div class="slider-btn"></div></div>
+        <div class="slider-label left">Contour</div>
+        <div class="slider-label right">Streamlines</div>
+      </div>
+      <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Flow Evolution</h4>
+      <div class="fv-stage"><canvas id="lbmCanvas_downwash"></canvas></div>
+      <div class="fv-controls">
+        <button id="lbmPlay_downwash">&#9654; Play</button>
+        <input id="lbmScrubber_downwash" type="range" min="0" max="50" value="0" class="fv-slider">
+        <span id="lbmFrameLabel_downwash">Frame 0 / 50</span>
+      </div>
+    </div>
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <img id="cpImg_downwash" class="static-field-img" src="" alt="Cp">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Pressure Coefficient C<sub>p</sub></h4>
+      <div class="fv-stage"><canvas id="cpCanvas_downwash"></canvas></div>
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <img id="vortImg_downwash" class="static-field-img" src="" alt="Vorticity">
+    </div>
+
+    <div class="vf-cell">
+      <h4>Vorticity</h4>
+      <div class="fv-stage"><canvas id="vorticityCanvas_downwash"></canvas></div>
+    </div>
   </div>
 
   <hr class="divider">
 
-  <h2>Discussion</h2>
+  <h2>Key Findings</h2>
+  <ul class="key-findings">
+    <li><strong>Regime transitions match Oke 1988:</strong> H/W = 0.3 shows isolated roughness (wakes don't interact), H/W = 0.5 shows wake interference (elongated recirculation), H/W = 0.8 shows skimming flow (stable vortex fills the canyon).</li>
+    <li><strong>Dense downtown (H/W = 0.6, 3 bldgs):</strong> Three-building configuration produces stronger canyon recirculation than the 2-building case at the same H/W, demonstrating that building density amplifies the wake interference effect.</li>
+    <li><strong>Top-down orientation matters:</strong> Vertical buildings (long across flow) create strong lateral deflection with high-speed gaps, while horizontal buildings (long along flow) funnel wind through orifice-like passages -- both are realistic street-network scenarios.</li>
+    <li><strong>Downwash amplification:</strong> The tall-to-low building height ratio produces a measurable downwash effect that would increase pedestrian-level wind speeds in real urban developments.</li>
+  </ul>
 
+  <h2>LBM Analysis</h2>
+  <p class="section-intro">
+    All urban simulations run at Re = 100 on 900x400 grids with the D2Q9 MRT
+    lattice. At this laminar Re, the flow captures the correct qualitative
+    regime transitions predicted by Oke 1988, which are Reynolds-number
+    independent in the mean. The rectangular building geometries are encoded
+    directly in the obstacle mask, and the Bouzidi interpolated bounce-back
+    provides second-order accurate boundary conditions on the building surfaces.
+  </p>
+  <p class="section-intro">
+    The side-view canyon series systematically varies H/W from 0.3 to 0.8,
+    reproducing the full range of Oke regimes. The H/W = 0.6 case uses three
+    buildings (NY * 2/5 = 160 cells tall, 40% of domain height) to model a
+    denser urban fabric. The two top-down configurations complement each other:
+    vertical buildings (long in the cross-flow direction) produce lateral
+    deflection and gap acceleration, while horizontal buildings (long in the
+    flow direction) create orifice-like funnel flow through street passages.
+    Together they cover both principal wind directions through a city network.
+  </p>
+
+  <h2>Discussion</h2>
   <p class="section-intro">
     Urban microclimate CFD at LBM-relevant Re values (100-200) is laminar,
     while real urban flows are turbulent (Re &gt; 10<sup>6</sup>). However, the
@@ -183,7 +339,6 @@
     pattern regardless of Re magnitude. These laminar simulations capture the
     correct regime transitions.
   </p>
-
   <p class="section-intro">
     Real-world applications: pedestrian wind comfort assessment, pollutant
     dispersion in street canyons, natural ventilation potential for buildings,
@@ -195,61 +350,80 @@
 
 </div>
 
-    <footer class="site-footer">
+<footer class="site-footer">
   <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d" target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/" target="_blank">LinkedIn</a></p>
 </footer>
 
 <script src="assets/js/slider.js"></script>
+<script src="assets/js/colormaps.js"></script>
+<script src="assets/js/flow-viewer.js"></script>
 <script>
 // ====================================================================
-// Helper for slider groups
+// Reusable 3x2 section initializer for each urban sub-section
 // ====================================================================
-function makeSliderGroup(opts) {
-  var tabId = opts.tabId, containerId = opts.containerId;
-  var beforeId = opts.beforeId, afterId = opts.afterId;
-  var sliderId = opts.sliderId;
-  var label = opts.label, values = opts.values, prefix = opts.prefix;
-  var buttonLabels = opts.buttonLabels || null;
-  var currentVal = values[0];
+function initUrbanSection(prefix, dataDir, imageCase, imageSuffixFn, lbmConfigs, imageBasePathFn) {
+  var reTabs = document.getElementById('reTabs_' + prefix);
+  var lbmCanvas = document.getElementById('lbmCanvas_' + prefix);
+  if (!lbmCanvas || !reTabs) return;
 
-  function buttonText(v) {
-    if (buttonLabels && buttonLabels[v] !== undefined) return buttonLabels[v];
-    return label + ' = ' + v;
+  var viewer = new FlowViewer(lbmCanvas, dataDir, { cmap: 'jet' });
+  var currentConfig = lbmConfigs[0];
+
+  viewer.onFrameChange = function (f) {
+    var lbl = document.getElementById('lbmFrameLabel_' + prefix);
+    if (lbl && viewer.cache[viewer.re]) {
+      lbl.textContent = 'Frame ' + f + ' / ' + (viewer.cache[viewer.re].lbm.n_frames - 1);
+      var scr = document.getElementById('lbmScrubber_' + prefix);
+      if (scr) { scr.max = viewer.cache[viewer.re].lbm.n_frames - 1; scr.value = f; }
+    }
+  };
+
+  function imageUrl(config, type) {
+    if (imageBasePathFn) {
+      var basePath = imageBasePathFn(config);
+      var suffix = imageSuffixFn ? imageSuffixFn(config) : config.file;
+      return 'assets/images/' + basePath + '/' + suffix + '_' + type + '.png';
+    }
+    var suffix = imageSuffixFn ? imageSuffixFn(config) : config.file;
+    return 'assets/images/' + imageCase + '/' + suffix + '_' + type + '.png';
   }
 
-  function imageUrl(v, type) {
-    var key = (opts.imageMap && opts.imageMap[v] !== undefined) ? opts.imageMap[v] : v;
-    return 'assets/images/' + prefix + '/re' + key + '_' + type + '.png';
-  }
-
-  function makePlaceholder(v, type) {
+  function makePlaceholder(config, type) {
     return 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">' +
-      '<rect width="600" height="300" fill="#0d1117"/>' +
-      '<text x="300" y="140" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
-      buttonText(v) + ' ' + type + '</text>' +
-      '<text x="300" y="160" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
-      '(simulation running, placeholder)</text></svg>'
+      '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300">' +
+      '<rect width="800" height="300" fill="#0d1117"/>' +
+      '<text x="400" y="140" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
+      config.label + ' ' + type + '</text></svg>'
     );
   }
 
-  function updateImages(v) {
-    var before = document.getElementById(beforeId);
-    var after = document.getElementById(afterId);
-    before.onerror = function() { this.src = makePlaceholder(v, 'contour'); };
-    after.onerror = function() { this.src = makePlaceholder(v, 'streamlines'); };
-    before.src = imageUrl(v, 'contour');
-    after.src = imageUrl(v, 'streamlines');
+  function updateImages(config) {
+    var before = document.getElementById('sliderImgBefore_' + prefix);
+    var after = document.getElementById('sliderImgAfter_' + prefix);
+    if (before) {
+      before.onerror = function () { this.src = makePlaceholder(config, 'contour'); };
+      before.src = imageUrl(config, 'contour');
+    }
+    if (after) {
+      after.onerror = function () { this.src = makePlaceholder(config, 'streamlines'); };
+      after.src = imageUrl(config, 'streamlines');
+    }
+    var cpImg = document.getElementById('cpImg_' + prefix);
+    if (cpImg) {
+      cpImg.onerror = function () { this.src = makePlaceholder(config, 'cp'); };
+      cpImg.src = imageUrl(config, 'cp');
+    }
+    var vortImg = document.getElementById('vortImg_' + prefix);
+    if (vortImg) {
+      vortImg.onerror = function () { this.src = makePlaceholder(config, 'vorticity'); };
+      vortImg.src = imageUrl(config, 'vorticity');
+    }
   }
 
-  function switchVal(v) {
-    currentVal = v;
-    document.querySelectorAll('#' + tabId + ' .teaser-link').forEach(function(btn) {
-      btn.classList.toggle('active', btn.dataset.val === v);
-    });
-    updateImages(v);
-    setTimeout(function() {
-      var c = document.getElementById(sliderId);
+  function resetSlider() {
+    setTimeout(function () {
+      var c = document.getElementById('fieldSlider_' + prefix);
+      if (!c) return;
       var h = c.querySelector('.slider-handle');
       var a = c.querySelector('.img-after');
       if (h) h.style.left = '50%';
@@ -257,58 +431,113 @@ function makeSliderGroup(opts) {
     }, 200);
   }
 
-  var rc = document.getElementById(tabId);
-  values.forEach(function(v) {
+  function switchConfig(config) {
+    currentConfig = config;
+    reTabs.querySelectorAll('.teaser-link').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-file') === config.file);
+    });
+    updateImages(config);
+    resetSlider();
+    viewer.setRe(config.file).then(function () {
+      if (!viewer.playing) viewer.play();
+      var pb = document.getElementById('lbmPlay_' + prefix);
+      if (pb) pb.innerHTML = '&#10074;&#10074; Pause';
+      renderStaticFields();
+    });
+  }
+
+  lbmConfigs.forEach(function (config) {
     var btn = document.createElement('button');
-    btn.className = 'teaser-link' + (v === currentVal ? ' active' : '');
-    btn.textContent = buttonText(v);
-    btn.dataset.val = v;
+    btn.className = 'teaser-link' + (config === currentConfig ? ' active' : '');
+    btn.setAttribute('data-file', config.file);
+    btn.textContent = config.label;
     btn.style.fontSize = '0.7em';
-    btn.onclick = function() { switchVal(v); };
-    rc.appendChild(btn);
+    btn.onclick = function () { switchConfig(config); };
+    reTabs.appendChild(btn);
   });
 
-  updateImages(currentVal);
+  var playBtn = document.getElementById('lbmPlay_' + prefix);
+  if (playBtn) {
+    playBtn.addEventListener('click', function () {
+      var playing = viewer.togglePlay();
+      this.innerHTML = playing ? '&#10074;&#10074; Pause' : '&#9654; Play';
+    });
+  }
+
+  var scrubber = document.getElementById('lbmScrubber_' + prefix);
+  if (scrubber) {
+    scrubber.addEventListener('input', function () {
+      viewer.pause();
+      if (playBtn) playBtn.innerHTML = '&#9654; Play';
+      viewer.setFrame(parseInt(this.value, 10));
+    });
+  }
+
+  function renderStaticFields() {
+    var entry = viewer.cache[viewer.re];
+    if (!entry) return;
+    var pCanvas = document.getElementById('cpCanvas_' + prefix);
+    var oCanvas = document.getElementById('vorticityCanvas_' + prefix);
+    if (pCanvas && entry.pmin !== undefined) {
+      viewer.renderStatic(pCanvas, 2, 'jet', entry.pmin, entry.pmax);
+    }
+    if (oCanvas && entry.omegaMax !== undefined) {
+      viewer.renderStatic(oCanvas, 3, 'rdbu', -entry.omegaMax, entry.omegaMax);
+    }
+  }
+
+  updateImages(currentConfig);
+  viewer.init(currentConfig.file).then(function () {
+    viewer.play();
+    if (playBtn) playBtn.innerHTML = '&#10074;&#10074; Pause';
+    renderStaticFields();
+    lbmConfigs.slice(1).forEach(function (c) { viewer.load(c.file); });
+  });
 }
 
-// Section 1: Side-View Canyon (2 buildings for 0.3/0.5/0.8, 3 buildings for 0.6)
-makeSliderGroup({
-  tabId: 'sideTabs', containerId: 'sideSlider',
-  beforeId: 'sideImgBefore', afterId: 'sideImgAfter',
-  sliderId: 'sideSlider',
-  label: 'H/W', values: ['0.3', '0.5', '0.6', '0.8'],
-  prefix: 'urban/side',
-  imageMap: { '0.3': '0.3', '0.5': '0.5', '0.6': '0.6_3b', '0.8': '0.8' },
-  buttonLabels: {
-    '0.3': '2 Bldgs / H/W = 0.3',
-    '0.5': '2 Bldgs / H/W = 0.5',
-    '0.6': '3 Bldgs / H/W = 0.6',
-    '0.8': '2 Bldgs / H/W = 0.8'
-  }
+// Section 1: Side-View Canyon (H/W sweep)
+initUrbanSection('side', 'assets/data/urban', 'urban', function (config) {
+  return config.file;
+}, [
+  { label: 'H/W = 0.3 (2 bldgs)', file: 'side_a03' },
+  { label: 'H/W = 0.5 (2 bldgs)', file: 'side_a05' },
+  { label: 'H/W = 0.6 (3 bldgs)', file: 'side_a06' },
+  { label: 'H/W = 0.8 (2 bldgs)', file: 'side_a08' }
+], function (config) {
+  // Map side_a03 -> simulations/side/2p_ar0.3, side_a05 -> simulations/side/2p_ar0.5, etc.
+  var f = config.file;
+  if (f === 'side_a03') return 'urban/simulations/side/2p_ar0.3';
+  if (f === 'side_a05') return 'urban/simulations/side/2p_ar0.5';
+  if (f === 'side_a06') return 'urban/simulations/side/3p_ar0.6';
+  if (f === 'side_a08') return 'urban/simulations/side/2p_ar0.8';
+  return 'urban/simulations/side/' + f;
 });
 
 // Section 2: Top-Down Vertical Buildings
-makeSliderGroup({
-  tabId: 'topdownTabs', containerId: 'topdownSlider',
-  beforeId: 'topdownImgBefore', afterId: 'topdownImgAfter',
-  sliderId: 'topdownSlider',
-  label: 'Re', values: [100], prefix: 'urban/topdown'
+initUrbanSection('topdown', 'assets/data/urban', 'urban', function (config) {
+  return config.file;
+}, [
+  { label: 'Re = 100', file: 'topdown' }
+], function (config) {
+  return 'urban/simulations/topdown_v';
 });
 
 // Section 3: Top-Down Horizontal Buildings (funnel flow)
-makeSliderGroup({
-  tabId: 'topdownHTabs', containerId: 'topdownHSlider',
-  beforeId: 'topdownHImgBefore', afterId: 'topdownHImgAfter',
-  sliderId: 'topdownHSlider',
-  label: 'Re', values: [100], prefix: 'urban/topdown_h'
+initUrbanSection('topdownH', 'assets/data/urban', 'urban', function (config) {
+  return config.file;
+}, [
+  { label: 'Re = 100', file: 'topdown_h' }
+], function (config) {
+  return 'urban/simulations/topdown_h';
 });
 
 // Section 4: Building Downwash
-makeSliderGroup({
-  tabId: 'downwashTabs', containerId: 'downwashSlider',
-  beforeId: 'downwashImgBefore', afterId: 'downwashImgAfter',
-  sliderId: 'downwashSlider',
-  label: 'Re', values: [100], prefix: 'urban/downwash'
+initUrbanSection('downwash', 'assets/data/urban', 'urban', function (config) {
+  return config.file;
+}, [
+  { label: 'Re = 100', file: 'downwash' }
+], function (config) {
+  return 'urban/simulations/downwash';
 });
 
 document.getElementById('sidebarToggle')?.addEventListener('click', function() {
@@ -316,8 +545,6 @@ document.getElementById('sidebarToggle')?.addEventListener('click', function() {
   document.body.classList.toggle('sidebar-open');
 });
 </script>
-    <script src="assets/js/colormaps.js"></script>
-    <script src="assets/js/flow-viewer.js"></script>
 
 </body>
 </html>

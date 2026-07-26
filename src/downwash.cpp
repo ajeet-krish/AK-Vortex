@@ -33,9 +33,9 @@ struct DownwashParams {
 };
 
 DownwashParams compute_params(double Re_H, int steps = -1) {
-    int h_tall = 120;
-    int h_low  = 45;
-    int w_bldg = 45;
+    int h_tall = 80;
+    int h_low  = 30;
+    int w_bldg = 30;
     int gap = h_low;  // gap = low-rise height
     double u_ref = 0.1;
     double length_scale = static_cast<double>(h_tall);
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::string subdir = "output/urban/downwash_re" + std::to_string(static_cast<int>(Re));
+    std::string subdir = "output/urban/downwash/re" + std::to_string(static_cast<int>(Re));
     std::filesystem::create_directories(subdir + "/frames");
 
     save_meta_json(subdir, Re, params.tau, params.u_ref,

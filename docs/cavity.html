@@ -30,15 +30,11 @@
         <a href="step.html" class="nav-item">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
         <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -71,7 +67,7 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>256 &times; 256</td>
+        <td>512 &times; 512</td>
       </tr>
       <tr>
         <td>Reynolds number</td>
@@ -83,7 +79,7 @@
       </tr>
       <tr>
         <td>Tau (relaxation parameter)</td>
-        <td>Re=100: 1.27, Re=400: 0.69, Re=1000: 0.58</td>
+        <td>Re=100: 2.04, Re=400: 0.88, Re=1000: 0.65</td>
       </tr>
       <tr>
         <td>Number of steps</td>
@@ -91,7 +87,7 @@
       </tr>
       <tr>
         <td>Reference length</td>
-        <td>NX = 256 cells</td>
+        <td>NX = 512 cells</td>
       </tr>
       <tr>
         <td>Collision</td>
@@ -120,8 +116,8 @@
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="vf-split">
-      <div class="vf-col">
+    <div class="vf-grid">
+      <div class="vf-cell">
         <h4>Steady-State Comparison</h4>
         <div class="comparison-slider" id="fieldSlider">
           <img id="sliderImgBefore" src="" alt="Contour">
@@ -135,7 +131,7 @@
         <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
 
-      <div class="vf-col">
+      <div class="vf-cell">
         <h4>Flow Evolution</h4>
         <div class="fv-stage">
           <canvas id="lbmCanvas" class="fv-canvas" width="96" height="96"></canvas>
@@ -145,6 +141,26 @@
           <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
           <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
         </div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <img id="cpImg" class="static-field-img" src="" alt="Cp">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -159,7 +175,7 @@
 
     <div class="chart-container" style="height:420px;">
       <div class="chart-title">Centerline Velocity Profiles: Lid-Driven Cavity vs Ghia 1982</div>
-      <img src="assets/images/cavity/profiles.png" alt="Cavity centerline profiles"
+      <img src="assets/images/cavity/simulations/profiles.png" alt="Cavity centerline profiles"
         style="width:100%;height:90%;object-fit:contain;">
     </div>
 
@@ -190,8 +206,8 @@
       At <strong>Re=100</strong> a single primary vortex fills the cavity with a vortex
       center near y/H &asymp; 0.70. At <strong>Re=400</strong> the primary vortex strengthens
       and a small secondary eddy forms in the bottom-right corner; the vortex center
-      migrates to y/H &asymp; 0.58. The simulations run on a 256&times;256 grid with
-      &tau; = 1.27 (Re=100), 0.69 (Re=400), 0.58 (Re=1000), converging after 12,800 steps.
+      migrates to y/H &asymp; 0.58. The simulations run on a 512&times;512 grid with
+      &tau; = 2.04 (Re=100), 0.88 (Re=400), 0.65 (Re=1000), converging after 12,800 steps.
       The centerline u-velocity profiles below are the standard Ghia 1982 benchmark.
     </p>
 
@@ -289,7 +305,7 @@
     </p>
 
     <div class="chart-container" style="height:320px;">
-      <img src="assets/images/cavity/pinn_comparison_re100.png" alt="PINN vs LBM comparison at Re=100"
+      <img src="assets/images/cavity/pinn/pinn_comparison_re100.png" alt="PINN vs LBM comparison at Re=100"
         style="width:100%;height:100%;object-fit:contain;">
     </div>
 
@@ -306,7 +322,7 @@
     </p>
 
     <div class="chart-container" style="height:320px;">
-      <img src="assets/images/cavity/pinn_comparison_re300.png" alt="PINN vs LBM interpolation at Re=300"
+      <img src="assets/images/cavity/pinn/pinn_comparison_re300.png" alt="PINN vs LBM interpolation at Re=300"
         style="width:100%;height:100%;object-fit:contain;">
     </div>
 
@@ -319,7 +335,7 @@
     </p>
 
     <div class="chart-container" style="height:320px;">
-      <img src="assets/images/cavity/pinn_comparison_re400.png" alt="PINN vs LBM comparison at Re=400"
+      <img src="assets/images/cavity/pinn/pinn_comparison_re400.png" alt="PINN vs LBM comparison at Re=400"
         style="width:100%;height:100%;object-fit:contain;">
     </div>
 
@@ -335,7 +351,7 @@
     </p>
 
     <div class="chart-container" style="height:320px;">
-      <img src="assets/images/cavity/pinn_comparison_re1000.png" alt="PINN vs LBM comparison at Re=1000"
+      <img src="assets/images/cavity/pinn/pinn_comparison_re1000.png" alt="PINN vs LBM comparison at Re=1000"
         style="width:100%;height:100%;object-fit:contain;">
     </div>
 
@@ -465,7 +481,7 @@
     </p>
 
     <div class="chart-container" style="height:340px;">
-      <img src="assets/images/cavity/loss_convergence.png" alt="Training loss convergence"
+      <img src="assets/images/cavity/pinn/loss_convergence.png" alt="Training loss convergence"
         style="width:100%;height:100%;object-fit:contain;">
     </div>
 
@@ -538,7 +554,7 @@
     </p>
 
     <div class="chart-container" style="height:360px;">
-      <img src="assets/images/cavity/sensitivity_map_re300.png" alt="Sensitivity map ∂u/∂Re at Re=300"
+      <img src="assets/images/cavity/pinn/sensitivity_map_re300.png" alt="Sensitivity map ∂u/∂Re at Re=300"
         style="width:100%;height:100%;object-fit:contain;">
     </div>
 
@@ -621,7 +637,7 @@
     let vfOnReChange = null;
 
     function imageUrl(re, type) {
-      return 'assets/images/cavity/re' + re + '_' + type + '.png';
+      return 'assets/images/cavity/simulations/re' + re + '/re' + re + '_' + type + '.png';
     }
 
     function makePlaceholder(re, type) {
@@ -724,6 +740,21 @@
         if (scr) { scr.max = pinn.nFrames - 1; scr.value = f; }
       };
 
+      // Render static pressure + vorticity canvases
+      function renderStaticFields(frame) {
+        var entry = viewer.cache[viewer.re];
+        if (!entry) return;
+        var f = (frame !== undefined) ? frame : entry.lbm.n_frames - 1;
+        var cpCanvas = document.getElementById('cpCanvas');
+        var oCanvas = document.getElementById('vorticityCanvas');
+        if (cpCanvas && entry.pmin !== undefined) {
+          viewer.renderStatic(cpCanvas, 2, 'jet', entry.pmin, entry.pmax, f);
+        }
+        if (oCanvas && entry.omegaMax !== undefined) {
+          viewer.renderStatic(oCanvas, 3, 'rdbu', -entry.omegaMax, entry.omegaMax, f);
+        }
+      }
+
       // Unified Re selector (Velocity Field) drives the LBM evolution: load the
       // matching frame set and auto-play so the animation tracks the static plot.
       vfOnReChange = function (re) {
@@ -731,8 +762,16 @@
           if (!viewer.playing) viewer.play();
           var pb = document.getElementById('lbmPlay');
           if (pb) pb.innerHTML = '&#10074;&#10074; Pause';
+          renderStaticFields();
         });
       };
+
+      viewer.onFrameChange = (function(orig) {
+        return function(f) {
+          if (orig) orig(f);
+          renderStaticFields(f);
+        };
+      })(viewer.onFrameChange);
 
       // Re buttons (PINN section) -- discrete Re, matching the LBM section.
       document.querySelectorAll('#pinnReGroup .fv-re').forEach(function (btn) {

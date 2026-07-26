@@ -40,8 +40,8 @@ int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
 
     double Re = 100.0;
-    int nx = 256;
-    int ny = 256;
+    int nx = 512;
+    int ny = 512;
     int steps = -1;
 
     int positional_idx = 1;

@@ -6,6 +6,7 @@
 - **Variable naming**: snake_case for local variables, PascalCase for structs/classes, SCREAMING_SNAKE_CASE for constants.
 - **HTML/CSS**: Double quotes for attributes, 2-space indentation, semantic HTML5 elements.
 - **Colormap convention**: All velocity/flow field plots and animations use the `jet` (rainbow) colormap for visual consistency across the portfolio (decided over turbo on 2026-07-16). The 3-panel error-delta panel uses `Reds`. Vorticity uses `RdBu` (signed). `viridis`/`turbo` LUTs remain available in `colormaps.js` but are not the default.
+- **Pre-simulation parameter verification**: Before running any simulation, the agent MUST verify that all code parameters (grid sizes, tau values, velocities, geometry) match `simulation_parameters.md`. This includes cross-referencing the orchestrator (`run_all_sims.py` or equivalent) against the source of truth document. If the code and document disagree, explain why one value is preferable, get user approval, then update the document and code consistently. Never skip this step.
 
 ## Goal
 Build and deploy a cache-optimized D2Q9 Lattice Boltzmann Method CFD solver in C++20 as a portfolio centrepiece for aerospace/defense engineering roles. Deliver an 8+ page HTML portfolio with per-case dedicated pages (interactive comparison sliders, KaTeX theory, validation tables), and a production-grade GitHub repository with CI and unit tests.
@@ -13,7 +14,7 @@ Build and deploy a cache-optimized D2Q9 Lattice Boltzmann Method CFD solver in C
 ## Target Audience
 Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Origin, and similar. The site must communicate: HPC competency (C++, OpenMP, cache optimization), CFD fundamentals (MRT, Bouzidi, Smagorinsky LES, AMR), and engineering communication skills (interactive web presentation, per-case analysis narratives).
 
-## Current Status (2026-07-24)
+## Current Status (2026-07-26)
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -21,15 +22,72 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 | 1 | Smagorinsky LES turbulence model | Completed |
 | 2 | Block-structured AMR (adaptive mesh refinement) | In progress (restriction operator needs fix) |
 | 3 | Vorticity output + postprocessor | Completed |
-| 4 | Full simulation re-runs + new cases | **In progress** (15/35 sims complete; remaining 20 pending after fixes) |
-| 4.1 | Fix plot aspect ratios (postprocess.py) | **Pending** (all PNGs square due to set_box_aspect(1)) |
-| 4.2 | Fix OpenMP perf (cached wall distance) | **Pending** (compute_wall_distance serial BFS dominates LES timestep) |
-| 4.3 | Fix periodic hills geometry | **Pending** (H: NY*2/3->NY/3, NX: 1200->1600, wider valleys) |
-| 5 | Website updates for new features | In progress (vf-split layout on all case pages) |
+| 4 | Full simulation re-runs + new cases | **Completed** (23/23 sims passed all tiers) |
+| 4.1 | Fix plot aspect ratios (postprocess.py) | **Deferred** (set_box_aspect(1) still in place) |
+| 4.2 | Fix OpenMP perf (cached wall distance) | **Deferred** |
+| 4.3 | Fix periodic hills geometry | **Deferred** |
+| 5 | Website updates for new features | Completed (2x2 grid layout on all case pages) |
 | 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
-| 5.7 | Grid resolution upgrade + full re-run | In progress (tiered: 1600x600/1200x450/keep) |
+| 5.7 | Grid resolution upgrade + full re-run | Completed (tiered: 1600x600/1200x450/keep) |
 | 6 | PINN surrogate suite (cavity steady + temporal) | Completed |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
+| **7** | **Website reorganization + image paths + obstacle viz + city grid** | **Completed** (with caveats below) |
+
+### Phase 7: Website Reorganization + Obstacle Visualization + Urban City Grid
+
+**Goal:** Fix all broken image paths, add vector-geometry obstacle overlays, add Cp/vorticity/pressure panels, redesign urban canyon as realistic city grid, add passive scalar transport.
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 7.0 | Remove deprecated cases (square_cylinder, periodic_hills, airfoil_ibm, heated_cylinder, thermal_cavity) | **Completed** |
+| 7.1a | Fix viewer-common-v2.js (add imageBasePath support, remove hardcoded `re` prefix) | **Completed** |
+| 7.1b | Fix all HTML image paths (9 case pages + index.html thumbnails) | **Completed** |
+| 7.1c | Fix static img references (cavity.html PINN images, cylinder.html PINN images) | **Completed** |
+| 7.2a | Add obstacle overlay module to postprocess.py (Circle, Rectangle, Polygon patches) | **Completed** |
+| 7.2b | Add Cp contour rendering (--cp flag) | **Completed** |
+| 7.2c | Add obstacle metadata to frame JSON (lbm.hpp save_json_frame) | **Completed** |
+| 7.3a | Update step.cpp NX to 1600 (Armaly benchmark: L/H >= 8 for Re=400) | **Completed** |
+| 7.3b | Urban city grid entry point (7 buildings, mixed orientations, 1200x600) | **Completed** |
+| 7.3c | Passive scalar transport (scalar_transport.hpp, ~100 lines) | **Completed** |
+| 7.3d | Scalar postprocessing (--field scalar, hot colormap) | **Deferred** |
+| 7.4a | New urban_citygrid.html page (3 inlet configs) | **Completed** |
+| 7.4b | Update existing case pages (add pressure/vorticity/Cp panels) | **Completed** |
+| 7.4c | Update sidebar navigation (remove old, add city grid) | **Completed** |
+
+#### Image Path Fix Strategy
+
+All images organized in `simulations/` and `pinn/` subdirectories. HTML/JS must be updated to match:
+
+| Page | Broken path | Corrected path |
+|------|------------|----------------|
+| cylinder.html | `cylinder/re100_contour.png` | `cylinder/simulations/re100/re100_contour.png` |
+| cavity.html | `cavity/re100_contour.png` | `cavity/simulations/re100/re100_contour.png` |
+| step.html | `step/re100_contour.png` | `step/simulations/re100/re100_contour.png` |
+| orifice_plate.html | `orifice_plate/re100_1p1h_contour.png` | `orifice_plate/simulations/1p1h/re100_1p1h_contour.png` |
+| flat_plate.html | `flatplate/re1000_aoa0_contour.png` | `flatplate/simulations/re1000/aoa0/re1000_aoa0_contour.png` |
+| cylinder_near_wall.html | `cylinder_near_wall/re100_gap10_contour.png` | `cylinder_near_wall/simulation/gap10/re100_gap10_contour.png` |
+| side_by_side.html | `side_by_side/re100_sd20_contour.png` | `side_by_side/simulations/sd20/re100_sd20_contour.png` |
+| rotating_cylinder.html | `rotating_cylinder/re100_w5_contour.png` | `rotating_cylinder/simulations/w5/re100_w5_contour.png` |
+| urban.html | `urban/side_a03_contour.png` | `urban/simulations/side/2p_ar0.3/side_ar0.3_re100_contour.png` |
+
+#### Obstacle Visualization (Soccer CFD approach)
+
+Use `matplotlib.patches.Circle`, `Rectangle`, `Polygon` overlaid on contour plots for crisp, resolution-independent obstacle rendering. C++ solver adds obstacle geometry metadata to frame JSON.
+
+#### Urban City Grid Design
+
+Replace separate topdown_v/topdown_h with one realistic city grid:
+- 7 buildings: 4 horizontal + 3 vertical, mixed orientations
+- Domain: 1200x600, street width = 2x building width
+- 3 inlet configurations: East, South, West wind
+- Passive scalar source at intersection for pollutant dispersion
+
+#### Passive Scalar Transport (Smoke)
+
+NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
+- d(phi)/dt + u.grad(phi) = D*laplacian(phi)
+- ONE-WAY coupling: flow carries scalar, scalar does NOT affect momentum
+- ~100 lines new C++ code in `src/scalar_transport.hpp`
 
 ### Completed to date
 - MRT collision operator (default, BGK fallback) with tuned rates
@@ -52,9 +110,9 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 - Block-structured AMR: AMRBlock/AMRGrid structs, prolongation, restriction, refinement sensor, regridding
 - Vorticity output: omega field in frame JSON, --vorticity flag in postprocess.py with RdBu colormap
 - Square cylinder case (ERCOFTAC 043): sharp-edge separation, fixed separation points
-- Urban canyon enhanced: 3 buildings in row, wider domain (900x400), larger buildings (H=NY/4, W=1.5H)
+- Urban canyon enhanced: 3 buildings in row, wider domain (900x400), larger buildings (H=NY*2/5=160, 40% of domain, 1.2H width)
 - Urban topdown enhanced: 3 buildings, larger (w=60, l=NY/2), wider spacing (2*w) for realistic street network
-- Downwash enhanced: buildings scaled up (h_tall=120, h_low=45, w=45), maintaining 2.67 height ratio
+- Downwash enhanced: buildings scaled up (h_tall=80, h_low=30, w=30), maintaining 2.67 height ratio
 - Cavity: JSON frame output; website uses JSON slider (static PNG gallery removed), VTK still written for Paraview
 - Auto-LES: automatically enables Smagorinsky when tau < 0.55 (high Re stability)
 - Periodic hills: canonical LES benchmark (Moser/Kim/Moin 1993), sinusoidal hill profile
@@ -69,6 +127,7 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 - Removed ribs case (deprecated) from nav and results; ribs.html deleted if present
 - Removed: nozzle (replaced by orifice plate), ahmed body (2D limitation), airfoil (replaced by flat plate), tandem cylinders (redundant), sports-bell (removed from portfolio to focus on validated cases)
 - Website: removed stats-bar from all case pages (data moved to setup/validation tables), "Field Viewer" renamed "Velocity Field" with explanatory text, deleted orphaned results.html/simulation.html
+- Website 2x2 grid layout: all case pages now use vf-grid with 4 panels (velocity slider, flow evolution, pressure canvas, vorticity canvas) instead of vf-split 2-column layout
 - PINN surrogate suite (Phase 6.0-6.2): `pinn/` directory with torch-free config/loader, PINN MLP (64x8, tanh), hybrid loss (PDE residual + data + BC), MPS training on Apple Silicon, 3-panel comparison (LBM/PINN/Error), website integration on cylinder.html
 - PINN training: Cylinder Re=100 steady-state, 15k Adam epochs + cosine annealing, importance sampling near cylinder, L2 u=36.3% vs LBM baseline
 - PINN parametric cavity (Phase 6.3): `ParametricPINN` (spatial + Re_n input), multi-Re training (Re=100+400), importance-sampled sensors (3000), hybrid loss with pressure (data_loss_full), v2 trained (462K params, HIDDEN=256, N_LAYERS=8) -- u L2 56.1%/41.8%, v L2 34.7%/33.0%, p L2 12.6%/12.6% for Re=100/400
@@ -767,20 +826,24 @@ Three tiers, easiest first:
 8. **No near-wall treatment**: Pure no-slip bounce-back everywhere. No y+ computation, no wall function. See Upgrade 2.
 9. **Isothermal only**: No thermal modeling. See Upgrade 4.
 10. **Strictly 2D**: D2Q9 hardcoded. No 3D capability. See Upgrade 5.
+11. **save_json_frame closing brace**: Missing root JSON `}` caused all frame output to be truncated. Fixed (added second `}`, rebuilt solver, re-ran urban_citygrid sims).
+12. **Urban citygrid zero velocity**: All 3 inlet configs (east/south/west) produce zero velocity data in frame output. Solver runs 240k steps with correct progress output, but `compute_macros` returns u=v=0 for all non-obstacle cells. Forces file confirms zero drag/lift. Root cause unknown -- likely a `system.f` initialization or streaming bug specific to the URBAN_CITYGRID case type.
+13. **Step/cylinder partial frame corruption**: Old frames (before the JSON closing brace fix) have mixed validity -- some frames parse correctly, others are truncated mid-file. Postprocess uses `_load_frame_safe` to skip corrupt frames. Re-running affected cases with fixed solver would produce clean output.
 
 ## Implementation Sequence
 
 1. **Phase 1: Smagorinsky LES**, Completed
 2. **Phase 2: Block-Structured AMR**, In progress (restriction operator needs fix)
 3. **Phase 3: Vorticity + Postprocessor**, Completed
-4. **Phase 4: Full Re-Runs + New Cases**, In progress (15/35 sims complete; remaining 20 pending after fixes)
-5. **Phase 4.1: Fix plot aspect ratios**, Pending (all PNGs square due to set_box_aspect(1))
-6. **Phase 4.2: Fix OpenMP perf**, Pending (cached wall distance, parallelize f_next zeroing)
-7. **Phase 4.3: Fix periodic hills geometry**, Pending (H: NY*2/3->NY/3, NX: 1200->1600, wider valleys)
-8. **Phase 5: Website Updates**, In progress (vf-split layout on all case pages)
+4. **Phase 4: Full Re-Runs + New Cases**, Completed (23/23 sims passed)
+5. **Phase 4.1: Fix plot aspect ratios**, Deferred
+6. **Phase 4.2: Fix OpenMP perf**, Deferred
+7. **Phase 4.3: Fix periodic hills geometry**, Deferred
+8. **Phase 5: Website Updates**, Completed (2x2 grid, Cp/vorticity panels)
 9. **Phase 6.8: Time-Parametric PINN**, Completed (Re=100/400/1000 trained, ONNX + binary export done)
 10. **Phase 6.9: Model improvement roadmap**, Pending (pressure-Poisson, Re range, curriculum)
 11. **Phase 5.5: Cavity deep dive + PINN narrative**, Completed
+12. **Phase 7: Website reorg + image paths + city grid**, Completed (with caveats: urban_citygrid solver produces zero velocity output, scalar postprocessing deferred)
 
 #### Phase 5.5: Cavity Page Deep Dive + PINN Surrogate Narrative
 

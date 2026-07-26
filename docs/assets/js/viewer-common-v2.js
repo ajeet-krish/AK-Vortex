@@ -1,6 +1,6 @@
 // ==========================================================================
 // LBM-2D: Shared Flow Viewer Init v2
-// Wires the vf-split layout (side-by-side: static slider + FlowEvolution canvas)
+// Wires the vf-grid layout (1 column: static slider | animated canvas | CP static | CP canvas | vorticity static | vorticity canvas)
 // on each case page. Each page calls initVFSplitSections() with its own config.
 //
 // Layout expected (cavity format):
@@ -53,10 +53,22 @@ function initVFSplitSections(opts) {
             var scr = document.getElementById('lbmScrubber');
             if (scr) { scr.max = viewer.cache[viewer.re].lbm.n_frames - 1; scr.value = f; }
         }
+        // Animate pressure and vorticity canvases in sync with velocity
+        renderStaticFields(f);
     };
 
     // --- Static slider image helpers ---
+    // imageBasePath: full base path within assets/images/ (e.g. 'cylinder/simulations/re100')
+    // imageSuffix: function(config) returns filename prefix (e.g. 're100')
+    // If imageBasePath is set, it is used directly. Otherwise falls back to legacy pattern.
     function imageUrl(config, type) {
+        if (opts.imageBasePath) {
+            // New pattern: imageBasePath is a function(config) returning the full subpath
+            var basePath = typeof opts.imageBasePath === 'function' ? opts.imageBasePath(config) : opts.imageBasePath;
+            var suffix = opts.imageSuffix ? opts.imageSuffix(config) : config.file;
+            return 'assets/images/' + basePath + '/' + suffix + '_' + type + '.png';
+        }
+        // Legacy pattern: assets/images/{imageCase}/re{suffix}_{type}.png
         var suffix = opts.imageSuffix ? opts.imageSuffix(config) : config.file;
         return 'assets/images/' + (opts.imageCase || 'cylinder') + '/re' + suffix + '_' + type + '.png';
     }
@@ -76,11 +88,24 @@ function initVFSplitSections(opts) {
     function updateImages(config) {
         var before = document.getElementById('sliderImgBefore');
         var after = document.getElementById('sliderImgAfter');
-        if (!before || !after) return;
-        before.onerror = function () { this.src = makePlaceholder(config, 'contour'); };
-        after.onerror = function () { this.src = makePlaceholder(config, 'streamlines'); };
-        before.src = imageUrl(config, 'contour');
-        after.src = imageUrl(config, 'streamlines');
+        if (before) {
+            before.onerror = function () { this.src = makePlaceholder(config, 'contour'); };
+            before.src = imageUrl(config, 'contour');
+        }
+        if (after) {
+            after.onerror = function () { this.src = makePlaceholder(config, 'streamlines'); };
+            after.src = imageUrl(config, 'streamlines');
+        }
+        var cpImg = document.getElementById('cpImg');
+        if (cpImg) {
+            cpImg.onerror = function () { this.src = makePlaceholder(config, 'cp'); };
+            cpImg.src = imageUrl(config, 'cp');
+        }
+        var vortImg = document.getElementById('vortImg');
+        if (vortImg) {
+            vortImg.onerror = function () { this.src = makePlaceholder(config, 'vorticity'); };
+            vortImg.src = imageUrl(config, 'vorticity');
+        }
     }
 
     function resetSlider() {
@@ -108,6 +133,7 @@ function initVFSplitSections(opts) {
             if (!viewer.playing) viewer.play();
             var pb = document.getElementById('lbmPlay');
             if (pb) pb.innerHTML = '&#10074;&#10074; Pause';
+            renderStaticFields();
         });
     }
 
@@ -120,6 +146,30 @@ function initVFSplitSections(opts) {
         btn.onclick = function () { switchConfig(config); };
         reTabs.appendChild(btn);
     });
+
+    // --- Field selector tabs (Velocity | Pressure | Vorticity) ---
+    var fieldTabs = document.getElementById('fieldTabs');
+    if (fieldTabs) {
+        var fields = [
+            { id: 'velocity', label: 'Velocity' },
+            { id: 'pressure', label: 'Pressure' },
+            { id: 'vorticity', label: 'Vorticity' }
+        ];
+        fields.forEach(function (f, i) {
+            var btn = document.createElement('button');
+            btn.className = 'teaser-link' + (i === 0 ? ' active' : '');
+            btn.setAttribute('data-field', f.id);
+            btn.textContent = f.label;
+            btn.style.fontSize = '0.7em';
+            btn.onclick = function () {
+                fieldTabs.querySelectorAll('.teaser-link').forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-field') === f.id);
+                });
+                viewer.setField(f.id);
+            };
+            fieldTabs.appendChild(btn);
+        });
+    }
 
     // --- Play / Pause ---
     var playBtn = document.getElementById('lbmPlay');
@@ -145,9 +195,26 @@ function initVFSplitSections(opts) {
     viewer.init(currentConfig.file).then(function () {
         viewer.play();
         if (playBtn) playBtn.innerHTML = '&#10074;&#10074; Pause';
+        // Render static pressure + vorticity canvases (2x2 grid)
+        renderStaticFields();
         // Preload remaining configs in background
         lbmConfigs.slice(1).forEach(function (c) { viewer.load(c.file); });
     });
+
+    // --- Render animated pressure + vorticity fields ---
+    function renderStaticFields(frame) {
+        var entry = viewer.cache[viewer.re];
+        if (!entry) return;
+        var f = (frame !== undefined) ? frame : entry.lbm.n_frames - 1;
+        var cpCanvas = document.getElementById('cpCanvas');
+        var oCanvas = document.getElementById('vorticityCanvas');
+        if (cpCanvas && entry.pmin !== undefined) {
+            viewer.renderStatic(cpCanvas, 2, 'jet', entry.pmin, entry.pmax, f);
+        }
+        if (oCanvas && entry.omegaMax !== undefined) {
+            viewer.renderStatic(oCanvas, 3, 'rdbu', -entry.omegaMax, entry.omegaMax, f);
+        }
+    }
 }
 
 if (typeof window !== 'undefined') {

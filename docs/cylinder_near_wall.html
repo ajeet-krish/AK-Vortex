@@ -31,15 +31,11 @@
         <a href="step.html" class="nav-item">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
         <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item active">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -73,7 +69,7 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>800 &times; 300</td>
+        <td>1600 &times; 600</td>
       </tr>
       <tr>
         <td>Cylinder diameter D</td>
@@ -117,19 +113,20 @@
       </tr>
     </table>
 
-        <h2>Velocity Field</h2>
+        <h2>Flow Field</h2>
 
     <p class="section-intro">
       Use the tabs below to select a parameter variant.
-      The left side shows the steady-state velocity contour with streamlines;
-      the right side shows the flow evolution from rest to steady state.
+      Top left: steady-state velocity contour with streamlines.
+      Top right: flow evolution from rest to steady state.
+      Bottom: pressure and vorticity fields at steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="vf-split">
-      <div class="vf-col">
-        <h4>Steady-State Comparison</h4>
+    <div class="vf-grid">
+      <div class="vf-cell">
+        <h4>Velocity (Contour | Streamlines)</h4>
         <div class="comparison-slider" id="fieldSlider">
           <img id="sliderImgBefore" src="" alt="Contour">
           <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
@@ -142,7 +139,7 @@
         <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
 
-      <div class="vf-col">
+      <div class="vf-cell">
         <h4>Flow Evolution</h4>
         <div class="fv-stage">
           <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
@@ -152,6 +149,26 @@
           <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
           <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
         </div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <img id="cpImg" class="static-field-img" src="" alt="Cp">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -173,22 +190,22 @@
         <tr>
           <td>10</td>
           <td>0.167</td>
-          <td>2.61</td>
-          <td>+1.42</td>
+          <td>1.43</td>
+          <td>+0.82</td>
           <td>Strong ground effect, large wall-induced lift</td>
         </tr>
         <tr>
           <td>20</td>
           <td>0.333</td>
-          <td>2.75</td>
-          <td>+0.69</td>
+          <td>1.65</td>
+          <td>+0.37</td>
           <td>Moderate ground effect, clear under-flow</td>
         </tr>
         <tr>
           <td>40</td>
           <td>0.667</td>
-          <td>2.56</td>
-          <td>+0.40</td>
+          <td>1.71</td>
+          <td>+0.36</td>
           <td>Weak ground effect, reduced lift</td>
         </tr>
       </tbody>
@@ -199,7 +216,7 @@
       beneath the cylinder. The dominant ground-effect signature is the
       wall-induced lift: the mean Cl decreases monotonically from +1.42 at
       gap/D = 0.167 to +0.40 at gap/D = 0.667 as the wall influence weakens.
-      The drag stays elevated relative to the isolated cylinder (Cd ~ 1.77 at
+      The drag stays elevated relative to the isolated cylinder (Cd ~ 1.16 at
       Re=100) due to blockage and wall proximity. Reference: Mougin &amp;
       Magnaudet 2001, Taneda 1965.
     </div>
@@ -245,8 +262,9 @@
       initVFSplitSections({
         dataDir: 'assets/data/cylinder_near_wall',
         paramLabel: 'Gap',
-        imageCase: 'cylinder_near_wall',
         cmap: 'jet',
+        imageBasePath: function(config) { return 'cylinder_near_wall/simulation/' + config.file; },
+        imageSuffix: function(config) { return 're100_' + config.file; },
         lbmConfigs: [
           { label: 'Gap=10', file: 'gap10' },
           { label: 'Gap=20', file: 'gap20' },

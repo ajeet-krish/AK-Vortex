@@ -165,6 +165,13 @@ def _load_frame(path):
     return raw
 
 
+def _load_frame_safe(path):
+    try:
+        return _load_frame(path)
+    except (json.JSONDecodeError, KeyError, ValueError):
+        return None
+
+
 def _resolve_cmap(cmap_arg, meta, output_dir='', field='velocity'):
     if cmap_arg:
         return cmap_arg
@@ -186,31 +193,76 @@ def _resolve_stream_cmap(cmap_arg, meta, output_dir=''):
 # ---------------------------------------------------------------------------
 OBSTACLE_COLOR = '#000000'  # strict black
 
-def _overlay_obstacles(ax, obstacle_mask):
-    """Draw obstacle regions as strict black overlay."""
-    if obstacle_mask is None or obstacle_mask.size == 0:
-        return
-    # Create a masked array: show obstacles as black
-    obs = np.ma.masked_where(~obstacle_mask, np.ones_like(obstacle_mask, dtype=float))
-    ax.imshow(obs, origin='lower', cmap='gray_r', aspect='auto',
-              vmin=0, vmax=1, alpha=1.0,
-              interpolation='nearest')
+# Obstacle registry: maps case names to geometry definitions
+# Each entry: { 'type': 'circle'|'rectangle'|'polygon'|'buildings',
+#               'params': {...} } or a function returning the geometry
+OBSTACLE_REGISTRY = {
+    'cylinder': lambda nx, ny: [{'type': 'circle', 'cx': nx/4, 'cy': ny/2+1, 'r': min(nx,ny)*0.0375}],
+    'backward-facing-step': lambda nx, ny: [{'type': 'rectangle', 'x0': 0, 'y0': 0, 'w': nx/4, 'h': ny/3}],
+    'cavity': lambda nx, ny: [],  # walls only, no internal obstacle
+}
+
+def _draw_circle_patch(ax, cx, cy, r, nx, ny):
+    """Draw a crisp circle obstacle overlay."""
+    from matplotlib.patches import Circle
+    circle = Circle((cx, cy), r, facecolor=OBSTACLE_COLOR, edgecolor='white',
+                     linewidth=0.8, zorder=5)
+    ax.add_patch(circle)
+
+def _draw_rectangle_patch(ax, x0, y0, w, h, nx, ny):
+    """Draw a crisp rectangle obstacle overlay."""
+    from matplotlib.patches import Rectangle
+    rect = Rectangle((x0, y0), w, h, facecolor=OBSTACLE_COLOR, edgecolor='white',
+                      linewidth=0.8, zorder=5)
+    ax.add_patch(rect)
+
+def _draw_polygon_patch(ax, vertices, nx, ny):
+    """Draw a crisp polygon obstacle overlay."""
+    from matplotlib.patches import Polygon
+    poly = Polygon(vertices, closed=True, facecolor=OBSTACLE_COLOR, edgecolor='white',
+                   linewidth=0.8, zorder=5)
+    ax.add_patch(poly)
+
+def _overlay_obstacles(ax, obstacle_mask, nx=None, ny=None, geometry=None):
+    """Draw obstacle regions with vector-geometry patches for crisp rendering.
+    
+    If geometry is provided, uses vector patches (Circle, Rectangle, Polygon).
+    Otherwise falls back to pixel mask overlay.
+    """
+    if geometry:
+        # Use vector-geometry patches for crisp rendering
+        for geom in geometry:
+            gtype = geom.get('type', '')
+            if gtype == 'circle':
+                _draw_circle_patch(ax, geom['cx'], geom['cy'], geom['r'],
+                                   nx or 800, ny or 300)
+            elif gtype == 'rectangle':
+                _draw_rectangle_patch(ax, geom['x0'], geom['y0'], geom['w'], geom['h'],
+                                      nx or 800, ny or 300)
+            elif gtype == 'polygon':
+                _draw_polygon_patch(ax, geom['vertices'], nx or 800, ny or 300)
+    elif obstacle_mask is not None and obstacle_mask.size > 0:
+        # Fallback: pixel mask overlay
+        obs = np.ma.masked_where(~obstacle_mask, np.ones_like(obstacle_mask, dtype=float))
+        ax.imshow(obs, origin='lower', cmap='gray_r', aspect='auto',
+                  vmin=0, vmax=1, alpha=1.0,
+                  interpolation='nearest')
 
 
 # ---------------------------------------------------------------------------
 # PNG rendering
 # ---------------------------------------------------------------------------
-def render_contour(ax, vel, cmap, vmin, vmax, obstacle=None):
+def render_contour(ax, vel, cmap, vmin, vmax, obstacle=None, geometry=None):
     im = ax.imshow(vel, origin='lower', cmap=cmap, aspect='equal',
                    vmin=vmin, vmax=vmax, interpolation='bilinear')
     ax.set_box_aspect(vel.shape[0] / vel.shape[1])
-    _overlay_obstacles(ax, obstacle)
+    _overlay_obstacles(ax, obstacle, vel.shape[1], vel.shape[0], geometry)
     ax.axis('off')
     ax.set_facecolor('white')
     return im
 
 
-def render_streamlines(ax, u, v, cmap, obstacle=None, density=1.0):
+def render_streamlines(ax, u, v, cmap, obstacle=None, geometry=None, density=1.0):
     ny, nx_grid = u.shape
     yg, xg = np.mgrid[0:ny, 0:nx_grid]
     step = max(1, nx_grid // 50)
@@ -219,7 +271,7 @@ def render_streamlines(ax, u, v, cmap, obstacle=None, density=1.0):
                        u[::step, ::step], v[::step, ::step],
                        color=vel_mag,
                        cmap=cmap, density=density, linewidth=0.8, arrowsize=0.8)
-    _overlay_obstacles(ax, obstacle)
+    _overlay_obstacles(ax, obstacle, nx_grid, ny, geometry)
     ax.axis('off')
     ax.set_aspect('equal')
     ax.set_box_aspect(ny / nx_grid)
@@ -506,7 +558,10 @@ def save_vorticity_png(data, output_dir, frame):
 
 
 def save_cp_png(data, output_dir, frame, meta=None):
-    """Pressure coefficient Cp = (p - p_ref) / (0.5 * rho_inf * U_inf^2)"""
+    """Pressure coefficient Cp = (p - p_ref) / (0.5 * rho_inf * U_inf^2)
+    Obstacle cells (rho=0) are masked as NaN and rendered transparent.
+    Color range auto-scaled to fluid cell percentile range.
+    """
     rho = np.array(data.get('rho', []))
     obs = np.array(data.get('obstacle', []))
     if rho.ndim == 0 or rho.size == 0:
@@ -516,6 +571,8 @@ def save_cp_png(data, output_dir, frame, meta=None):
         rho = rho.reshape(data['ny'], data['nx'])
     if obs.ndim == 1 and obs.size > 0:
         obs = obs.reshape(data['ny'], data['nx'])
+    else:
+        obs = np.zeros_like(rho, dtype=bool)
 
     # Reference values from meta or defaults
     if meta:
@@ -531,12 +588,27 @@ def save_cp_png(data, output_dir, frame, meta=None):
     q_inf = 0.5 * rho_inf * u_inf * u_inf
     cp = (p - p_ref) / max(q_inf, 1e-12)
 
-    # Clip Cp to [-3, 2] for visualization (typical range)
-    cp_clip = np.clip(cp, -3.0, 2.0)
+    # Mask obstacle cells (rho=0 gives extreme Cp)
+    fluid_mask = obs < 0.5
+    cp_fluid = cp[fluid_mask]
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    if cp_fluid.size == 0:
+        print(f"  No fluid cells in frame {frame}, skipping Cp")
+        return
+
+    # Auto-scale to fluid percentiles, symmetric around 0
+    cp_lo = np.percentile(cp_fluid, 2)
+    cp_hi = np.percentile(cp_fluid, 98)
+    cp_abs = max(abs(cp_lo), abs(cp_hi), 0.5)
+
+    cp_masked = np.ma.masked_where(~fluid_mask, cp)
+    cp_clip = np.clip(cp_masked, -cp_abs, cp_abs)
+
+    # Adaptive figsize matching data aspect ratio
+    ny, nx = cp_clip.shape
+    fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny / nx)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, cp_clip, 'RdBu', -3.0, 2.0, obs)
+    im = render_contour(ax, cp_clip, 'RdBu', -cp_abs, cp_abs, obs)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Pressure Coefficient Cp', color='black')
     plt.tight_layout(pad=0.5)
@@ -596,7 +668,10 @@ def main():
         for vtk_path in frame_files:
             frame_match = re.search(r'frame_(\d+)', vtk_path.name)
             frame_num = int(frame_match.group(1)) if frame_match else 0
-            data = _load_frame(str(vtk_path))
+            data = _load_frame_safe(str(vtk_path))
+            if data is None:
+                print(f"  SKIP frame {frame_num} (corrupt JSON)")
+                continue
 
             if not HAS_MPL:
                 print("matplotlib not installed, skipping PNG output")

@@ -202,18 +202,18 @@ TEST(TimeStepTest, MassConservation) {
 // Parameter computation tests
 // ------------------------------------------------------------------
 TEST(ParamsTest, TauFromRe) {
-    // For Re = 100, u_inflow = 0.1, NX = 800:
-    // nu = 0.1 * 800 / 100 = 0.8
-    // tau = 0.5 + 3 * 0.8 = 2.9
+    // For Re = 100, u_inflow = 0.1, NX = 1200 (global default):
+    // nu = 0.1 * 1200 / 100 = 1.2
+    // tau = 0.5 + 3 * 1.2 = 4.1
     double u_inflow = 0.1;
     double Re = 100.0;
     double nu = u_inflow * NX / Re;
     double tau = 0.5 + 3.0 * nu;
-    EXPECT_NEAR(tau, 2.9, 1e-12);
+    EXPECT_NEAR(tau, 4.1, 1e-12);
 
-    // Re = 200: nu = 0.1 * 800 / 200 = 0.4, tau = 0.5 + 3 * 0.4 = 1.7
+    // Re = 200: nu = 0.1 * 1200 / 200 = 0.6, tau = 0.5 + 3 * 0.6 = 2.3
     Re = 200.0;
     nu = u_inflow * NX / Re;
     tau = 0.5 + 3.0 * nu;
-    EXPECT_NEAR(tau, 1.7, 1e-12);
+    EXPECT_NEAR(tau, 2.3, 1e-12);
 }

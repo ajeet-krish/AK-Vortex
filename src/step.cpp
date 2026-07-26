@@ -35,8 +35,11 @@ struct StepParams {
 };
 
 StepParams compute_params(double Re_H, int steps = -1) {
-    int h_step = NY / 3;                     // step height
-    int h_inlet = NY - 1 - h_step;           // inlet height (fluid portion)
+    // Armaly 1983 benchmark: 2:1 expansion ratio, L/H >= 8 for Re=400.
+    // NX=3200, NY=600, h_step=NY/2=300 gives L=(NX-NX/4)/H=2400/300=8 (meets requirement).
+    // Use --nx/--ny to override.
+    int h_step = NY / 2;                     // step height (NY/2 cells), 2:1 expansion
+    int h_inlet = NY - 1 - h_step;           // inlet height (299 cells)
     double u_max = 0.1;                      // parabolic peak
     double u_mean = (2.0 / 3.0) * u_max;     // mean velocity for parabola
     double length_scale = 2.0 * h_inlet;     // hydraulic diameter
@@ -58,6 +61,10 @@ int main(int argc, char* argv[]) {
     double Re = 100.0;
     int steps = -1;
     bool save_vtk = false;
+    // Default grid for 2:1 expansion Armaly benchmark (L/H >= 8 at Re=400).
+    // Override with --nx/--ny if needed.
+    NX = 3200;
+    NY = 600;
 
     int positional_idx = 1;
     for (int i = 1; i < argc; ++i) {
@@ -84,6 +91,8 @@ int main(int argc, char* argv[]) {
 
 
     auto params = compute_params(Re, steps);
+    g_step_h_step = params.h_step;
+    g_step_h_inlet = params.h_inlet;
     LBMCapabilities system;
 
     // Place step obstacle

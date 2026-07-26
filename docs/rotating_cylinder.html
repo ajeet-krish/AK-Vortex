@@ -31,15 +31,11 @@
         <a href="step.html" class="nav-item">Backward Step</a>
         <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
         <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="periodic_hills.html" class="nav-item">Periodic Hills</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
         <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="square_cylinder.html" class="nav-item">Square Cylinder</a>
         <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
         <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
         <a href="rotating_cylinder.html" class="nav-item active">Rotating Cylinder</a>
-        <a href="heated_cylinder.html" class="nav-item">Heated Cylinder</a>
-        <a href="airfoil_ibm.html" class="nav-item">Airfoil (IBM)</a>
-        <a href="thermal_cavity.html" class="nav-item">Thermal Cavity</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Reference</div>
@@ -71,7 +67,7 @@
       </tr>
       <tr>
         <td>Grid</td>
-        <td>800 &times; 300</td>
+        <td>1200 &times; 800</td>
       </tr>
       <tr>
         <td>Cylinder diameter D</td>
@@ -115,19 +111,20 @@
       </tr>
     </table>
 
-        <h2>Velocity Field</h2>
+        <h2>Flow Field</h2>
 
     <p class="section-intro">
       Use the tabs below to select a parameter variant.
-      The left side shows the steady-state velocity contour with streamlines;
-      the right side shows the flow evolution from rest to steady state.
+      Top left: steady-state velocity contour with streamlines.
+      Top right: flow evolution from rest to steady state.
+      Bottom: pressure and vorticity fields at steady state.
     </p>
 
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;" id="reTabs"></div>
 
-    <div class="vf-split">
-      <div class="vf-col">
-        <h4>Steady-State Comparison</h4>
+    <div class="vf-grid">
+      <div class="vf-cell">
+        <h4>Velocity (Contour | Streamlines)</h4>
         <div class="comparison-slider" id="fieldSlider">
           <img id="sliderImgBefore" src="" alt="Contour">
           <img id="sliderImgAfter" class="img-after" src="" alt="Streamlines">
@@ -140,7 +137,7 @@
         <p class="fv-note">Drag the handle to wipe between the velocity-magnitude contour and the streamline plot.</p>
       </div>
 
-      <div class="vf-col">
+      <div class="vf-cell">
         <h4>Flow Evolution</h4>
         <div class="fv-stage">
           <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
@@ -150,6 +147,26 @@
           <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
           <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
         </div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <img id="cpImg" class="static-field-img" src="" alt="Cp">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Pressure Coefficient C<sub>p</sub></h4>
+        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
+      </div>
+
+      <div class="vf-cell">
+        <h4>Vorticity</h4>
+        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -171,31 +188,32 @@
         <tr>
           <td>0.5</td>
           <td>Moderate rotation</td>
-          <td>2.1</td>
-          <td>-1.6</td>
+          <td>1.32</td>
+          <td>+0.60</td>
           <td>3.14</td>
         </tr>
         <tr>
           <td>1.0</td>
           <td>Strong rotation</td>
-          <td>2.7</td>
-          <td>-3.4</td>
+          <td>1.35</td>
+          <td>+1.13</td>
           <td>6.28</td>
         </tr>
         <tr>
           <td>2.0</td>
           <td>Very strong rotation</td>
-          <td>6.6</td>
-          <td>-7.3</td>
+          <td>1.45</td>
+          <td>+3.94</td>
           <td>12.57</td>
         </tr>
       </tbody>
     </table>
 
     <div class="callout">
-      Computed Cl is 50-60% of the Kutta-Joukowski inviscid prediction (Cl = 2&pi;S),
-      consistent with viscous effects at Re=100. Reference: Mittal &amp; Kumar 2003,
-      Rao et al. 2015.
+      Computed Cl is ~19% of the Kutta-Joukowski inviscid prediction (Cl = 2&pi;S)
+      at S=0.5, rising to ~31% at S=2.0. The viscous effects at Re=100 and the
+      Ladd (1994) moving boundary condition produce lower lift than the inviscid
+      theory predicts. Reference: Mittal &amp; Kumar 2003, Rao et al. 2015.
     </div>
 
     <h2>Discussion</h2>
@@ -244,8 +262,9 @@
       initVFSplitSections({
         dataDir: 'assets/data/rotating_cylinder',
         paramLabel: 'Omega',
-        imageCase: 'rotating_cylinder',
         cmap: 'jet',
+        imageBasePath: function(config) { return 'rotating_cylinder/simulations/' + config.file; },
+        imageSuffix: function(config) { return 're100_' + config.file; },
         lbmConfigs: [
           { label: 'w=0.5', file: 'w5' },
           { label: 'w=1.0', file: 'w10' },

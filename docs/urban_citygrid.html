@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AK-Vortex: Urban City Grid - 7 buildings with mixed orientations, 3 inlet wind configurations">
+  <title>Urban City Grid - AK-Vortex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+
+  <div class="sidebar">
+    <div class="sidebar-brand"><a href="index.html">AK-Vortex</a></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-heading">Project</div>
+        <a href="index.html" class="nav-item">Home</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-heading">Simulations</div>
+        <a href="cylinder.html" class="nav-item">Cylinder</a>
+        <a href="cavity.html" class="nav-item">Lid-Driven Cavity</a>
+        <a href="step.html" class="nav-item">Backward Step</a>
+        <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
+        <a href="urban.html" class="nav-item">Urban Canyon</a>
+        <a href="urban_citygrid.html" class="nav-item active">Urban City Grid</a>
+        <a href="flat_plate.html" class="nav-item">Flat Plate</a>
+        <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
+        <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
+        <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-heading">Reference</div>
+        <a href="theory.html" class="nav-item">Theory &amp; Methodology</a>
+        <a href="implementation.html" class="nav-item">C++ Implementation</a>
+        <a href="pinn.html" class="nav-item">Physics-Informed Neural Networks</a>
+        <a href="https://github.com/ajeet-krish/lbm-2d" class="nav-item" target="_blank">GitHub Repository &nearr;</a>
+      </div>
+    </nav>
+  </div>
+
+<div class="main-content">
+
+  <h1>Urban City Grid: Realistic Building Network</h1>
+
+  <p class="section-intro">
+    A realistic urban environment with <strong>7 buildings</strong> of mixed orientations
+    (4 horizontal + 3 vertical) arranged in a city grid pattern. The domain is 1200x600
+    with street width set to 2x building width for realistic urban canyon proportions.
+    Three inlet wind configurations (East, South, West) demonstrate how wind direction
+    affects flow patterns through the building network.
+  </p>
+
+  <h2>Setup</h2>
+
+  <table>
+    <tr>
+      <th>Parameter</th>
+      <th>Value</th>
+    </tr>
+    <tr><td>Domain</td><td>1200 x 600 (NX x NY)</td></tr>
+    <tr><td>Reynolds number</td><td>Re = 100</td></tr>
+    <tr><td>Building count</td><td>7 (4 horizontal + 3 vertical)</td></tr>
+    <tr><td>Building dimensions</td><td>80 x 160 (width x height)</td></tr>
+    <tr><td>Street width</td><td>160 (2x building width)</td></tr>
+    <tr><td>Inlet configurations</td><td>East, South, West wind</td></tr>
+    <tr><td>Collision</td><td>MRT (Multi-Relaxation Time)</td></tr>
+    <tr><td>Boundary conditions</td><td>Zou/He velocity inlet, convective outlet</td></tr>
+  </table>
+
+  <h2>Inlet Configurations</h2>
+
+  <div id="reTabs_citygrid" style="display:flex;gap:4px;flex-wrap:wrap;margin:1rem 0;"></div>
+
+  <div class="vf-grid">
+    <div class="vf-cell">
+      <h4>Steady-State Comparison</h4>
+      <div class="comparison-slider" id="fieldSlider_citygrid">
+        <img id="sliderImgBefore_citygrid" src="" alt="Contour">
+        <img id="sliderImgAfter_citygrid" class="img-after" src="" alt="Streamlines">
+        <div class="slider-handle"><div class="slider-btn"></div></div>
+        <div class="slider-label left">Contour</div>
+        <div class="slider-label right">Streamlines</div>
+      </div>
+      <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Velocity Field</h4>
+      <p class="fv-note">Interactive canvas viewer with Play/Pause + frame scrubber.</p>
+      <div class="fv-stage" id="fvStage_citygrid">
+        <canvas id="fvCanvas_citygrid" class="fv-canvas" width="560" height="280"></canvas>
+      </div>
+      <div class="fv-controls">
+        <button id="fvPlay_citygrid" class="fv-btn">&#9654; Play</button>
+        <input type="range" id="fvScrubber_citygrid" min="0" max="50" value="0" class="fv-slider" style="flex:1">
+        <span id="fvFrameLabel_citygrid" class="fv-label">Frame 0 / 50</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="vf-grid" style="margin-top:1.5rem;">
+    <div class="vf-cell">
+      <h4>Pressure Coefficient Cp</h4>
+      <img id="cpImg_citygrid" src="" alt="Pressure Coefficient" style="width:100%;border-radius:6px;">
+      <p class="fv-note">Cp = (p - p_ref) / (0.5 * rho_inf * U_inf^2). Red = high pressure (stagnation), blue = low pressure (separation).</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Pressure Coefficient Cp</h4>
+      <div class="fv-stage"><canvas id="cpCanvas_citygrid" class="fv-canvas"></canvas></div>
+    </div>
+    <div class="vf-cell">
+      <h4>Vorticity Field</h4>
+      <img id="vortImg_citygrid" src="" alt="Vorticity" style="width:100%;border-radius:6px;">
+      <p class="fv-note">Vorticity omega = dv/dx - du/dy. Red = counter-clockwise rotation, blue = clockwise rotation.</p>
+    </div>
+    <div class="vf-cell">
+      <h4>Vorticity Field</h4>
+      <div class="fv-stage"><canvas id="vorticityCanvas_citygrid" class="fv-canvas"></canvas></div>
+    </div>
+  </div>
+
+  <h2>Flow Physics</h2>
+
+  <p class="section-intro">
+    The city grid creates complex urban aerodynamics:
+  </p>
+
+  <ul style="margin:1rem 0;padding-left:1.5rem;">
+    <li><strong>Channeling effect:</strong> Wind funneled between parallel buildings accelerates through narrow streets</li>
+    <li><strong>Wake interference:</strong> Downstream buildings sit in the wake of upstream structures, reducing effective wind speed</li>
+    <li><strong>Corner vortices:</strong> Strong recirculation zones form at building corners where flow separates</li>
+    <li><strong>Canyon recirculation:</strong> Stable vortices form between closely spaced buildings</li>
+    <li><strong>Direction-dependent patterns:</strong> Different inlet directions activate different street canyons and flow paths</li>
+  </ul>
+
+  <h2>Key Findings</h2>
+
+  <div class="key-findings">
+    <ul>
+      <li>East wind creates strong channeling through horizontal streets</li>
+      <li>South wind activates vertical street canyons with vortex formation</li>
+      <li>West wind creates opposite flow patterns to east wind with different wake interactions</li>
+      <li>Mixed building orientations create 3D-like flow complexity in 2D simulation</li>
+      <li>Street width = 2x building width provides realistic urban canyon proportions</li>
+    </ul>
+  </div>
+
+</div>
+
+<script src="assets/js/slider.js"></script>
+<script src="assets/js/colormaps.js"></script>
+<script src="assets/js/flow-viewer.js"></script>
+<script src="assets/js/viewer-common-v2.js"></script>
+<script>
+(function() {
+  var CITYGRID_CONFIGS = [
+    { label: 'East Wind', file: 'east' },
+    { label: 'South Wind', file: 'south' },
+    { label: 'West Wind', file: 'west' },
+  ];
+
+  var group = document.getElementById('reTabs_citygrid');
+  CITYGRID_CONFIGS.forEach(function(cfg, idx) {
+    var btn = document.createElement('button');
+    btn.className = 'tab-btn' + (idx === 0 ? ' active' : '');
+    btn.textContent = cfg.label;
+    btn.dataset.file = cfg.file;
+    btn.onclick = function() {
+      group.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      selectCitygrid(cfg.file);
+    };
+    group.appendChild(btn);
+  });
+
+  var currentViewer = null;
+
+  function selectCitygrid(file) {
+    var basePath = 'assets/images/urban/simulations/city_grid/inlet_' + file;
+    var beforeImg = document.getElementById('sliderImgBefore_citygrid');
+    var afterImg = document.getElementById('sliderImgAfter_citygrid');
+    if (beforeImg) {
+      beforeImg.src = basePath + '/' + file + '_contour.png';
+      beforeImg.onerror = function() { this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300"><rect width="800" height="300" fill="#0d1117"/><text x="400" y="150" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">Simulation data pending</text></svg>'); };
+    }
+    if (afterImg) {
+      afterImg.src = basePath + '/' + file + '_streamlines.png';
+      afterImg.onerror = function() { this.src = beforeImg.onerror.toString(); };
+    }
+
+    var cpImg = document.getElementById('cpImg_citygrid');
+    if (cpImg) {
+      cpImg.src = basePath + '/' + file + '_cp.png';
+      cpImg.onerror = function() { this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="560" height="280" viewBox="0 0 560 280"><rect width="560" height="280" fill="#0d1117"/><text x="280" y="140" fill="#484f58" font-family="monospace" font-size="13" text-anchor="middle">Cp data pending</text></svg>'); };
+    }
+
+    var vortImg = document.getElementById('vortImg_citygrid');
+    if (vortImg) {
+      vortImg.src = basePath + '/' + file + '_vorticity.png';
+      vortImg.onerror = function() { this.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="560" height="280" viewBox="0 0 560 280"><rect width="560" height="280" fill="#0d1117"/><text x="280" y="140" fill="#484f58" font-family="monospace" font-size="13" text-anchor="middle">Vorticity data pending</text></svg>'); };
+    }
+
+    currentViewer = new FlowViewer(
+      document.getElementById('fvCanvas_citygrid'),
+      'assets/data/urban_citygrid',
+      { cmap: 'jet', filePrefix: 'lbm' }
+    );
+    currentViewer.load(file);
+
+    initComparisonSlider('fieldSlider_citygrid');
+  }
+
+  selectCitygrid('east');
+
+  document.getElementById('sidebarToggle').addEventListener('click', function() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.body.classList.toggle('sidebar-open');
+  });
+})();
+</script>
+
+</body>
+</html>

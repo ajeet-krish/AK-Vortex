@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
     double Re = 1000.0;
     double aoa_deg = 0.0;
-    double chord = NY / 2.0 + 5.0;
+    double chord = 200.0;
     int steps = -1;
 
     int positional_idx = 1;

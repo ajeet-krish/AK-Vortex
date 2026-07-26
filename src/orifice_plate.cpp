@@ -58,7 +58,8 @@ OrificeParams compute_params(double Re, const std::string& config,
     double nu = u_inflow * length_scale / Re;
     double tau = 0.5 + 3.0 * nu;
 
-    int plate_thickness = 2;
+    int ds = std::max(1, NX / 100);
+    int plate_thickness = std::max(4, ds);
 
     std::vector<int> plate_cx;
     std::vector<std::vector<int>> holes_cy;
@@ -70,15 +71,15 @@ OrificeParams compute_params(double Re, const std::string& config,
         plate_cx.push_back(NX / 2);
         holes_cy.push_back({NY / 4, NY / 2, NY * 3 / 4});
     } else if (config == "2p") {
-        int start_x = NX / 3;
-        int spacing = NX / 3;
+        int start_x = (NX / 3 / ds) * ds;
+        int spacing = (NX / 3 / ds) * ds;
         for (int i = 0; i < 2; ++i) {
             plate_cx.push_back(start_x + i * spacing);
             holes_cy.push_back({(i % 2 == 0) ? NY * 3 / 4 : NY / 4});
         }
     } else {  // "3p"
-        int start_x = NX / 4;
-        int spacing = NX / 4;
+        int start_x = (NX / 4 / ds) * ds;
+        int spacing = (NX / 4 / ds) * ds;
         for (int i = 0; i < 3; ++i) {
             plate_cx.push_back(start_x + i * spacing);
             holes_cy.push_back({(i % 2 == 0) ? NY * 3 / 4 : NY / 4});

@@ -40,6 +40,9 @@ cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 ./build/LBM_SideBySide 100 3             # Side-by-side cylinders, transverse (S/D=3)
 ./build/LBM_RotatingCylinder 100 1.0     # Rotating cylinder (Magnus, omega=1.0)
 
+# Urban city grid (7 buildings, 3 inlet configs -- south/west deferred)
+./build/LBM_UrbanCityGrid 100 --inlet east    # East wind (validated)
+
 # Run tests
 ./build/LBM_Tests
 
@@ -62,62 +65,10 @@ cd pinn && .venv/bin/pip install -r requirements.txt
 
 ## Simulation Parameters
 
-### External Aerodynamics
-
-| Case | Grid | Re | tau | u_inf | L_ref | Geometry | Collision | BC |
-|------|------|-----|-----|-------|-------|----------|-----------|-----|
-| Cylinder | 800x300 | 100 | 0.680 | 0.1 | D=60 | Circle R=30 | MRT | Bouzidi |
-| Cylinder | 800x300 | 200 | 0.590 | 0.1 | D=60 | Circle R=30 | MRT | Bouzidi |
-| Cylinder | 800x300 | 1000 | 0.518 | 0.1 | D=60 | Circle R=30 | MRT+LES | Bouzidi |
-| Square cylinder | 800x300 | 200 | 0.545 | 0.1 | s=30 | Square 30x30 | MRT | Polygon |
-| Flat plate AoA=0 | 800x300 | 1000 | 0.547 | 0.1 | c=155 | Rectangle 155x2 | MRT | Polygon |
-| Flat plate AoA=10 | 800x300 | 1000 | 0.547 | 0.1 | c=155 | Rectangle 155x2 | MRT | Polygon |
-| Flat plate Re=500 | 800x300 | 500 | 0.593 | 0.1 | c=155 | Rectangle 155x2 | MRT | Polygon |
-| Flat plate Re=2000 | 800x300 | 2000 | 0.523 | 0.1 | c=155 | Rectangle 155x2 | MRT+LES | Polygon |
-| Cylinder near wall (gap=10) | 800x300 | 100 | 0.590 | 0.1 | D=60 | Circle R=30 + wall | MRT | Bouzidi |
-| Cylinder near wall (gap=20) | 800x300 | 100 | 0.590 | 0.1 | D=60 | Circle R=30 + wall | MRT | Bouzidi |
-| Cylinder near wall (gap=40) | 800x300 | 100 | 0.590 | 0.1 | D=60 | Circle R=30 + wall | MRT | Bouzidi |
-| Side-by-side S/D=2 (transverse) | 800x300 | 100 | 0.620 | 0.1 | D=40 | 2 circles, S=80 in y | MRT | Bouzidi |
-| Side-by-side S/D=3 (transverse) | 800x300 | 100 | 0.620 | 0.1 | D=40 | 2 circles, S=120 in y | MRT | Bouzidi |
-| Side-by-side S/D=5 (transverse) | 800x300 | 100 | 0.620 | 0.1 | D=40 | 2 circles, S=200 in y | MRT | Bouzidi |
-| Rotating cylinder w=0.5 | 800x300 | 100 | 0.680 | 0.1 | D=60 | Circle R=30, rotating | MRT | Bouzidi+Ladd |
-| Rotating cylinder w=1.0 | 800x300 | 100 | 0.680 | 0.1 | D=60 | Circle R=30, rotating | MRT | Bouzidi+Ladd |
-| Rotating cylinder w=2.0 | 800x300 | 100 | 0.680 | 0.1 | D=60 | Circle R=30, rotating | MRT | Bouzidi+Ladd |
-
-### Internal Flows
-
-| Case | Grid | Re | tau | u_ref | L_ref | Geometry | Collision | BC |
-|------|------|-----|-----|-------|-------|----------|-----------|-----|
-| Cavity | 800x300 | 100 | 0.680 | 0.1 | NY=300 | Square lid | MRT | Bounce-back |
-| Cavity | 800x300 | 400 | 0.545 | 0.1 | NY=300 | Square lid | MRT | Bounce-back |
-| Cavity | 800x300 | 1000 | 0.518 | 0.1 | NY=300 | Square lid | MRT+LES | Bounce-back |
-| Step | 800x300 | 100 | 1.296 | 0.1 | Dh=398 | h_step=100 | MRT | Bounce-back |
-| Step | 800x300 | 200 | 0.898 | 0.1 | Dh=398 | h_step=100 | MRT | Bounce-back |
-| Step | 800x300 | 400 | 0.699 | 0.1 | Dh=398 | h_step=100 | MRT | Bounce-back |
-| Periodic hills | 800x300 | 100 | 1.10 | 0.1 | H=200, h=H/6 | Sinusoidal bottom (1 period, L=NX) | MRT | Periodic x |
-| Periodic hills | 800x300 | 1000 | 0.56 | 0.1 | H=200, h=H/6 | Sinusoidal bottom (1 period, L=NX) | MRT+LES | Periodic x |
-| Periodic hills | 800x300 | 2800 | 0.52 | 0.1 | H=200, h=H/6 | Sinusoidal bottom (1 period, L=NX) | MRT+LES | Periodic x |
-
-### Orifice Plate
-
-| Case | Grid | Re | tau | u_inf | L_ref | Hole width | Geometry | Collision |
-|------|------|-----|-----|-------|-------|-----------|----------|-----------|
-| Orifice 1p1h | 800x300 | 100 | 0.725 | 0.025 | H=300 | 37 | 1 plate, 1 hole | MRT+LES |
-| Orifice 1p3h | 800x300 | 100 | 0.725 | 0.025 | H=300 | 37 | 1 plate, 3 holes | MRT+LES |
-| Orifice 2p | 800x300 | 100 | 0.725 | 0.025 | H=300 | 37 | 2 plates, staggered | MRT+LES |
-| Orifice 3p | 800x300 | 100 | 0.725 | 0.025 | H=300 | 37 | 3 plates, staggered | MRT+LES |
-
-### Urban / Building
-
-| Case | Grid | Re | tau | u_ref | L_ref | Geometry | Collision |
-|------|------|-----|-----|-------|-------|----------|-----------|
-| Urban side AR=0.3 | 900x400 | 100 | 0.680 | 0.1 | H=100 | 2 bldgs, W=333 | MRT |
-| Urban side AR=0.5 | 900x400 | 100 | 0.680 | 0.1 | H=100 | 2 bldgs, W=200 | MRT |
-| Urban side AR=0.8 | 900x400 | 100 | 0.680 | 0.1 | H=100 | 2 bldgs, W=125 | MRT |
-| Urban side AR=0.6 | 900x400 | 100 | 0.680 | 0.1 | H=100 | 3 bldgs, W=167 | MRT |
-| Urban topdown (vertical) | 900x400 | 100 | 0.590 | 0.1 | w=80 | 3 tall bldgs, street net | MRT |
-| Urban topdown (horizontal) | 900x400 | 100 | 0.590 | 0.1 | w=80 | 3 long bldgs, funnel | MRT |
-| Downwash | 800x300 | 100 | 0.740 | 0.1 | H=120 | Tall(120)+low(45) | MRT |
+See [simulation_parameters.md](simulation_parameters.md) for the complete single-source-of-truth
+reference: grid sizes, tau values, geometry, boundary conditions, and Reynolds number definitions
+for all 14 simulation cases. This replaces the inline tables below -- keep the `.md` file in sync,
+not this README.
 
 ## Validation Coverage
 
@@ -125,16 +76,15 @@ cd pinn && .venv/bin/pip install -r requirements.txt
 |------|----------|-----------|------------|
 | **Flat plate boundary layer** | 500-2000 | Cf, Cd, Cl vs AoA | Blasius 1908, thin-airfoil theory |
 | Cylinder wake | 100-200 | St, Cd | Williamson 1988, Tritton 1959 |
-| Square cylinder | 200 | Cd, St | Lyn et al. 1995 (ERCOFTAC 043) |
 | Lid-driven cavity | 100-1000 | u-profile | Ghia, Ghia & Shin 1982 |
 | Backward-facing step | 100-400 | Xr/H | Armaly et al. 1983 |
 | Orifice plate | 100 | Loss coeff K | ISO 5167, Idelchik 2006 |
-| Periodic hills | 100-2800 | Reattachment, U-profile | Moser/Kim/Moin 1993 |
 | Cylinder near wall | 100 | Cl vs gap | Ground effect literature |
 | Side-by-side cylinders | 100 | Cd, Cl vs S/D | Zdravkovich 1977, Alam & Zhou 2007 |
 | Rotating cylinder | 100 | Cl vs omega | Kutta-Joukowski theorem |
 | Urban canyon (side) | H/W 0.3-0.8 | Flow regime | Oke 1988 |
 | Building downwash | 100 | Cp distribution | Hunt 1984 |
+| Urban city grid | 100 | Flow patterns | 7 buildings, east inlet (south/west deferred) |
 
 ## Key Features
 
@@ -272,14 +222,13 @@ The `docs/` directory contains a 12+ page portfolio website:
 - **Simulation > [Case]** -- Per-case dedicated pages with interactive flow viewers, validation tables, force plots, discussion
 - **Reference** (theory.html, implementation.html) -- LBM theory with KaTeX, code architecture with source blocks
 
-Each case page has two interactive viewer sections:
+Each case page has a 2x2 grid layout with four panels:
 
-1. **LBM Evolution** -- Animated canvas streaming the C++ solver's velocity field
-   from rest to steady state (Play/Pause + scrubber). Velocity magnitude contours
-   (jet colormap) with overlaid streamlines.
-2. **PINN Prediction** -- The parametric surrogate (precomputed sweep or live ONNX
-   Runtime Web inference). Discrete Reynolds number buttons (100/400/1000) drive
-   the network; a time scrubber animates the transient (Phase 6.8 temporal PINN).
+1. **Velocity (Contour | Streamlines)** -- Interactive comparison slider for steady-state velocity magnitude
+2. **Flow Evolution** -- Animated canvas streaming the C++ solver's velocity field
+   from rest to steady state (Play/Pause + scrubber)
+3. **Pressure** -- Static pressure contour at steady state
+4. **Vorticity** -- Static vorticity contour at steady state (RdBu colormap)
 
 Binary frame data is exported by `pinn/export/export_web_data.py` to
 `docs/assets/data/{case}/` as float16 `.bin` files (gzipped for delivery). All
@@ -353,28 +302,28 @@ defaults for rectangular).
 
 | Case | Re | Grid | Cd | Cl | Status |
 |------|-----|------|-----|-----|--------|
-| Flat plate AoA=0 | 1000 | 1600x600 | 0.070 | 0.000 | Validated vs Blasius (Cd 0.070 vs 2*Cf=0.084) |
-| Flat plate AoA=5 | 1000 | 1600x600 | 0.074 | 0.333 | Small incidence |
-| Flat plate AoA=10 | 1000 | 1600x600 | 0.130 | 0.604 | Suction side |
-| Flat plate Re=500 | 500 | 1600x600 | 0.103 | 0.000 | Re scaling validated |
-| Flat plate Re=2000 | 2000 | 1600x600 | 0.049 | 0.000 | Re scaling validated |
-| Cylinder | 100 | 1600x600 | 1.536 | ~0 | Validated (Mei BB, was 1.774 Bouzidi) |
-| Cylinder | 200 | 1600x600 | 1.319 | ~0 | Validated (Mei BB, was 1.495 Bouzidi) |
-| Square cylinder | 200 | 1200x450 | 1.568 | 0.358 | Validated vs ERCOFTAC |
+| Flat plate AoA=0 | 1000 | 1200x800 | 0.070 | 0.000 | Validated vs Blasius (Cd 0.070 vs 2*Cf=0.084) |
+| Flat plate AoA=5 | 1000 | 1200x800 | 0.074 | 0.333 | Small incidence |
+| Flat plate AoA=10 | 1000 | 1200x800 | 0.130 | 0.604 | Suction side |
+| Flat plate Re=500 | 500 | 1200x800 | 0.103 | 0.000 | Re scaling validated |
+| Flat plate Re=2000 | 2000 | 1200x800 | 0.049 | 0.000 | Re scaling validated |
+| Cylinder | 100 | 1200x600 | 1.536 | ~0 | Validated (Mei BB, was 1.774 Bouzidi) |
+| Cylinder | 200 | 1200x600 | 1.319 | ~0 | Validated (Mei BB, was 1.495 Bouzidi) |
 | Cavity | 100 | 512x512 | -- | -- | Validated vs Ghia |
 | Cavity | 400 | 512x512 | -- | -- | Validated vs Ghia |
 | Cavity | 1000 | 512x512 | -- | -- | Validated vs Ghia |
-| Step | 100 | 1200x450 | -- | -- | Validated vs Armaly |
-| Step | 200 | 1200x450 | -- | -- | Validated vs Armaly |
-| Step | 400 | 1200x450 | -- | -- | Validated vs Armaly |
-| Orifice plate | 100 | 800x300 | Fx 0.9-63 | -- | K increases with plates |
-| Periodic hills | 100 | 1600x450 | -- | -- | LES benchmark (geometry being fixed) |
-| Periodic hills | 1000 | 1600x450 | -- | -- | LES benchmark (pending) |
-| Cylinder near wall | 100 | 1200x450 | 2.6-2.8 | +0.40 to +1.42 | Ground effect (lift vs gap) |
-| Side-by-side | 100 | 1200x450 | 2.6-2.8 | ~0 (amp 0.6-0.7) | Interference study |
-| Rotating cylinder | 100 | 1200x450 | -- | -- | Magnus effect (Ladd) |
+| Step | 100 | 2400x600 | -- | -- | Validated vs Armaly |
+| Step | 200 | 2400x600 | -- | -- | Validated vs Armaly |
+| Step | 400 | 2400x600 | -- | -- | Validated vs Armaly |
+| Orifice plate | 100 | 1600x1000 | Fx 0.9-63 | -- | K increases with plates |
+| Cylinder near wall | 100 | 1600x600 | 2.6-2.8 | +0.40 to +1.42 | Ground effect (lift vs gap) |
+| Side-by-side | 100 | 1200x800 | 2.6-2.8 | ~0 (amp 0.6-0.7) | Interference study |
+| Rotating cylinder | 100 | 1200x800 | -- | -- | Magnus effect (Ladd) |
 | Urban canyon | 100 | 900x400 | -- | -- | Oke 1988 regimes |
-| Downwash | 100 | 900x300 | -- | -- | Hunt 1984 |
+| Downwash | 100 | 800x300 | -- | -- | Hunt 1984 |
+| City Grid | 100 | 1600x1200 | -- | -- | 7 buildings, east inlet |
+| Square cylinder | 200 | 800x300 | 1.568 | 0.358 | Retired (sharp-edge separation) |
+| Periodic hills | 100 | 1600x450 | -- | -- | Retired (geometry pending fix) |
 
 ## Roadmap
 
@@ -393,6 +342,73 @@ defaults for rectangular).
 | 6 | Physics-Informed Neural Network (PINN) surrogate suite | Completed (cavity steady + temporal) |
 | 6.8 | Time-parametric PINN training | Completed (Re=100/400/1000; Re=300 interpolation demo) |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
+| **7** | **Website reorganization + image paths + obstacle viz + city grid** | **Completed (with caveats)** |
+
+### Phase 7: Website Reorganization + Image Path Fixes + Obstacle Visualization
+
+**Goal:** Fix all broken image paths (HTML references don't match organized folder structure), add vector-geometry obstacle overlays to postprocessing, add Cp/vorticity/pressure contour panels, redesign urban canyon as a realistic city grid, and add passive scalar (smoke) transport for urban dispersion visualization.
+
+**Status:** Completed (see caveats below)
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 7.0 | Remove deprecated cases (square_cylinder, periodic_hills, airfoil_ibm, heated_cylinder, thermal_cavity) | **Completed** |
+| 7.1a | Fix viewer-common-v2.js (add imageBasePath support, remove hardcoded `re` prefix) | **Completed** |
+| 7.1b | Fix all HTML image paths (9 case pages + index.html thumbnails) | **Completed** |
+| 7.1c | Fix static img references (cavity.html PINN images, cylinder.html PINN images) | **Completed** |
+| 7.2a | Add obstacle overlay module to postprocess.py (Circle, Rectangle, Polygon patches) | **Completed** |
+| 7.2b | Add Cp contour rendering (--cp flag) | **Completed** |
+| 7.2c | Add obstacle metadata to frame JSON (lbm.hpp save_json_frame) | **Completed** |
+| 7.3a | Update step.cpp NX to 1600 (Armaly benchmark: L/H >= 8 for Re=400) | **Completed** |
+| 7.3b | Urban city grid entry point (7 buildings, mixed orientations, 1200x600) | **Completed** |
+| 7.3c | Passive scalar transport (scalar_transport.hpp, ~100 lines) | **Completed** |
+| 7.3d | Scalar postprocessing (--field scalar, hot colormap) | **Deferred** |
+| 7.4a | New urban_citygrid.html page (3 inlet configs) | **Completed** |
+| 7.4b | Update existing case pages (add pressure/vorticity/Cp panels) | **Completed** |
+| 7.4c | Update sidebar navigation (remove old, add city grid) | **Completed** |
+
+**Caveats:**
+1. Urban citygrid solver produces zero velocity output (all frames have u=v=0 everywhere). Root cause unknown -- likely an initialization or streaming bug in the URBAN_CITYGRID entry point. Cp and vorticity images are generated from zero fields (black/empty plots).
+2. save_json_frame missing root `}` fixed (added second closing brace, re-ran urban_citygrid sims with valid JSON).
+3. Step/cylinder old frames have mixed validity (truncated JSON from pre-fix solver). Postprocess uses `_load_frame_safe` to skip corrupt frames.
+4. Urban side (2p_ar0.3/0.5/0.8), topdown_v -- missing vorticity (frames from old solver without omega output).
+
+#### Image Path Fix Strategy
+
+All images are organized in `simulations/` and `pinn/` subdirectories, but HTML references them at flat root level. Fix: update HTML/JS to match organized folder structure.
+
+| Page | Current broken path | Corrected path |
+|------|-------------------|----------------|
+| cylinder.html | `cylinder/re100_contour.png` | `cylinder/simulations/re100/re100_contour.png` |
+| cavity.html | `cavity/re100_contour.png` | `cavity/simulations/re100/re100_contour.png` |
+| step.html | `step/re100_contour.png` | `step/simulations/re100/re100_contour.png` |
+| orifice_plate.html | `orifice_plate/re100_1p1h_contour.png` | `orifice_plate/simulations/1p1h/re100_1p1h_contour.png` |
+| flat_plate.html | `flatplate/re1000_aoa0_contour.png` | `flatplate/simulations/re1000/aoa0/re1000_aoa0_contour.png` |
+| cylinder_near_wall.html | `cylinder_near_wall/re100_gap10_contour.png` | `cylinder_near_wall/simulation/gap10/re100_gap10_contour.png` |
+| side_by_side.html | `side_by_side/re100_sd20_contour.png` | `side_by_side/simulations/sd20/re100_sd20_contour.png` |
+| rotating_cylinder.html | `rotating_cylinder/re100_w5_contour.png` | `rotating_cylinder/simulations/w5/re100_w5_contour.png` |
+| urban.html | `urban/side_a03_contour.png` | `urban/simulations/side/2p_ar0.3/side_ar0.3_re100_contour.png` |
+
+#### Obstacle Visualization (Soccer CFD approach)
+
+Use `matplotlib.patches.Circle`, `Rectangle`, `Polygon` overlaid on contour plots for crisp, resolution-independent obstacle rendering. Mask flow data inside obstacles with `np.ma.masked_where`. C++ solver adds obstacle geometry metadata to frame JSON for postprocessor to read.
+
+#### Urban City Grid Design
+
+Replace separate topdown_v/topdown_h with one realistic city grid:
+- 7 buildings: 4 horizontal (street-aligned) + 3 vertical (avenue-aligned)
+- Mixed orientations create realistic street canyons with intersections
+- Domain: 1200x600, street width = 2x building width
+- 3 inlet configurations: East wind (validated), South/West deferred
+- Passive scalar source at intersection for pollutant dispersion visualization
+
+#### Passive Scalar Transport (Smoke)
+
+NOT thermal LBM. Adds a second D2Q9 distribution `g_i` for scalar concentration phi:
+- Equation: d(phi)/dt + u.grad(phi) = D*laplacian(phi)
+- ONE-WAY coupling: flow carries scalar, scalar does NOT affect momentum
+- ~100 lines of new C++ code in `src/scalar_transport.hpp`
+- Postprocess: `--field scalar` renders phi with hot colormap (smoke effect)
 
 ### Pending Fixes (Phase 4)
 
@@ -407,6 +423,9 @@ defaults for rectangular).
 | Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | **Completed** |
 | Side-by-side geometry | Transverse arrangement | D=40, S/D=2,3,5 | **Completed** |
 | Orifice single-hole jet | 1p1h/2p/3p diverged | Lower u_inflow to 0.025 + LES | **Completed** |
+| save_json_frame closing brace | Missing root `}` truncates all frames | Added second `}`, rebuilt, re-ran urban_citygrid | **Completed** |
+| Urban citygrid zero velocity | Solver produces u=v=0 for all cells | Root cause unknown (initialization/streaming bug in URBAN_CITYGRID) | **In progress** |
+| Step/cylinder partial frames | Old frames truncated mid-file | Postprocess uses `_load_frame_safe` to skip; re-run with fixed solver for clean output | **Deferred** |
 
 ## Solver Accuracy & Capability Upgrade Roadmap
 

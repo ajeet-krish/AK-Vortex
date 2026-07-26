@@ -746,6 +746,38 @@ html { scroll-behavior: smooth; scroll-padding-top: 28px; }
     margin-top: 0;
   }
 
+  /* --- 3x2 grid layout (velocity slider + video / CP static + video / vorticity static + video) --- */
+  .vf-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+  @media (max-width: 720px) {
+    .vf-grid { grid-template-columns: 1fr; }
+  }
+  .vf-grid .vf-cell {
+    min-width: 0;
+  }
+  .vf-grid .vf-cell > h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+  }
+  .vf-grid .static-canvas {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-canvas);
+  }
+  .vf-grid .static-field-img {
+    width: 100%;
+    max-width: 560px;
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
   .comparison-slider {
    position: relative;
    width: 100%;

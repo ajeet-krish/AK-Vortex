@@ -137,10 +137,11 @@
             // cmap: per-case color scheme. Every plot AND animation for a
             // given case must share this colormap for visual consistency.
             this.cmap = opts.cmap || 'jet';
-            this.cache = {};            // re -> { lbm, vmax }
+            this.cache = {};            // re -> { lbm, vmax, pmin, pmax, omegaMax }
             this._missing = {};         // re -> true if file failed to load
             this.re = 100;
             this.currentFrame = 0;
+            this.currentField = 'velocity';  // 'velocity' | 'pressure' | 'vorticity'
             this.playing = false;
             this.showStreamlines = true;
             this.frameInterval = 90;    // ms between animation frames
@@ -159,9 +160,9 @@
             if (this._missing[re]) return null;
             this._status('Loading Re=' + re + ' data...');
             try {
-                const buf = await fetchBinary(`${this.dataDir}/${this.filePrefix}_re${re}.bin`);
+                const buf = await fetchBinary(`${this.dataDir}/${this.filePrefix}_${re}.bin`);
                 const lbm = parseBinary(buf);
-                const entry = { lbm, vmax: this._computeVmax(lbm) };
+                const entry = { lbm, ...this._computeVmax(lbm) };
                 this.cache[re] = entry;
                 this._missing[re] = false;
                 this._status('');
@@ -192,7 +193,7 @@
         _computeVmax(lbm) {
             const { nx, ny, n_chan, data, n_frames } = lbm;
             const n = nx * ny;
-            let vmax = 1e-9;
+            let vmax = 1e-9, pmin = Infinity, pmax = -Infinity, omegaMax = 1e-9;
             for (let f = 0; f < n_frames; f++) {
                 const uOff = (f * n_chan) * n;
                 const vOff = (f * n_chan + 1) * n;
@@ -200,8 +201,19 @@
                     const vm = Math.hypot(data[uOff + k], data[vOff + k]);
                     if (vm > vmax) vmax = vm;
                 }
+                if (n_chan >= 5) {
+                    const pOff = (f * n_chan + 2) * n;
+                    const oOff = (f * n_chan + 3) * n;
+                    for (let k = 0; k < n; k++) {
+                        const p = data[pOff + k];
+                        if (p < pmin) pmin = p;
+                        if (p > pmax) pmax = p;
+                        const abso = Math.abs(data[oOff + k]);
+                        if (abso > omegaMax) omegaMax = abso;
+                    }
+                }
             }
-            return vmax;
+            return { vmax, pmin, pmax, omegaMax };
         }
 
         // ---- channel accessors ----
@@ -216,20 +228,30 @@
             return this._scratch;
         }
 
-        // ---- rendering (velocity magnitude only) ----
+        // ---- rendering ----
         _render() {
             const entry = this.cache[this.re];
             if (!entry) return;
             const src = entry.lbm;
-            const { nx, ny } = src;
+            const { nx, ny, n_chan } = src;
             const frame = this.currentFrame;
             const scr = this._ensureScratch(nx * ny);
-            const u = this._chan(src, frame, 0), v = this._chan(src, frame, 1);
-            for (let k = 0; k < nx * ny; k++) scr[k] = Math.hypot(u[k], v[k]);
-            this._paint(this.ctx, scr, nx, ny, 0, entry.vmax, this.cmap);
-            if (this.showStreamlines) {
-                const obs = src.n_chan >= 5 ? this._chan(src, frame, 4) : null;
-                this._drawStreamlines(this.ctx, u, v, nx, ny, obs, entry.vmax);
+            const field = this.currentField;
+
+            if (field === 'velocity') {
+                const u = this._chan(src, frame, 0), v = this._chan(src, frame, 1);
+                for (let k = 0; k < nx * ny; k++) scr[k] = Math.hypot(u[k], v[k]);
+                this._paint(this.ctx, scr, nx, ny, 0, entry.vmax, this.cmap);
+                if (this.showStreamlines && n_chan >= 5) {
+                    const obs = this._chan(src, frame, 4);
+                    this._drawStreamlines(this.ctx, u, v, nx, ny, obs, entry.vmax);
+                }
+            } else if (field === 'pressure' && n_chan >= 5) {
+                const p = this._chan(src, frame, 2);
+                this._paint(this.ctx, p, nx, ny, entry.pmin, entry.pmax, 'jet');
+            } else if (field === 'vorticity' && n_chan >= 5) {
+                const omega = this._chan(src, frame, 3);
+                this._paint(this.ctx, omega, nx, ny, -entry.omegaMax, entry.omegaMax, 'rdbu');
             }
         }
 
@@ -299,9 +321,29 @@
             this.currentFrame = Math.max(0, Math.min(this.cache[this.re].lbm.n_frames - 1, i));
             this._render();
         }
+        setField(field) {
+            this.currentField = field;
+            this._render();
+        }
         play() { this.playing = true; this._last = 0; }
         pause() { this.playing = false; }
         togglePlay() { this.playing = !this.playing; if (this.playing) this._last = 0; return this.playing; }
+
+        renderStatic(canvasId, channel, cmap, min, max, frame) {
+            const entry = this.cache[this.re];
+            if (!entry) return;
+            const canvas = typeof canvasId === 'string' ? document.getElementById(canvasId) : canvasId;
+            if (!canvas) return;
+            const src = entry.lbm;
+            const { nx, ny, n_chan } = src;
+            if (channel >= n_chan) return;
+            const f = frame !== undefined ? frame : src.n_frames - 1;
+            canvas.width = nx;
+            canvas.height = ny;
+            const ctx = canvas.getContext('2d');
+            const arr = this._chan(src, f, channel);
+            this._paint(ctx, arr, nx, ny, min, max, cmap);
+        }
 
         _resetCanvasSize() {
             const src = this.cache[this.re];

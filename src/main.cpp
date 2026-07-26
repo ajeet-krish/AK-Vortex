@@ -16,7 +16,7 @@
 //   ./build/LBM_Engine 100 20000            (Re=100, 20000 steps)
 //   ./build/LBM_Engine 100 20000 --vtk      (include legacy VTK output)
 //
-// Reynolds: Re = u_inflow * D / nu,  D = 2 * radius = NY/5 = 30
+// Reynolds: Re = u_inflow * D / nu,  D = 2 * radius = 60 (fixed)
 //   nu = (tau - 0.5) / 3
 //   tau = 0.5 + 3 * u_inflow * D / Re
 // ==========================================================================
@@ -31,7 +31,7 @@ struct SimParams {
 
 SimParams compute_params(double Re, int steps = -1) {
     double u_inflow = 0.1;
-    double length_scale = static_cast<double>(NY) / 5.0;  // D = 2 * NY/10 = NY/5
+    double length_scale = 60.0;  // D = 2 * radius = 60 (fixed)
     double nu = u_inflow * length_scale / Re;
     double tau = 0.5 + 3.0 * nu;
 
@@ -54,7 +54,7 @@ ForceHistory run_simulation(double Re, int steps, bool save_vtk) {
 
     int cx_cyl = NX / 4;
     int cy_cyl = NY / 2 + 1;
-    int radius = NY / 10;
+    int radius = 30;
     place_cylinder(system, cx_cyl, cy_cyl, radius);
 
     // Initialize with equilibrium
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
 
     // Auto-LES: enable Smagorinsky when tau < 0.55 (high Re stability)
     {
-        double nu = 0.1 * (NY / 5.0) / Re;
+        double nu = 0.1 * 60.0 / Re;
         double tau_check = 0.5 + 3.0 * nu;
         if (tau_check < 0.55 && !g_use_les) {
             g_use_les = true;

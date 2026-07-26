@@ -1,6 +1,7 @@
 #include "lbm.hpp"
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <cmath>
 #include <string>
 #include <filesystem>
@@ -74,7 +75,7 @@ void layout_side(int n, int bw, int W, int& b1_0, int& b1_1,
 
 UrbanParams compute_side_params(double Re, double ar, int n_bldg) {
     double u_ref = 0.1;
-    int H = NY / 5;                        // building height
+    int H = NY * 2 / 5;                     // building height (40% of domain)
     int W = static_cast<int>(static_cast<double>(H) / ar);
     if (W < 10) W = 10;
     int bldg_wid = static_cast<int>(1.2 * H);  // building width = 1.2 * height
@@ -112,10 +113,11 @@ UrbanParams compute_topdown_params(double Re, TDOrient orient) {
     int w_bldg = w_bldg_nominal;
     int b1_x0, b2_x0, b3_x0, bldg_y0, bldg_y1, l_bldg;
     int bldg1_y0_td = 0, bldg2_y0_td = 0, bldg3_y0_td = 0;
+    int bldg1_x0_td = 0, bldg2_x0_td = 0, bldg3_x0_td = 0;
     int bldg_x0_td = 0, bldg_x1_td = 0;
     if (orient == TDOrient::VERTICAL) {
         // 3 tall buildings (long in y), wide street spacing
-        w_bldg = 100;
+        w_bldg = 120;
         int canyon = 2 * w_bldg;
         l_bldg = NY / 2;
         int total_w = 3 * w_bldg + 2 * canyon;
@@ -126,23 +128,23 @@ UrbanParams compute_topdown_params(double Re, TDOrient orient) {
         bldg_y0 = NY / 2 - l_bldg / 2;
         bldg_y1 = bldg_y0 + l_bldg;
         bldg1_y0_td = bldg_y0; bldg2_y0_td = bldg_y0; bldg3_y0_td = bldg_y0;
-        bldg_x0_td = b1_x0; bldg_x1_td = b1_x0 + w_bldg;
+        bldg1_x0_td = b1_x0; bldg2_x0_td = b2_x0; bldg3_x0_td = b3_x0;
     } else {
-        // 3 long buildings (long in x), stacked in y -> wind funneled
-        // through the horizontal canyons between them (same x, changing y)
-        w_bldg = NX / 3;     // elongated in x, clearly "long" rectangles
-        l_bldg = NY / 10;    // short in y
+        // 3 long buildings (long in x), spread along x with canyons between.
+        // Wind funneled along the pedestrian canyon between buildings.
+        w_bldg = 100;
+        l_bldg = NY / 8;
         int gap = 2 * l_bldg;
-        int total = 3 * l_bldg + 2 * gap;
-        int y0 = (NY - total) / 2;
-        int x0 = (NX - w_bldg) / 2;
-        bldg1_y0_td = y0;
-        bldg2_y0_td = y0 + l_bldg + gap;
-        bldg3_y0_td = y0 + 2 * (l_bldg + gap);
-        bldg_x0_td = x0;
-        bldg_x1_td = x0 + w_bldg;
-        b1_x0 = x0; b2_x0 = x0; b3_x0 = x0;
-        bldg_y0 = 0; bldg_y1 = 0;
+        int b1_x = NX * 3 / 8 - w_bldg / 2;
+        int b2_x = b1_x + w_bldg + gap;
+        int b3_x = b2_x + w_bldg + gap;
+        bldg1_x0_td = b1_x;
+        bldg2_x0_td = b2_x;
+        bldg3_x0_td = b3_x;
+        bldg_y0 = NY / 2 - l_bldg / 2;
+        bldg_y1 = bldg_y0 + l_bldg;
+        // unused for topdown (side view fields)
+        b1_x0 = 0; b2_x0 = 0; b3_x0 = 0;
     }
 
     int num_steps = std::max(20000, static_cast<int>(15.0 * NX / u_ref));
@@ -174,24 +176,15 @@ void place_topdown_obstacles(LBMCapabilities& system, const UrbanParams& p) {
     for (int y = 0; y < NY; ++y) {
         for (int x = 0; x < NX; ++x) {
             if (y == 0 || y == NY - 1) system.obstacle[node_index(x, y)] = true;
-            bool hit = false;
-            if (p.orient == TDOrient::HORIZONTAL) {
-                // 3 long slabs at the same x, stacked in y with canyons between
-                if (x >= p.bldg_x0_td && x < p.bldg_x1_td) {
-                    if (y >= p.bldg1_y0_td && y < p.bldg1_y0_td + p.l_bldg) hit = true;
-                    else if (y >= p.bldg2_y0_td && y < p.bldg2_y0_td + p.l_bldg) hit = true;
-                    else if (y >= p.bldg3_y0_td && y < p.bldg3_y0_td + p.l_bldg) hit = true;
-                }
-            } else {
-                // 3 tall pillars at the same y, spread along x with canyons between
-                if (x >= p.bldg1_x0_td && x < p.bldg1_x0_td + p.w_bldg
-                    && y >= p.bldg_y0 && y < p.bldg_y1) hit = true;
-                else if (x >= p.bldg2_x0_td && x < p.bldg2_x0_td + p.w_bldg
-                    && y >= p.bldg_y0 && y < p.bldg_y1) hit = true;
-                else if (x >= p.bldg3_x0_td && x < p.bldg3_x0_td + p.w_bldg
-                    && y >= p.bldg_y0 && y < p.bldg_y1) hit = true;
-            }
-            if (hit) system.obstacle[node_index(x, y)] = true;
+            if (x >= p.bldg1_x0_td && x < p.bldg1_x0_td + p.w_bldg
+                && y >= p.bldg_y0 && y < p.bldg_y1)
+                system.obstacle[node_index(x, y)] = true;
+            if (x >= p.bldg2_x0_td && x < p.bldg2_x0_td + p.w_bldg
+                && y >= p.bldg_y0 && y < p.bldg_y1)
+                system.obstacle[node_index(x, y)] = true;
+            if (x >= p.bldg3_x0_td && x < p.bldg3_x0_td + p.w_bldg
+                && y >= p.bldg_y0 && y < p.bldg_y1)
+                system.obstacle[node_index(x, y)] = true;
         }
     }
 }
@@ -272,17 +265,24 @@ int main(int argc, char* argv[]) {
     }
 
     std::string mode_str = (mode == UrbanMode::SIDE) ? "side" : "topdown";
-    std::string ar_str = "";
     std::string orient_str = "";
     if (mode == UrbanMode::SIDE) {
-        int ar_int = static_cast<int>(aspect_ratio * 10.0 + 0.5);
-        ar_str = "_ar" + std::to_string(ar_int);
-        if (n_bldg >= 3) ar_str += "_3b";
+        orient_str = (n_bldg >= 3) ? " 3bldg" : " 2bldg";
     } else if (orient == TDOrient::HORIZONTAL) {
         orient_str = "_h";
     }
-    std::string subdir = "output/urban_" + mode_str + ar_str + orient_str
-                         + "_re" + std::to_string(static_cast<int>(Re));
+    std::string subdir;
+    if (mode == UrbanMode::SIDE) {
+        std::ostringstream ss;
+        ss << std::fixed << std::setprecision(1) << aspect_ratio;
+        std::string bldg_prefix = (n_bldg >= 3) ? "3p_ar" : "2p_ar";
+        subdir = "output/urban/side/" + bldg_prefix + ss.str() + "_re"
+                 + std::to_string(static_cast<int>(Re));
+    } else if (orient == TDOrient::HORIZONTAL) {
+        subdir = "output/urban/topdown_h/re" + std::to_string(static_cast<int>(Re));
+    } else {
+        subdir = "output/urban/topdown_v/re" + std::to_string(static_cast<int>(Re));
+    }
     std::filesystem::create_directories(subdir + "/frames");
 
     save_meta_json(subdir, Re, params.tau, params.u_ref,
