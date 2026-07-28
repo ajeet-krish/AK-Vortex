@@ -58,6 +58,10 @@ CONFIGS = [
     ("output/urban/topdown_v/re100", "urban_topdown_v", False),
     ("output/urban/topdown_h/re100", "urban_topdown_h", False),
     ("output/urban/downwash/re100", "urban_downwash", False),
+    # Urban city grid (passive scalar dispersion)
+    ("output/urban/city_grid/inlet_east", "city_grid_east", False),
+    ("output/urban/city_grid/inlet_south", "city_grid_south", False),
+    ("output/urban/city_grid/inlet_west", "city_grid_west", False),
     # Ribs (raw Fx/Fy)
     ("output/ribs/re50", "ribs_re50", False),
     ("output/ribs/re100", "ribs_re100", False),

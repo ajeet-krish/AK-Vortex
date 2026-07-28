@@ -13,8 +13,8 @@
 //   ./build/LBM_Downwash 200                      (Re_H=200)
 //
 // Tall building upstream, low-rise downstream.
-// Buildings scaled up: h_tall=120, h_low=45, w_bldg=45, gap=45.
-// Maintains height ratio ~2.67 (120/45).
+// Buildings: h_tall=80, h_low=30, w_bldg=30, gap=30.
+// Maintains height ratio ~2.67 (80/30).
 // Re_H = u_ref * H_tall / nu
 // Validation: Cp distribution vs Hunt 1984 (qualitative)
 // ==========================================================================

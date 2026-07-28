@@ -20,7 +20,7 @@ struct CavityParams {
     double tau;
     double u_lid;
     int num_steps;
-    int vtk_interval;
+    int save_interval;
 };
 
 CavityParams compute_params(double Re, int nx, int steps) {
@@ -28,9 +28,9 @@ CavityParams compute_params(double Re, int nx, int steps) {
     double nu = u_lid * nx / Re;
     double tau = 0.5 + 3.0 * nu;
     int num_steps = (steps > 0) ? steps : std::max(10000, static_cast<int>(5.0 * nx / u_lid));
-    int vtk_interval = num_steps / 50;
+    int save_interval = std::max(1, num_steps / 50);
 
-    return {tau, u_lid, num_steps, vtk_interval};
+    return {tau, u_lid, num_steps, save_interval};
 }
 
 int main(int argc, char* argv[]) {
@@ -43,14 +43,21 @@ int main(int argc, char* argv[]) {
     int nx = 512;
     int ny = 512;
     int steps = -1;
+    bool save_vtk = false;
 
     int positional_idx = 1;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--use-les") {
+        if (arg == "--vtk") {
+            save_vtk = true;
+        } else if (arg == "--use-les") {
             g_use_les = true;
         } else if (arg == "--cs" && i + 1 < argc) {
             g_cs = std::stod(argv[++i]);
+        } else if (arg == "--nx" && i + 1 < argc) {
+            nx = std::stoi(argv[++i]);
+        } else if (arg == "--ny" && i + 1 < argc) {
+            ny = std::stoi(argv[++i]);
         } else if (arg.find("--") != 0) {
             if (positional_idx == 1) Re = std::stod(arg);
             else if (positional_idx == 2) nx = std::stoi(arg);
@@ -59,6 +66,18 @@ int main(int argc, char* argv[]) {
         }
     }
     ny = nx;  // square cavity
+
+    // Auto-LES: enable Smagorinsky when tau < 0.55 (high Re stability)
+    {
+        double u_lid = 0.1;
+        double nu = u_lid * nx / Re;
+        double tau_check = 0.5 + 3.0 * nu;
+        if (tau_check < 0.55 && !g_use_les) {
+            g_use_les = true;
+            std::cout << "Auto-LES: tau=" << tau_check << " < 0.55, enabling Smagorinsky LES (Cs="
+                      << g_cs << ")" << std::endl;
+        }
+    }
 
     // Set globals for cavity mode
     NX = nx;
@@ -95,12 +114,18 @@ int main(int argc, char* argv[]) {
     std::string subdir = "output/cavity/re" + std::to_string(static_cast<int>(Re));
     std::filesystem::create_directories(subdir + "/frames");
 
+    // Write metadata (matching main.cpp/step.cpp pattern)
+    save_meta_json(subdir, Re, params.tau, params.u_lid,
+                   static_cast<double>(NX), "lid-driven-cavity", NX, NY);
+
     for (int step = 0; step <= params.num_steps; ++step) {
         execute_time_step(system, params.tau, params.u_lid);
 
-        if (step % params.vtk_interval == 0) {
+        if (step % params.save_interval == 0) {
             save_json_frame(system, step, subdir);
-            save_vtk_frame(system, step, subdir);
+            if (save_vtk) {
+                save_vtk_frame(system, step, subdir);
+            }
         }
 
         if (step % 1000 == 0) {

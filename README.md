@@ -26,7 +26,6 @@ cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
 # Fluid analysis cases
 ./build/LBM_Engine 100                   # Cylinder wake at Re=100 (curved boundary demo)
-./build/LBM_SquareCylinder 200           # Square cylinder at Re=200 (ERCOFTAC 043)
 ./build/LBM_Cavity 100                   # Lid-driven cavity at Re=100
 ./build/LBM_Step 100                     # Backward-facing step at Re=100
 ./build/LBM_OrificePlate 100 3p          # Orifice plate (3 staggered plates)
@@ -35,7 +34,6 @@ cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 ./build/LBM_Downwash 100                 # Building downwash (tall + low-rise)
 
 # New physics cases
-./build/LBM_PeriodicHills 100            # Periodic hills (canonical LES benchmark)
 ./build/LBM_CylinderNearWall 100 20      # Cylinder near wall (ground effect, gap=20)
 ./build/LBM_SideBySide 100 3             # Side-by-side cylinders, transverse (S/D=3)
 ./build/LBM_RotatingCylinder 100 1.0     # Rotating cylinder (Magnus, omega=1.0)
@@ -95,7 +93,7 @@ not this README.
 - **OpenMP parallel** collision and streaming (collapse(2))
 - **Momentum exchange** force extraction for Cd/Cl coefficients
 - **Direct JSON output** -- per-frame velocity, pressure, vorticity fields + append-only force history. Optional `--vtk` flag for legacy Paraview export.
-- **14 simulation cases**: flat plate, cylinder, square cylinder, lid-driven cavity, backward-facing step, orifice plate, urban canyon (side + topdown vertical/horizontal), building downwash, periodic hills, cylinder near wall, side-by-side cylinders, rotating cylinder.
+- **14 simulation cases**: flat plate, cylinder, lid-driven cavity, backward-facing step, orifice plate, urban canyon (side + topdown vertical/horizontal), building downwash, cylinder near wall, side-by-side cylinders, rotating cylinder, urban city grid.
   - **PINN surrogate**: Fourier-feature parametric PINN (593K params) trained on cavity Re=100+400+1000, 3-panel comparison (LBM/PINN/Error in Reds) on website, discrete Re buttons + Re=300 interpolation panel, ~300-600x faster than the solver.
   - **Interactive Flow Viewer**: Per-case canvas engine (`docs/assets/js/flow-viewer.js`) streams compact float16 binary frame data (velocity magnitude + streamlines) with Play/Pause + scrubber. Live PINN tab runs the surrogate in-browser via ONNX Runtime Web.
 - **Polygon obstacle support** via point-in-polygon -- any closed 2D shape.
@@ -164,7 +162,6 @@ interactive design-space exploration practical in the browser.
 | 6.3 | Lid-driven cavity | Re (100-400) | Exists (51 frames, 128x128) | Re buttons -> vortex center shift |
 | 6.4 | Backward-facing step | Re (100-400) | Re-run Re=100 needed (no p/omega) | Re slider -> reattachment length |
 | 6.5 | Orifice plate | hole_w, n_plates | New Re+geometry sweeps needed | Diameter slider -> loss coeff K |
-| 6.8 | Time-Parametric PINN | t + Re | LBM time-series at Re=100+400+1000 | Watch vortex roll-up at any timestep |
 
 #### Phase 6.8: Time-Parametric PINN (Spatio-Temporal Surrogate)
 
@@ -246,11 +243,9 @@ src/
   flat_plate.cpp       Flat plate boundary layer (PRIMARY validation case)
   cavity.cpp           Lid-driven cavity
   step.cpp             Backward-facing step
-  square_cylinder.cpp  Square cylinder (ERCOFTAC 043)
   orifice_plate.cpp    Orifice plate (single + multi-stage, staggered)
   urban_canyon.cpp     Urban canyon (side 2b/3b + topdown vertical/horizontal)
   downwash.cpp         Building downwash (scaled buildings)
-  periodic_hills.cpp   Periodic hills (canonical LES benchmark)
   cylinder_near_wall.cpp  Cylinder near wall (ground effect)
   side_by_side_cylinders.cpp  Side-by-side cylinders (interference)
   rotating_cylinder.cpp  Rotating cylinder (Magnus effect)
@@ -264,12 +259,10 @@ scripts/
 docs/
   flat_plate.html      PRIMARY validation case (Blasius, drag polar)
   cylinder.html        Cylinder wake (comparison slider)
-  square_cylinder.html ERCOFTAC 043 (sharp-edge separation)
   cavity.html          Lid-driven cavity + PINN parametric Re-sweep
   step.html            Backward-facing step
   orifice_plate.html   Orifice plate (single + multi-stage)
   urban.html           Urban canyon (side + topdown vertical/horizontal + downwash)
-  periodic_hills.html  Periodic hills (LES benchmark)
   cylinder_near_wall.html  Cylinder near wall (ground effect)
   side_by_side.html    Side-by-side cylinders (interference)
   rotating_cylinder.html  Rotating cylinder (Magnus effect)
@@ -322,8 +315,6 @@ defaults for rectangular).
 | Urban canyon | 100 | 900x400 | -- | -- | Oke 1988 regimes |
 | Downwash | 100 | 800x300 | -- | -- | Hunt 1984 |
 | City Grid | 100 | 1600x1200 | -- | -- | 7 buildings, east inlet |
-| Square cylinder | 200 | 800x300 | 1.568 | 0.358 | Retired (sharp-edge separation) |
-| Periodic hills | 100 | 1600x450 | -- | -- | Retired (geometry pending fix) |
 
 ## Roadmap
 
@@ -417,11 +408,10 @@ NOT thermal LBM. Adds a second D2Q9 distribution `g_i` for scalar concentration 
 | Plot aspect ratios | All PNGs square (set_box_aspect(1) in postprocess.py) | Remove set_box_aspect(1), use data aspect ratio | **Pending** |
 | OpenMP perf | compute_wall_distance serial BFS runs every step with LES | Cache wall distance (geometry is static, compute once) | **Pending** |
 | f_next zeroing | std::fill is serial, 17MB per step | Parallelize with #pragma omp parallel for | **Pending** |
-| Periodic hills geometry | H=NY*2/3 (67% obstacle), valleys too narrow | H=NY/3, NX=1600 (33% wider valleys, ~30% obstacle) | **Pending** |
 | Variable shadowing | double y shadows outer loop var in lbm.hpp:319 | Rename to wall_d | **Pending** |
 | Ladd moving boundary | Rotating cylinder tangential velocity | Implement Ladd (1994) bounce-back | **Completed** |
 | Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | **Completed** |
-| Side-by-side geometry | Transverse arrangement | D=40, S/D=2,3,5 | **Completed** |
+| Side-by-side geometry | Transverse arrangement | D=60, S/D=2,3,5 | **Completed** |
 | Orifice single-hole jet | 1p1h/2p/3p diverged | Lower u_inflow to 0.025 + LES | **Completed** |
 | save_json_frame closing brace | Missing root `}` truncates all frames | Added second `}`, rebuilt, re-ran urban_citygrid | **Completed** |
 | Urban citygrid zero velocity | Solver produces u=v=0 for all cells | Root cause unknown (initialization/streaming bug in URBAN_CITYGRID) | **In progress** |

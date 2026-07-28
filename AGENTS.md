@@ -25,7 +25,6 @@ Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Or
 | 4 | Full simulation re-runs + new cases | **Completed** (23/23 sims passed all tiers) |
 | 4.1 | Fix plot aspect ratios (postprocess.py) | **Deferred** (set_box_aspect(1) still in place) |
 | 4.2 | Fix OpenMP perf (cached wall distance) | **Deferred** |
-| 4.3 | Fix periodic hills geometry | **Deferred** |
 | 5 | Website updates for new features | Completed (2x2 grid layout on all case pages) |
 | 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
 | 5.7 | Grid resolution upgrade + full re-run | Completed (tiered: 1600x600/1200x450/keep) |
@@ -93,7 +92,7 @@ NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
 - MRT collision operator (default, BGK fallback) with tuned rates
 - Bouzidi interpolated bounce-back for cylinders (q_cylinder) and polygons (q_polygon)
 - JSON output pipeline (meta.json, forces.jsonl, frame_*.json) with pressure field
-- 14 simulation cases: cylinder, cavity, step, urban (side+topdown), downwash, square cylinder, flat plate, orifice plate, periodic hills, cylinder near wall, side-by-side cylinders, rotating cylinder
+- 12 simulation cases: cylinder, cavity, step, urban (side+topdown), downwash, flat plate, orifice plate, cylinder near wall, side-by-side cylinders, rotating cylinder, urban city grid
 - 12 Google Test suite tests, GitHub Actions CI
 - Postprocess.py with --split, --cmap, --strouhal, --video, obstacle overlay, pressure contour
 - Comparison slider (contour vs streamline), slider.js
@@ -109,20 +108,18 @@ NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
 - Smagorinsky LES: g_use_les/g_cs globals, tau_eff quadratic solver, s_shear scaling in MRT collision
 - Block-structured AMR: AMRBlock/AMRGrid structs, prolongation, restriction, refinement sensor, regridding
 - Vorticity output: omega field in frame JSON, --vorticity flag in postprocess.py with RdBu colormap
-- Square cylinder case (ERCOFTAC 043): sharp-edge separation, fixed separation points
 - Urban canyon enhanced: 3 buildings in row, wider domain (900x400), larger buildings (H=NY*2/5=160, 40% of domain, 1.2H width)
+- Urban canyon inlet buffer fix: 100-cell minimum inlet/outlet buffer prevents NaN divergence at low AR (0.3, 0.6) and topdown_v where buildings were pushed against the Zou-He inflow. Canyon width capped to fit within NX-200.
 - Urban topdown enhanced: 3 buildings, larger (w=60, l=NY/2), wider spacing (2*w) for realistic street network
 - Downwash enhanced: buildings scaled up (h_tall=80, h_low=30, w=30), maintaining 2.67 height ratio
 - Cavity: JSON frame output; website uses JSON slider (static PNG gallery removed), VTK still written for Paraview
 - Auto-LES: automatically enables Smagorinsky when tau < 0.55 (high Re stability)
-- Periodic hills: canonical LES benchmark (Moser/Kim/Moin 1993), sinusoidal hill profile
 - Cylinder near wall: ground effect study, cylinder raised to wall gaps 10/20/40 cells (clear under-flow)
-- Side-by-side cylinders: TRANSVERSE arrangement (same x, offset in y), D=40 (NY/15) so S/D=5 fits domain, S/D=2,3,5
+- Side-by-side cylinders: TRANSVERSE arrangement (same x, offset in y), D=60, S/D=2,3,5
 - Rotating cylinder: Magnus effect with variable angular velocity (0.5,1.0,2.0 rad/ts)
 - Ladd (1994) moving boundary: omega_lat = omega_user * u_inflow / R, f_bb correction term
 - Cylinder near wall: physical wall at y=0, force extraction filtered to cylinder only
 - Orifice plate: 4 configs (1p1h, 1p3h, 2p, 3p); u_inflow=0.025 + LES for single-hole jet stability
-- Periodic hills: hill height reduced to h_max=H/6 (was H/2); L changed from 9*H=1800 to NX=800 so exactly one hill period fits the domain (fixes the periodic-x BC height discontinuity that caused NaN divergence at step 2); fully-periodic streaming + force-extraction paths wired for PERIODIC_HILLS
 - Urban canyon: moved to External Aerodynamics nav. Side view = 4 cases (H/W 0.3/0.5/0.8 with 2 buildings, H/W 0.6 with 3 buildings). Top-down adds horizontal-orientation buildings (wind funneled along pedestrian, orifice-like) alongside vertical
 - Removed ribs case (deprecated) from nav and results; ribs.html deleted if present
 - Removed: nozzle (replaced by orifice plate), ahmed body (2D limitation), airfoil (replaced by flat plate), tandem cylinders (redundant), sports-bell (removed from portfolio to focus on validated cases)
@@ -147,15 +144,13 @@ NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
 | Flat plate Re=2000 | 2000 | 0.049 | 0 | Re scaling validated |
 | Cylinder | 100 | 1.536 | ~0 | Validated (Mei BB) |
 | Cylinder | 200 | 1.319 | ~0 | Validated (Mei BB) |
-| Square cylinder | 200 | 1.568 | 0.358 | Validated vs ERCOFTAC |
 | Cavity | 100-1000 |, |, | Validated vs Ghia |
 | Step | 100-400 |, |, | Validated vs Armaly |
 | Orifice plate | 100 | Fx 0.9 (1p3h) to 63 (3p) |, | ISO 5167 loss validation |
-| Periodic hills | 100-2800 |, |, | LES benchmark (geometry being fixed) |
 | Cylinder near wall | 100 | 2.56-2.75 | +0.40 to +1.42 | Ground effect (lift vs gap) |
 | Side-by-side | 100 | 2.57-2.82 | ~0 (amp 0.6-0.7) | Interference study |
 | Rotating cylinder | 100 | Cd~2-7, Cl~-1.5 to -7.4 |, | Magnus effect (Ladd) |
-| Urban canyon | 100 | Cd 0.37 (AR0.3) to 55 (topdown) | Cl 6.9 (AR0.5) to 20.2 (AR0.8) | Oke 1988 regimes; topdown vertical vs horizontal |
+| Urban canyon | 100 | Cd 0.37 (AR0.3) to 55 (topdown) | Cl 6.9 (AR0.5) to 20.2 (AR0.8) | Oke 1988 regimes; AR0.3/AR0.6/topdown_v fixed (inlet buffer) |
 | Downwash | 100 |, |, | Hunt 1984 |
 
 ### Failed / Known Issues
@@ -164,7 +159,6 @@ NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
 - Rotating cylinder: Ladd (1994) implemented, Cl~50-60% of Kutta-Joukowski prediction (viscous effects)
 - Cylinder near wall: Wall effect working, Cd~2.6 (vs 1.77 isolated), Cl +0.4 to +1.4 (upward, scales with gap)
 - Orifice 3p: Diverged at step 58500 at 60k steps with u_inflow=0.025+LES; rerun at 50k steps completed clean.
-- Periodic hills: L>NX periodic-x discontinuity fixed in code (L=NX, 3 hill cycles via n_cycles=3, fully-periodic streaming + force extraction). Body-force driving implemented (compute_body_force, ×28 safety factor); re-run Re=100 (40k steps), Re=1000/2800 (240k steps) completed clean, images regenerated, docs updated (3-cycle callout + Fx table).
 - Flat plate AoA force extraction: at AoA=5 deg the computed streamwise Cd (0.046) is lower than at AoA=0 (0.105), which is physically wrong (drag should rise with incidence). The momentum-exchange extraction reports the global x/y force correctly, so this points to a drag/lift decomposition issue under rotation that needs review. AoA=0 (Re-sweep) and the Cd reference-area convention (Cd = 2·Cf on planform area) are validated.
 - Urban topdown horizontal: 3 long slabs (long in x, stacked in y) develop shear-layer (Kelvin-Helmholtz) instability in the canyons that grows until NaN divergence (~step 40k) without dissipation. Forcing Smagorinsky LES (--use-les) stabilizes it; appropriate since the separated canyon flow is turbulent.
 
@@ -176,10 +170,8 @@ NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
 | OpenMP perf | `compute_wall_distance()` serial BFS runs every step with LES (~70-85% of timestep) | Cache wall distance (geometry is static, compute once at init) | `src/lbm_types.hpp` | **Pending** |
 | f_next zeroing | `std::fill` is serial, zeros 17MB per step | Parallelize with `#pragma omp parallel for` | `src/lbm.hpp` | **Pending** |
 | Variable shadowing | `double y` at lbm.hpp:319 shadows outer loop var | Rename to `wall_d` | `src/lbm.hpp` | **Pending** |
-| Periodic hills geometry | H=NY*2/3 (58.7% obstacle), valleys 400 cells wide | H=NY/3, NX=1600 (~30% obstacle, 533-cell valleys) | `src/periodic_hills.cpp`, `scripts/run_all_sims.py` | **Pending** |
 | Ladd moving boundary | Rotating cylinder tangential velocity | Implement Ladd (1994) bounce-back | `lbm_types.hpp`, `lbm.hpp`, `rotating_cylinder.cpp` | **Completed** |
 | Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | `cylinder_near_wall.cpp`, `lbm.hpp` | **Completed** |
-| Periodic hills re-run | L=NX fix, body-force driving | Re-run all Re, regenerate images | `periodic_hills.cpp`, `lbm.hpp` | **Completed** |
 | Cylinder Re=1000 | Diverged at tau=0.518 | Documented as known limitation; website surfaces Re=20/40/100/200 only | `main.cpp` | **Deferred** |
 
 ## Roadmap
@@ -522,7 +514,6 @@ AMRGrid
 - Flat plate boundary layer: AoA sweep (-10 to 15 deg) + Re sweep (500-2000)
 - Square cylinder (ERCOFTAC 043): Cd/St validation
 - Orifice plate: 4 configs (1p1h, 1p3h, 2p, 3p), ISO 5167 loss validation
-- Periodic hills: canonical LES benchmark (Moser/Kim/Moin 1993)
 - Cylinder near wall: ground effect study with variable wall gap (10/20/40 cells)
 - Side-by-side cylinders: transverse interference study with variable S/D ratio (2,3,5)
 - Rotating cylinder: Magnus effect with variable angular velocity
@@ -533,6 +524,8 @@ AMRGrid
 - Tandem cylinders: redundant with urban topdown multi-body flow
 - Jeffery-Hamel: wedge apex singularity, replaced by CD nozzle (now orifice plate)
 - Converging-diverging nozzle: replaced by orifice plate (single + multi-stage)
+- Square cylinder: source file removed (ERCOFTAC 043 sharp-edge separation)
+- Periodic hills: source file removed (LES benchmark, geometry pending fix)
 
 **Re-runs with omega field:**
 - All existing cases regenerated with vorticity output
@@ -575,7 +568,6 @@ lbm-2d/
     orifice_plate.cpp            # Orifice plate (single + multi-stage, staggered)
     urban_canyon.cpp           # Urban canyon (--mode side|topdown), 3 buildings
     downwash.cpp               # Building downwash entry point (scaled up buildings)
-    periodic_hills.cpp         # Periodic hills (canonical LES benchmark)
     cylinder_near_wall.cpp     # Cylinder near wall (ground effect)
     side_by_side_cylinders.cpp # Side-by-side cylinders (interference)
     rotating_cylinder.cpp      # Rotating cylinder (Magnus effect)
@@ -598,7 +590,6 @@ lbm-2d/
     step.html                  # Backward-facing step
     orifice_plate.html           # Orifice plate (single + multi-stage)
     urban.html                   # Urban canyon (side + topdown + downwash)
-    periodic_hills.html        # Periodic hills (LES benchmark)
     cylinder_near_wall.html    # Cylinder near wall (ground effect)
     side_by_side.html          # Side-by-side cylinders (interference)
     rotating_cylinder.html     # Rotating cylinder (Magnus effect)
@@ -886,14 +877,12 @@ produced. Check off as completed. Use `--use-les` where tau < 0.55.
 
 - [ ] **Cylinder Re=100** -- `./build/LBM_Engine 100` (expect Cd~1.53, was 1.77 Bouzidi)
 - [ ] **Cylinder Re=200** -- `./build/LBM_Engine 200` (expect Cd~1.37, Cl amp~0.37)
-- [ ] **Square cylinder Re=200** -- `./build/LBM_SquareCylinder 200` (Cd~1.16, ERCOFTAC)
 - [ ] **Flat plate AoA=0 Re=1000** -- `./build/LBM_FlatPlate 1000 0` (Cd~0.026, Blasius)
 - [ ] **Flat plate AoA=10 Re=1000** -- `./build/LBM_FlatPlate 1000 10` (Cl~1.1)
 - [ ] **Cavity Re=100** -- `./build/LBM_Cavity 100` (Ghia u-profile)
 - [ ] **Cavity Re=400** -- `./build/LBM_Cavity 400`
 - [ ] **Step Re=100** -- `./build/LBM_Step 100` (Armaly Xr/H)
 - [ ] **Orifice 1p1h Re=100** -- `./build/LBM_OrificePlate 100 1p1h` (ISO 5167 K)
-- [ ] **Periodic hills Re=100** -- `./build/LBM_PeriodicHills 100` (LES benchmark)
 - [ ] **Cylinder near wall Re=100 gap=20** -- `./build/LBM_CylinderNearWall 100 20`
 - [ ] **Side-by-side Re=100 S/D=3** -- `./build/LBM_SideBySide 100 3`
 - [ ] **Rotating cylinder Re=100 w=1.0** -- `./build/LBM_RotatingCylinder 100 1.0`
@@ -903,7 +892,6 @@ produced. Check off as completed. Use `--use-les` where tau < 0.55.
 ### B. Van Driest damping sanity (LES cases, confirm no regression)
 
 - [ ] **Cylinder Re=1000 fine grid (NX=2400 NY=900)** -- `./build/LBM_Engine 1000 40000 --use-les` (stable, Cd within 30% lit)
-- [ ] **Periodic hills Re=1000** -- `./build/LBM_PeriodicHills 1000` (LES, check y+ damping)
 - [ ] **Urban topdown horizontal Re=100 (LES)** -- `./build/LBM_UrbanCanyon --mode topdown --horizontal --use-les`
 
 ### C. New thermal LBM cases (Upgrade 4)

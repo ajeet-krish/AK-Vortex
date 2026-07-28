@@ -121,6 +121,8 @@ int main(int argc, char* argv[]) {
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 
+    NX = 1600; NY = 1000;  // doc default
+
     double Re = 100.0;
     std::string config = "3p";
     int steps = -1;

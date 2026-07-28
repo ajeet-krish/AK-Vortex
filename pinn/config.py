@@ -88,18 +88,43 @@ def _geometry_for(shape_type: str, NX: int, NY: int, ds: int) -> dict:
         radius = (NY / 10.0) / ds
         return {"cx": cx, "cy": cy, "radius": radius}
     if shape_type == "lid-driven-cavity":
-        # No interior obstacle -- flow enclosed by walls.
-        # Lid occupies the top wall row (y = NY-1).
         return {"shape_type": "lid-driven-cavity"}
     if shape_type == "backward-facing-step":
-        # Step at x = NX/4, y = 0 to h_step (NY/3).
         h_step = NY // 3
-        return {"shape_type": "backward-facing-step", "h_step": h_step}
+        return {"shape_type": "backward-facing-step", "h_step": h_step,
+                "h_step_norm": (h_step / NY) * 2.0 - 1.0}
     if shape_type == "orifice-plate":
-        # Orifice plate at x = NX/2, hole centered at y = NY/2.
-        hole_w = NX // 8  # default, overridden per-config
-        return {"shape_type": "orifice-plate", "hole_w": hole_w}
-    return {}
+        hole_w = NX // 8
+        plate_x = NX // 2
+        return {"shape_type": "orifice-plate", "hole_w": hole_w,
+                "plate_x_norm": (plate_x / NX) * 2.0 - 1.0,
+                "hole_center_norm": 0.0, "hole_half_norm": (hole_w / NY)}
+    if shape_type == "flat-plate":
+        chord = NX // 3
+        return {"shape_type": "flat-plate", "chord": chord,
+                "chord_norm": (chord / NX) * 2.0}
+    if shape_type in ("urban-side", "urban-topdown", "urban-canyon",
+                       "building-downwash"):
+        return {"shape_type": shape_type}
+    if shape_type == "cylinder-near-wall":
+        cx = (NX / 4.0) / ds
+        cy = (NY * 0.3) / ds  # raised above ground
+        radius = (NY / 10.0) / ds
+        gap_y = (NY * 0.1) / ds  # gap = 10% of height
+        return {"cx": cx, "cy": cy, "radius": radius,
+                "gap_y_norm": (gap_y / NY) * 2.0 - 1.0}
+    if shape_type == "side-by-side":
+        cx = (NX / 4.0) / ds
+        cy1 = (NY / 2.0 - NY / 8.0) / ds
+        cy2 = (NY / 2.0 + NY / 8.0) / ds
+        radius = (NY / 10.0) / ds
+        return {"cx": cx, "cy": cy1, "cy2": cy2, "radius": radius}
+    if shape_type == "rotating-cylinder":
+        cx = (NX / 4.0) / ds
+        cy = (NY / 2.0 + 1.0) / ds
+        radius = (NY / 10.0) / ds
+        return {"cx": cx, "cy": cy, "radius": radius}
+    return {"shape_type": shape_type}
 
 
 def from_meta(meta_path: str, case_dir: Optional[str] = None,

@@ -70,6 +70,8 @@ int main(int argc, char* argv[]) {
     std::cout << " Ladd (1994) Moving Boundary" << std::endl;
     std::cout << "==============================================" << std::endl;
 
+    NX = 1200; NY = 800;  // doc default
+
     double Re = 100.0;
     double omega = 1.0;
     int steps = -1;

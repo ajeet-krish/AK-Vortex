@@ -100,6 +100,15 @@ def _detect_shape(meta, output_dir=None):
             if 'downwash' in dname:
                 return 'building-downwash'
             return 'urban-canyon'
+        # New nested paths under urban/
+        if pname == 'side':
+            return 'urban-side'
+        if pname == 'topdown_v':
+            return 'urban-topdown'
+        if pname == 'topdown_h':
+            return 'urban-topdown'
+        if pname == 'city_grid':
+            return 'urban-canyon'
         # Legacy flat directory names
         if 'urban_side' in dname:
             return 'urban-side'
@@ -557,6 +566,89 @@ def save_vorticity_png(data, output_dir, frame):
     print(f"  Saved {path}")
 
 
+def save_mesh_png(data, output_dir, frame, meta=None):
+    """Render the computational grid: cell edges + obstacle boundaries.
+
+    Draws a wireframe of the lattice grid with:
+    - Thin gray lines for interior cell edges (alpha=0.15)
+    - Thick black lines for domain boundaries
+    - Red lines for obstacle boundaries (where fluid meets solid)
+    - Colored patches for obstacle regions
+    """
+    ny_data = data['ny']
+    nx_data = data['nx']
+    obs = np.array(data.get('obstacle', []))
+    if obs.ndim == 1 and obs.size > 0:
+        obs = obs.reshape(ny_data, nx_data)
+    else:
+        obs = np.zeros((ny_data, nx_data), dtype=bool)
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
+    fig.patch.set_facecolor('white')
+
+    # Draw faint interior cell edges
+    # Skip some lines if grid is very large to keep file size reasonable
+    skip_x = max(1, nx_data // 200)
+    skip_y = max(1, ny_data // 200)
+
+    for x in range(0, nx_data + 1, skip_x):
+        ax.axvline(x - 0.5, color='gray', linewidth=0.3, alpha=0.15)
+    for y in range(0, ny_data + 1, skip_y):
+        ax.axhline(y - 0.5, color='gray', linewidth=0.3, alpha=0.15)
+
+    # Draw domain boundary (thick black)
+    ax.plot([-0.5, nx_data - 0.5, nx_data - 0.5, -0.5, -0.5],
+            [-0.5, -0.5, ny_data - 0.5, ny_data - 0.5, -0.5],
+            color='black', linewidth=1.5)
+
+    # Draw obstacle boundaries (red edges where fluid meets solid)
+    # Find obstacle boundary cells: obstacle cells adjacent to fluid
+    obs_bool = obs > 0.5
+    for y in range(ny_data):
+        for x in range(nx_data):
+            if not obs_bool[y, x]:
+                continue
+            # Check 4 neighbors
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx2, ny2 = x + dx, y + dy
+                if 0 <= nx2 < nx_data and 0 <= ny2 < ny_data:
+                    if not obs_bool[ny2, nx2]:
+                        # This is a boundary edge
+                        if dx == -1:  # fluid to the left
+                            ax.plot([x - 0.5, x - 0.5], [y - 0.5, y + 0.5],
+                                    color='red', linewidth=0.8, alpha=0.7)
+                        elif dx == 1:  # fluid to the right
+                            ax.plot([x + 0.5, x + 0.5], [y - 0.5, y + 0.5],
+                                    color='red', linewidth=0.8, alpha=0.7)
+                        elif dy == -1:  # fluid below
+                            ax.plot([x - 0.5, x + 0.5], [y - 0.5, y - 0.5],
+                                    color='red', linewidth=0.8, alpha=0.7)
+                        elif dy == 1:  # fluid above
+                            ax.plot([x - 0.5, x + 0.5], [y + 0.5, y + 0.5],
+                                    color='red', linewidth=0.8, alpha=0.7)
+
+    # Overlay obstacle regions as light gray patches
+    obs_mask = np.ma.masked_where(~obs_bool, np.ones_like(obs_bool, dtype=float))
+    ax.imshow(obs_mask, origin='lower', cmap='gray_r', aspect='equal',
+              vmin=0, vmax=1, alpha=0.3, interpolation='nearest',
+              extent=[-0.5, nx_data - 0.5, -0.5, ny_data - 0.5])
+
+    ax.set_xlim(-1, nx_data)
+    ax.set_ylim(-1, ny_data)
+    ax.set_aspect('equal')
+    ax.set_box_aspect(ny_data / nx_data)
+    ax.set_xlabel('x (lattice units)')
+    ax.set_ylabel('y (lattice units)')
+    ax.set_title(f'Computational Grid ({nx_data}x{ny_data})', fontsize=10)
+    ax.grid(False)
+
+    plt.tight_layout(pad=0.5)
+    path = os.path.join(output_dir, f'mesh_{int(frame):04d}.png')
+    plt.savefig(path, dpi=150, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.close()
+    print(f"  Saved {path}")
+
+
 def save_cp_png(data, output_dir, frame, meta=None):
     """Pressure coefficient Cp = (p - p_ref) / (0.5 * rho_inf * U_inf^2)
     Obstacle cells (rho=0) are masked as NaN and rendered transparent.
@@ -644,6 +736,8 @@ def main():
                         help='Print friction factor from meta.json (ribbed channel)')
     parser.add_argument('--video', action='store_true',
                         help='Render overlay video (contour + streamlines on same frame)')
+    parser.add_argument('--mesh', action='store_true',
+                        help='Render computational grid (cell edges + obstacle boundaries)')
     args = parser.parse_args()
 
     input_dir = args.input_dir
@@ -675,6 +769,8 @@ def main():
 
             if not HAS_MPL:
                 print("matplotlib not installed, skipping PNG output")
+            elif args.mesh:
+                save_mesh_png(data, input_dir, frame_num, meta)
             elif args.cp:
                 save_cp_png(data, input_dir, frame_num, meta)
             elif args.vorticity:

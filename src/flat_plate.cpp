@@ -63,6 +63,8 @@ int main(int argc, char* argv[]) {
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 
+    NX = 1200; NY = 900;  // doc default
+
     double Re = 1000.0;
     double aoa_deg = 0.0;
     double chord = 200.0;

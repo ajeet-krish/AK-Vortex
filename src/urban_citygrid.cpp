@@ -33,8 +33,6 @@ struct CityGridParams {
 
 CityGridParams compute_citygrid_params(double Re, int inlet_dir) {
     double u_ref = 0.1;
-    NX = 1600;
-    NY = 1200;
 
     // Building dimensions (scaled for larger domain)
     int bldg_w = 120;   // building width
@@ -107,10 +105,13 @@ int main(int argc, char* argv[]) {
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 
+    NX = 1600; NY = 1200;  // doc default
+
     double Re = 100.0;
     int steps = -1;
     int inlet_dir = 0;  // 0=East, 1=South, 2=West
     bool save_vtk = false;
+    int positional_idx = 1;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -130,13 +131,19 @@ int main(int argc, char* argv[]) {
             else if (dir == "south" || dir == "1") inlet_dir = 1;
             else if (dir == "west" || dir == "2") inlet_dir = 2;
         } else if (arg.find("--") != 0) {
-            Re = std::stod(arg);
+            if (positional_idx == 1) Re = std::stod(arg);
+            else if (positional_idx == 2) steps = std::stoi(arg);
+            ++positional_idx;
         }
     }
 
     g_case = CaseType::URBAN_CITYGRID;
     g_inlet_dir = inlet_dir;
     auto params = compute_citygrid_params(Re, inlet_dir);
+    if (steps > 0) {
+        params.num_steps = steps;
+        params.save_interval = steps / 50;
+    }
     LBMCapabilities system;
 
     place_citygrid_obstacles(system, params);

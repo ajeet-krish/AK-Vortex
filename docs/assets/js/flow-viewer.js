@@ -150,6 +150,7 @@
             this._last = 0;
             this._imgData = null;
             this._scratch = null;
+            this._MAX_DIM = 1200;
             this._loopBound = this._loop.bind(this);
             requestAnimationFrame(this._loopBound);
         }
@@ -338,18 +339,21 @@
             const { nx, ny, n_chan } = src;
             if (channel >= n_chan) return;
             const f = frame !== undefined ? frame : src.n_frames - 1;
-            canvas.width = nx;
-            canvas.height = ny;
+            const scale = Math.min(1, this._MAX_DIM / Math.max(nx, ny));
+            canvas.width = Math.round(nx * scale);
+            canvas.height = Math.round(ny * scale);
             const ctx = canvas.getContext('2d');
             const arr = this._chan(src, f, channel);
             this._paint(ctx, arr, nx, ny, min, max, cmap);
         }
-
         _resetCanvasSize() {
             const src = this.cache[this.re];
             if (!src) return;
-            this.canvas.width = src.lbm.nx;
-            this.canvas.height = src.lbm.ny;
+            let w = src.lbm.nx;
+            let h = src.lbm.ny;
+            const scale = Math.min(1, this._MAX_DIM / Math.max(w, h));
+            this.canvas.width = Math.round(w * scale);
+            this.canvas.height = Math.round(h * scale);
         }
 
         async init(re) {

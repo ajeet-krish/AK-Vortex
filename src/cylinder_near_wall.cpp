@@ -66,6 +66,8 @@ int main(int argc, char* argv[]) {
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 
+    NX = 1600; NY = 600;  // doc default
+
     double Re = 100.0;
     int gap = 20;
     int steps = -1;

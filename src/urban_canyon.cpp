@@ -80,10 +80,19 @@ UrbanParams compute_side_params(double Re, double ar, int n_bldg) {
     if (W < 10) W = 10;
     int bldg_wid = static_cast<int>(1.2 * H);  // building width = 1.2 * height
 
-    // Ensure n buildings + (n-1) canyons fit within NX with margin
+    // Ensure n buildings + (n-1) canyons fit within NX with margin.
+    // Cap canyon width first (preserves building width for blockage physics),
+    // then shrink buildings if still too wide.  Minimum 100-cell inlet buffer
+    // so buildings are not jammed against the Zou-He inflow (causes NaN).
+    int max_total = NX - 200;  // 100-cell buffer on each side
     int total_needed = n_bldg * bldg_wid + (n_bldg - 1) * W;
-    if (total_needed > NX - 20) {
-        bldg_wid = (NX - 20 - (n_bldg - 1) * W) / n_bldg;
+    if (total_needed > max_total && n_bldg > 1) {
+        W = (max_total - n_bldg * bldg_wid) / (n_bldg - 1);
+        if (W < 20) W = 20;
+        total_needed = n_bldg * bldg_wid + (n_bldg - 1) * W;
+    }
+    if (total_needed > max_total) {
+        bldg_wid = (max_total - (n_bldg - 1) * W) / n_bldg;
         if (bldg_wid < 20) bldg_wid = 20;
     }
 
@@ -120,7 +129,14 @@ UrbanParams compute_topdown_params(double Re, TDOrient orient) {
         w_bldg = 120;
         int canyon = 2 * w_bldg;
         l_bldg = NY / 2;
+        // Cap total width to maintain 100-cell inlet/outlet buffer
+        int max_total = NX - 200;
         int total_w = 3 * w_bldg + 2 * canyon;
+        if (total_w > max_total) {
+            canyon = (max_total - 3 * w_bldg) / 2;
+            if (canyon < 20) canyon = 20;
+            total_w = 3 * w_bldg + 2 * canyon;
+        }
         int start_x = (NX - total_w) / 2;
         b1_x0 = start_x;
         b2_x0 = b1_x0 + w_bldg + canyon;

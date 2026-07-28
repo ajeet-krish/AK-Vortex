@@ -9,7 +9,7 @@ flags (`--nx`, `--ny`, `--chord`, `--inlet`, etc.) where noted.
 |------|-------|----------------|-----------|
 | 1 | Cylinder, Cavity, Flat Plate, Step | 1200x1200, 512x512, 1200x900, 3200x600 | Primary validation, curved boundaries |
 | 2 | Cylinder Near Wall, Side-by-Side, Rotating Cyl, Orifice | 1600x600, 1200x1000, 1200x800, 1600x1000 | Mixed rectangular/curved |
-| 3 | Urban Canyon, Downwash, City Grid | Source defaults (900x400, 800x300, 1600x1200) | Purely rectangular, no staircase benefit |
+| 3 | Urban Canyon, Downwash, City Grid | 900x400, 1200x600, 1600x1200 | Purely rectangular, no staircase benefit |
 
 ## Case Parameters
 
@@ -68,15 +68,6 @@ flags (`--nx`, `--ny`, `--chord`, `--inlet`, etc.) where noted.
 | tau(Re_H=400) | 0.80 | |
 | Validation | Armaly (1983) | Xr/H ~3/6/9 for Re=100/200/400 |
 
-### Square Cylinder (square_cylinder.cpp -- LBM_SquareCylinder)
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Grid | Source defaults (1200x600) | `--nx`/`--ny` override |
-| Side length | D | Computed from grid |
-| u_inflow | 0.10 | Fixed |
-| Validation | ERCOFTAC 043 | Sharp-edge separation |
-
 ### Cylinder Near Wall (cylinder_near_wall.cpp -- LBM_CylinderNearWall)
 
 | Parameter | Value | Notes |
@@ -118,17 +109,6 @@ flags (`--nx`, `--ny`, `--chord`, `--inlet`, etc.) where noted.
 | LES | Auto-enabled | u_inflow=0.025 gives tau near 0.55 |
 | Validation | ISO 5167 | Loss coefficient K |
 
-### Periodic Hills (periodic_hills.cpp -- LBM_PeriodicHills)
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Grid | Source defaults (NX=NY=800) | L = NX fits one hill period |
-| Hill height | h_max = NY/6 | Reduced to fix NaN divergence |
-| n_cycles | 3 | Three hill cycles in domain |
-| BC | Periodic x, periodic y | Fully periodic |
-| Driving | Body force (x28 safety factor) | Computed from Re and geometry |
-| Validation | Moser/Kim/Moin (1993) | LES benchmark |
-
 ### Urban Canyon (urban_canyon.cpp -- LBM_UrbanCanyon)
 
 | Parameter | Value | Notes |
@@ -137,12 +117,18 @@ flags (`--nx`, `--ny`, `--chord`, `--inlet`, etc.) where noted.
 | Modes | side, topdown | `--mode` argument |
 | Side AR | 0.3, 0.5, 0.6(3-bldg), 0.8 | `--ar` argument |
 | Topdown orient | vertical, horizontal | `--orient` argument |
+| Building height | NY * 2/5 = 160 (side) | 40% of domain |
+| Building width | 1.2 * H = 192 (side) | Scaled to fit |
+| Inlet buffer | 100 cells minimum | Prevents NaN divergence |
+| Canyon width | Capped to fit within NX-200 | Side: W=316(AR0.3/0.5), 62(AR0.6), 200(AR0.8) |
+| Topdown V | w_bldg=120, l_bldg=NY/2=200 | Canyon capped for 100-cell buffer |
+| Topdown H | w_bldg=100, l_bldg=NY/8=50 | Smaller blockage, fits naturally |
 
 ### Downwash (downwash.cpp -- LBM_Downwash)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| Grid | NX=800, NY=300 | Source default |
+| Grid | NX=1200, NY=600 | Source default (scaled up buildings) |
 | Buildings | h_tall=80, h_low=30, w=30 | Height ratio 2.67 |
 | Validation | Hunt (1984) | Building downwash |
 
@@ -167,12 +153,10 @@ flags (`--nx`, `--ny`, `--chord`, `--inlet`, etc.) where noted.
 | Cavity | 100, 400, 1000 | u_lid * NX / nu | NX |
 | Flat plate | 500, 1000, 2000 | u_inflow * chord / nu | chord |
 | Step | 100, 200, 400 | u_mean * D_h / nu | D_h = 2*h_inlet |
-| Square cylinder | 200 | u_inflow * D / nu | D |
 | Cylinder near wall | 100 | u_inflow * D / nu | D = 60 |
 | Side-by-side | 100 | u_inflow * D / nu | D = 60 |
 | Rotating cylinder | 100 | u_inflow * D / nu | D = 60 |
 | Orifice plate | 100 | u_inflow * NY / nu | NY |
-| Periodic hills | 100, 1000, 2800 | u_bulk * H / nu | Hill height H |
 | Urban canyon | 100 | u_ref * bldg_h / nu | Building height |
 | Downwash | 100 | u_ref * h_tall / nu | Tall building height |
 | City grid | 100 | u_ref * bldg_h / nu | Building height |

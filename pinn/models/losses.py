@@ -645,3 +645,208 @@ def total_loss_cavity_temporal(model, colloc_by_re, sens_by_re, grid_xy,
 def _split(out: torch.Tensor):
     """Split (N, 3) output into u, v, p."""
     return out[:, 0], out[:, 1], out[:, 2]
+
+
+# --------------------------------------------------------------------------
+# Boundary conditions: Backward-facing step (walls + step surface)
+# --------------------------------------------------------------------------
+def bc_loss_step(model, n: int, h_step_norm: float, device, re_norm=None):
+    """Step BC: no-slip on bottom walls, step surface, and top wall.
+
+    The step occupies x_norm = [-1, x_step], y_norm = [-1, h_step_norm].
+    The domain has an inlet at x_norm = -1 (below step height), outlet at +1.
+
+    Args:
+        h_step_norm: normalized step height in [-1, 1] space.
+        re_norm: If not None, augment input with Re parameter.
+    """
+    # Bottom wall (left of step): y = -1, x in [-1, +1]
+    x_bot = torch.linspace(-1.0, 1.0, n)
+    y_bot = torch.full_like(x_bot, -1.0)
+    xy_bot = torch.stack([x_bot, y_bot], dim=1)
+
+    # Top wall: y = +1, x in [-1, +1]
+    y_top = torch.full_like(x_bot, 1.0)
+    xy_top = torch.stack([x_bot, y_top], dim=1)
+
+    # Step top surface: y = h_step_norm, x in [-1, ~0] (step region)
+    x_step = torch.linspace(-1.0, 0.0, n // 2)
+    y_step = torch.full_like(x_step, h_step_norm)
+    xy_step = torch.stack([x_step, y_step], dim=1)
+
+    # Step vertical face: x = 0, y in [-1, h_step_norm]
+    y_face = torch.linspace(-1.0, h_step_norm, n // 4)
+    x_face = torch.zeros_like(y_face)
+    xy_face = torch.stack([x_face, y_face], dim=1)
+
+    xy = torch.cat([xy_bot, xy_top, xy_step, xy_face], dim=0)
+    if re_norm is not None:
+        re_col = torch.full((xy.shape[0], 1), re_norm)
+        xy = torch.cat([xy, re_col], dim=1)
+    xy = _on_device(xy, device)
+    u, v, _ = _split(model(xy))
+    return F.mse_loss(u, torch.zeros_like(u)) + F.mse_loss(v, torch.zeros_like(v))
+
+
+def bc_loss_step_full(model, n: int, u_inflow: float, h_step_norm: float,
+                      device, re_norm=None):
+    """Full step BC: step surface + inflow + outlet + walls."""
+    L_step = bc_loss_step(model, n, h_step_norm, device, re_norm)
+    L_inflow = bc_loss_inflow(model, n, u_inflow, device)
+    L_outlet = bc_loss_outlet(model, n, device)
+    L_walls = bc_loss_walls(model, n, device)
+    return L_step + L_inflow + L_outlet + L_walls
+
+
+# --------------------------------------------------------------------------
+# Boundary conditions: Flat plate (walls + plate surface)
+# --------------------------------------------------------------------------
+def bc_loss_flatplate(model, n: int, chord_norm: float, device, re_norm=None):
+    """Flat plate BC: no-slip on plate surface at y=0, x in [0, chord_norm].
+
+    Args:
+        chord_norm: normalized chord length in [-1, 1] space.
+        re_norm: If not None, augment input with Re parameter.
+    """
+    # Plate surface: y = 0 (midline), x in [x_start, x_end]
+    # Plate is at the centerline: y_norm = 0, x from x_plate_start to x_plate_end
+    x_plate = torch.linspace(-1.0, -1.0 + chord_norm, n)
+    y_plate = torch.zeros_like(x_plate)
+    xy_plate = torch.stack([x_plate, y_plate], dim=1)
+
+    if re_norm is not None:
+        re_col = torch.full((xy_plate.shape[0], 1), re_norm)
+        xy_plate = torch.cat([xy_plate, re_col], dim=1)
+    xy_plate = _on_device(xy_plate, device)
+    u, v, _ = _split(model(xy_plate))
+    return F.mse_loss(u, torch.zeros_like(u)) + F.mse_loss(v, torch.zeros_like(v))
+
+
+def bc_loss_flatplate_full(model, n: int, u_inflow: float, chord_norm: float,
+                           device, re_norm=None):
+    """Full flat plate BC: plate + inflow + outlet + top/bottom walls."""
+    L_plate = bc_loss_flatplate(model, n, chord_norm, device, re_norm)
+    L_inflow = bc_loss_inflow(model, n, u_inflow, device)
+    L_outlet = bc_loss_outlet(model, n, device)
+    L_walls = bc_loss_walls(model, n, device)
+    return L_plate + L_inflow + L_outlet + L_walls
+
+
+# --------------------------------------------------------------------------
+# Boundary conditions: Orifice plate (walls + plate surface)
+# --------------------------------------------------------------------------
+def bc_loss_orifice(model, n: int, plate_x_norm: float, hole_center_norm: float,
+                    hole_half_norm: float, device, re_norm=None):
+    """Orifice plate BC: no-slip on plate except at the hole.
+
+    The plate is a vertical barrier at x = plate_x_norm with a hole
+    centered at y = hole_center_norm with half-height hole_half_norm.
+
+    Args:
+        plate_x_norm: x position of plate in [-1, 1] space.
+        hole_center_norm: y center of hole in [-1, 1] space.
+        hole_half_norm: half-height of hole in [-1, 1] space.
+        re_norm: If not None, augment input with Re parameter.
+    """
+    # Plate above hole: x = plate_x, y in [hole_center + hole_half, 1]
+    y_above = torch.linspace(hole_center_norm + hole_half_norm, 1.0, n // 3)
+    x_above = torch.full_like(y_above, plate_x_norm)
+    xy_above = torch.stack([x_above, y_above], dim=1)
+
+    # Plate below hole: x = plate_x, y in [-1, hole_center - hole_half]
+    y_below = torch.linspace(-1.0, hole_center_norm - hole_half_norm, n // 3)
+    x_below = torch.full_like(y_below, plate_x_norm)
+    xy_below = torch.stack([x_below, y_below], dim=1)
+
+    xy = torch.cat([xy_above, xy_below], dim=0)
+    if re_norm is not None:
+        re_col = torch.full((xy.shape[0], 1), re_norm)
+        xy = torch.cat([xy, re_col], dim=1)
+    xy = _on_device(xy, device)
+    u, v, _ = _split(model(xy))
+    return F.mse_loss(u, torch.zeros_like(u)) + F.mse_loss(v, torch.zeros_like(v))
+
+
+def bc_loss_orifice_full(model, n: int, u_inflow: float, plate_x_norm: float,
+                         hole_center_norm: float, hole_half_norm: float,
+                         device, re_norm=None):
+    """Full orifice BC: plate + inflow + outlet + walls."""
+    L_plate = bc_loss_orifice(model, n, plate_x_norm, hole_center_norm,
+                              hole_half_norm, device, re_norm)
+    L_inflow = bc_loss_inflow(model, n, u_inflow, device)
+    L_outlet = bc_loss_outlet(model, n, device)
+    L_walls = bc_loss_walls(model, n, device)
+    return L_plate + L_inflow + L_outlet + L_walls
+
+
+# --------------------------------------------------------------------------
+# Boundary conditions: Urban canyon (walls + building surfaces)
+# --------------------------------------------------------------------------
+def bc_loss_urban_walls(model, n: int, device, re_norm=None):
+    """Urban canyon: no-slip on top, bottom, left, right walls."""
+    return bc_loss_walls(model, n, device) + bc_loss_cavity_walls(model, n, device, re_norm)
+
+
+def bc_loss_urban_full(model, n: int, u_inflow: float, device, re_norm=None):
+    """Full urban BC: inflow + outlet + walls."""
+    L_inflow = bc_loss_inflow(model, n, u_inflow, device)
+    L_outlet = bc_loss_outlet(model, n, device)
+    L_walls = bc_loss_urban_walls(model, n, device, re_norm)
+    return L_inflow + L_outlet + L_walls
+
+
+# --------------------------------------------------------------------------
+# Boundary conditions: Cylinder near wall (cylinder + ground + walls)
+# --------------------------------------------------------------------------
+def bc_loss_near_wall(model, n: int, cx_norm: float, cy_norm: float,
+                      r_norm_x: float, r_norm_y: float,
+                      gap_y_norm: float, device, re_norm=None):
+    """Cylinder near wall: cylinder surface + ground plane at y = gap_y_norm."""
+    # Cylinder surface
+    theta = torch.linspace(0.0, 2.0 * 3.14159265, n)
+    x_cyl = cx_norm + r_norm_x * torch.cos(theta)
+    y_cyl = cy_norm + r_norm_y * torch.sin(theta)
+    xy_cyl = torch.stack([x_cyl, y_cyl], dim=1)
+
+    # Ground plane: y = gap_y_norm, x in [-1, +1]
+    x_ground = torch.linspace(-1.0, 1.0, n)
+    y_ground = torch.full_like(x_ground, gap_y_norm)
+    xy_ground = torch.stack([x_ground, y_ground], dim=1)
+
+    xy = torch.cat([xy_cyl, xy_ground], dim=0)
+    if re_norm is not None:
+        re_col = torch.full((xy.shape[0], 1), re_norm)
+        xy = torch.cat([xy, re_col], dim=1)
+    xy = _on_device(xy, device)
+    u, v, _ = _split(model(xy))
+    return F.mse_loss(u, torch.zeros_like(u)) + F.mse_loss(v, torch.zeros_like(v))
+
+
+def bc_loss_near_wall_full(model, n: int, u_inflow: float, cx_norm: float,
+                           cy_norm: float, r_norm_x: float, r_norm_y: float,
+                           gap_y_norm: float, device, re_norm=None):
+    """Full near-wall BC: cylinder + ground + inflow + outlet + walls."""
+    L_cyl = bc_loss_near_wall(model, n, cx_norm, cy_norm, r_norm_x, r_norm_y,
+                              gap_y_norm, device, re_norm)
+    L_inflow = bc_loss_inflow(model, n, u_inflow, device)
+    L_outlet = bc_loss_outlet(model, n, device)
+    L_walls = bc_loss_walls(model, n, device)
+    return L_cyl + L_inflow + L_outlet + L_walls
+
+
+# --------------------------------------------------------------------------
+# Generic total loss (works with any BC function)
+# --------------------------------------------------------------------------
+def total_loss_generic(model, colloc_xy, coords, u_target, v_target, p_target,
+                       re, u_inflow, bc_fn, device,
+                       w_pde=1.0, w_data=1.0, w_bc=1.0, w_p=0.0):
+    """Generic hybrid loss: PDE + data + arbitrary BC function.
+
+    Args:
+        bc_fn: callable(model, n_points, device) -> scalar BC loss.
+    """
+    L_pde = pde_loss(model, colloc_xy, re, u_inflow)
+    L_data = data_loss_full(model, coords, u_target, v_target, p_target) if w_p > 0 \
+             else data_loss(model, coords, u_target, v_target)
+    L_bc = bc_fn(model, 200, device)
+    return w_pde * L_pde + w_data * L_data + w_bc * L_bc, L_pde, L_data, L_bc

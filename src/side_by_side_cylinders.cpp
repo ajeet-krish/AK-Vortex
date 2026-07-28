@@ -71,6 +71,8 @@ int main(int argc, char* argv[]) {
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 
+    NX = 1200; NY = 1000;  // doc default: 6% blockage at D=60
+
     double Re = 100.0;
     double sd_ratio = 3.0;
     int steps = -1;

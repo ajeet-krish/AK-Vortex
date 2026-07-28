@@ -746,11 +746,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 28px; }
     margin-top: 0;
   }
 
-  /* --- 3x2 grid layout (velocity slider + video / CP static + video / vorticity static + video) --- */
+  /* --- 3x2 grid layout (velocity slider + video / Cp static + video / vorticity static + video) --- */
   .vf-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    gap: 1rem;
     margin: 1.5rem 0;
   }
   @media (max-width: 720px) {
@@ -758,10 +758,51 @@ html { scroll-behavior: smooth; scroll-padding-top: 28px; }
   }
   .vf-grid .vf-cell {
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
   }
   .vf-grid .vf-cell > h4 {
     margin-top: 0;
     margin-bottom: 0.5rem;
+    font-size: 0.82em;
+    color: var(--fg-dim);
+  }
+  .vf-grid .fv-stage {
+    width: 100%;
+    background: var(--bg-canvas);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    line-height: 0;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+  }
+  .vf-grid .comparison-slider {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
+    background: var(--bg-canvas);
+    max-width: none;
+    margin: 0;
+    position: relative;
+  }
+  .vf-grid .comparison-slider img {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+  }
+  .vf-grid .static-field-img {
+    width: 100%;
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-width: none;
+    margin: 0;
   }
   .vf-grid .static-canvas {
     width: 100%;
@@ -769,13 +810,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 28px; }
     border: 1px solid var(--border);
     border-radius: 6px;
     background: var(--bg-canvas);
-  }
-  .vf-grid .static-field-img {
-    width: 100%;
-    max-width: 560px;
+    max-width: none;
     display: block;
-    border: 1px solid var(--border);
-    border-radius: 6px;
   }
 
   .comparison-slider {
@@ -941,9 +977,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 28px; }
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  max-width: 560px;
   margin: 0.7rem auto;
   font-size: 0.8em;
+}
+.vf-grid .fv-controls {
+  max-width: none;
+  margin: 0;
 }
 .fv-group {
   display: flex;
