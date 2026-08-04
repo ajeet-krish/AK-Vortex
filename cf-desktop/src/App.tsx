@@ -33,10 +33,10 @@ const CASE_DEFAULTS: Record<string, { nx: number; ny: number }> = {
 };
 
 function App() {
-    const DEFAULT_CASE = 'cylinder';
+    const DEFAULT_CASE = 'custom';
     const [config, setConfig] = useState<SimConfig>({
-        nx: CASE_DEFAULTS[DEFAULT_CASE].nx,
-        ny: CASE_DEFAULTS[DEFAULT_CASE].ny,
+        nx: 800,
+        ny: 300,
         re: 100,
         uInflow: 0.1,
         maxSteps: 30000,
@@ -213,6 +213,15 @@ function App() {
             alert(`Simulation failed: ${e}`);
         }
         setRunning(false);
+    };
+
+    const resetSimulation = () => {
+        setOutputDir(null);
+        setFrames([]);
+        setFrameData(null);
+        setFrameIndex(0);
+        setPlaying(false);
+        setShapes([]);
     };
 
     const handleCaseTypeChange = (caseType: string) => {
@@ -421,6 +430,10 @@ function App() {
 
                             <button className="btn-export" onClick={handleExportPng}>
                                 Export PNG
+                            </button>
+
+                            <button className="btn-reset" onClick={resetSimulation}>
+                                New Simulation
                             </button>
                         </div>
                     )}

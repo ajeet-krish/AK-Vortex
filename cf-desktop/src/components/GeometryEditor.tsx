@@ -24,7 +24,7 @@ interface GeometryEditorProps {
     onGeometryChange: (shapes: Shape[]) => void;
 }
 
-type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca';
+type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca' | 'move';
 
 function nextShapeName(type: string, shapes: Shape[]): string {
     if (type === 'naca') {
@@ -56,6 +56,10 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     // Collision warning
     const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
 
+    // Drag-to-move state
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [dragStartGrid, setDragStartGrid] = useState<Point | null>(null);
+
     // Convert grid coordinates to canvas pixel coordinates
     const gridToCanvas = useCallback((gx: number, gy: number, canvasW: number, canvasH: number) => {
         const scaleX = canvasW / nx;
@@ -84,6 +88,65 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
             gy: (py - offsetY) / scale,
         };
     }, [nx, ny]);
+
+    // Hit-test: check if a grid point is inside any shape
+    const findShapeAtPoint = useCallback(
+        (gx: number, gy: number): Shape | null => {
+            // Iterate in reverse so topmost (last added) shape wins
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                const s = shapes[i];
+                if (s.type === 'circle' && s.radius !== undefined) {
+                    const dx = gx - s.x;
+                    const dy = gy - s.y;
+                    if (dx * dx + dy * dy <= s.radius * s.radius) return s;
+                } else if (s.type === 'rectangle' && s.width !== undefined && s.height !== undefined) {
+                    if (gx >= s.x && gx <= s.x + s.width && gy >= s.y && gy <= s.y + s.height) return s;
+                } else if (s.type === 'polygon' && s.points && s.points.length >= 3) {
+                    // Ray-casting point-in-polygon
+                    let inside = false;
+                    for (let j = 0, k = s.points.length - 1; j < s.points.length; k = j++) {
+                        const xi = s.points[j].x, yi = s.points[j].y;
+                        const xj = s.points[k].x, yj = s.points[k].y;
+                        if (((yi > gy) !== (yj > gy)) && (gx < ((xj - xi) * (gy - yi)) / (yj - yi) + xi)) {
+                            inside = !inside;
+                        }
+                    }
+                    if (inside) return s;
+                }
+            }
+            return null;
+        },
+        [shapes]
+    );
+
+    // Move shape by delta in grid coordinates
+    const moveShape = useCallback(
+        (id: string, dx: number, dy: number) => {
+            setShapes((prev) => {
+                const updated = prev.map((s) => {
+                    if (s.id !== id) return s;
+                    if (s.type === 'circle') {
+                        return { ...s, x: s.x + dx, y: s.y + dy };
+                    }
+                    if (s.type === 'rectangle') {
+                        return { ...s, x: s.x + dx, y: s.y + dy };
+                    }
+                    if (s.type === 'polygon' && s.points) {
+                        return {
+                            ...s,
+                            x: s.x + dx,
+                            y: s.y + dy,
+                            points: s.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+                        };
+                    }
+                    return s;
+                });
+                onGeometryChange(updated);
+                return updated;
+            });
+        },
+        [onGeometryChange]
+    );
 
     // Check for collisions when adding a shape
     const checkCollision = useCallback(
@@ -293,6 +356,23 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const pt = getMouseGrid(e);
 
+        // Check if clicking on an existing shape (for drag-to-move, any tool)
+        const hitShape = findShapeAtPoint(pt.x, pt.y);
+        if (hitShape) {
+            // Select the shape
+            setSelectedId(hitShape.id);
+            // Start drag
+            setDraggingId(hitShape.id);
+            setDragStartGrid(pt);
+            return;
+        }
+
+        // If move tool is active but clicked empty space, deselect
+        if (activeTool === 'move') {
+            setSelectedId(null);
+            return;
+        }
+
         if (activeTool === 'naca') {
             // Place NACA airfoil at click position
             const rawPoints = naca4Airfoil(nacaM, nacaP, nacaT, 80);
@@ -350,12 +430,29 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isDrawing && activeTool !== 'polygon') return;
         const pt = getMouseGrid(e);
+
+        // Handle drag-to-move
+        if (draggingId && dragStartGrid) {
+            const dx = pt.x - dragStartGrid.x;
+            const dy = pt.y - dragStartGrid.y;
+            moveShape(draggingId, dx, dy);
+            setDragStartGrid(pt);
+            return;
+        }
+
+        if (!isDrawing && activeTool !== 'polygon') return;
         setDrawCurrent(pt);
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        // Finalize drag-to-move
+        if (draggingId) {
+            setDraggingId(null);
+            setDragStartGrid(null);
+            return;
+        }
+
         if (!isDrawing || !drawStart) return;
         const pt = getMouseGrid(e);
 
@@ -516,6 +613,13 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                     >
                         NACA
                     </button>
+                    <button
+                        className={`tool-btn ${activeTool === 'move' ? 'active' : ''}`}
+                        onClick={() => { setActiveTool('move'); setPolygonPoints([]); }}
+                        title="Move shapes (click and drag)"
+                    >
+                        Move
+                    </button>
                 </div>
                 <div className="tool-group">
                     <button className="tool-btn danger" onClick={clearAll} title="Clear All">
@@ -601,6 +705,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
+                    style={{ cursor: activeTool === 'move' ? 'grab' : draggingId ? 'grabbing' : 'crosshair' }}
                 />
             </div>
 
@@ -620,6 +725,18 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
             {activeTool === 'naca' && (
                 <div className="editor-hint">
                     Click on canvas to place airfoil. Adjust parameters above.
+                </div>
+            )}
+
+            {activeTool === 'move' && (
+                <div className="editor-hint">
+                    Click and drag shapes to reposition them.
+                </div>
+            )}
+
+            {draggingId && (
+                <div className="editor-hint">
+                    Dragging... release to drop.
                 </div>
             )}
 
