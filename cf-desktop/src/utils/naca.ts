@@ -63,6 +63,8 @@ export function naca4Airfoil(
     }
 
     // Combine perpendicular to camber line
+    // Negate y so upper surface (camber) appears on top in canvas coordinates
+    // (canvas y increases downward, but aerodynamic convention has camber going up)
     const upper: Point[] = [];
     const lower: Point[] = [];
     for (let i = 0; i < n; i++) {
@@ -70,11 +72,11 @@ export function naca4Airfoil(
         const xt = x[i];
         upper.push({
             x: xt - yt[i] * Math.sin(theta),
-            y: yc[i] + yt[i] * Math.cos(theta),
+            y: -(yc[i] + yt[i] * Math.cos(theta)),
         });
         lower.push({
             x: xt + yt[i] * Math.sin(theta),
-            y: yc[i] - yt[i] * Math.cos(theta),
+            y: -(yc[i] - yt[i] * Math.cos(theta)),
         });
     }
 

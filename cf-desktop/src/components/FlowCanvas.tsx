@@ -88,7 +88,7 @@ export default function FlowCanvas({
     }, [field, velocity, p, omega, colorRange]);
 
     // Choose colormap
-    const cmap = field === 'vorticity' ? 'rdbu' : 'jet';
+    const cmap = field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet';
 
     // Get the values array for the selected field
     const values = field === 'velocity' ? velocity : field === 'pressure' ? p : omega;

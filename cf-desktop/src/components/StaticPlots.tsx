@@ -18,8 +18,8 @@ interface PlotSpec {
 
 const PLOTS: PlotSpec[] = [
   { label: 'Velocity Contour', field: 'velocity', showStreamlines: false, cmap: 'jet' },
-  { label: 'Streamlines', field: 'velocity', showStreamlines: true, cmap: 'jet' },
-  { label: 'Pressure', field: 'pressure', showStreamlines: false, cmap: 'jet' },
+  { label: 'Velocity Streamlines', field: 'velocity', showStreamlines: true, cmap: 'jet' },
+  { label: 'Pressure', field: 'pressure', showStreamlines: false, cmap: 'coolwarm' },
   { label: 'Vorticity', field: 'vorticity', showStreamlines: false, cmap: 'rdbu' },
 ];
 
@@ -154,48 +154,54 @@ function PlotCanvas({
     canvas.width = width;
     canvas.height = height;
 
-    const { min, max } = range;
-    const dataRange = max - min || 1;
-
-    // Render at native grid resolution then scale
-    const imageData = ctx.createImageData(nx, ny);
-    const data = imageData.data;
-
-    for (let j = 0; j < ny; j++) {
-      const srcRow = ny - 1 - j;
-      for (let i = 0; i < nx; i++) {
-        const pixelIdx = (j * nx + i) * 4;
-        const valIdx = srcRow * nx + i;
-
-        if (obstacle[valIdx]) {
-          data[pixelIdx] = 30;
-          data[pixelIdx + 1] = 30;
-          data[pixelIdx + 2] = 30;
-          data[pixelIdx + 3] = 255;
-          continue;
-        }
-
-        const t = (values[valIdx] - min) / dataRange;
-        const c = sampleColormap(spec.cmap, t);
-        data[pixelIdx] = c[0];
-        data[pixelIdx + 1] = c[1];
-        data[pixelIdx + 2] = c[2];
-        data[pixelIdx + 3] = 255;
-      }
-    }
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = nx;
-    tempCanvas.height = ny;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-
-    tempCtx.putImageData(imageData, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(tempCanvas, 0, 0, width, height);
-
     const sx = width / nx;
     const sy = height / ny;
+
+    if (spec.showStreamlines) {
+      // White background for streamlines panel
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+    } else {
+      // Render contour at native grid resolution then scale
+      const { min, max } = range;
+      const dataRange = max - min || 1;
+
+      const imageData = ctx.createImageData(nx, ny);
+      const data = imageData.data;
+
+      for (let j = 0; j < ny; j++) {
+        const srcRow = ny - 1 - j;
+        for (let i = 0; i < nx; i++) {
+          const pixelIdx = (j * nx + i) * 4;
+          const valIdx = srcRow * nx + i;
+
+          if (obstacle[valIdx]) {
+            data[pixelIdx] = 30;
+            data[pixelIdx + 1] = 30;
+            data[pixelIdx + 2] = 30;
+            data[pixelIdx + 3] = 255;
+            continue;
+          }
+
+          const t = (values[valIdx] - min) / dataRange;
+          const c = sampleColormap(spec.cmap, t);
+          data[pixelIdx] = c[0];
+          data[pixelIdx + 1] = c[1];
+          data[pixelIdx + 2] = c[2];
+          data[pixelIdx + 3] = 255;
+        }
+      }
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = nx;
+      tempCanvas.height = ny;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (!tempCtx) return;
+
+      tempCtx.putImageData(imageData, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(tempCanvas, 0, 0, width, height);
+    }
 
     drawObstacles(ctx, obstacle, nx, ny, sx, sy);
 

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile } from '@tauri-apps/plugin-fs';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
 import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
@@ -292,13 +294,22 @@ function App() {
         }
     };
 
-    const handleExportPng = () => {
+    const handleExportPng = async () => {
         const canvas = document.querySelector('.flow-canvas-container canvas') as HTMLCanvasElement | null;
         if (!canvas) return;
-        const link = document.createElement('a');
-        link.download = `lbm_${config.caseType}_re${config.re}_step${currentStep}_${field}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+
+        const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+        const buffer = await blob.arrayBuffer();
+        const uint8 = new Uint8Array(buffer);
+
+        const path = await save({
+            defaultPath: `lbm_${config.caseType}_re${config.re}_step${currentStep}_${field}.png`,
+            filters: [{ name: 'PNG', extensions: ['png'] }],
+        });
+
+        if (path) {
+            await writeFile(path, uint8);
+        }
     };
 
     return (
@@ -527,7 +538,7 @@ function App() {
                                 <ColorScaleBar
                                     min={colorRange.min}
                                     max={colorRange.max}
-                                    cmap={field === 'vorticity' ? 'rdbu' : 'jet'}
+                                    cmap={field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet'}
                                 />
                             </div>
                             <StaticPlots
