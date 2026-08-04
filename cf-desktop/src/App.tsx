@@ -38,8 +38,8 @@ const CASE_DEFAULTS: Record<string, { nx: number; ny: number }> = {
 function App() {
     const DEFAULT_CASE = 'custom';
     const [config, setConfig] = useState<SimConfig>({
-        nx: 800,
-        ny: 300,
+        nx: 1200,
+        ny: 400,
         re: 100,
         uInflow: 0.1,
         maxSteps: 30000,
@@ -338,39 +338,82 @@ function App() {
                         </div>
 
                         <div className="form-group">
-                            <label>Grid: {config.nx} x {config.ny}</label>
-                            <input
-                                type="range"
-                                min="100"
-                                max="2000"
-                                step="100"
-                                value={config.nx}
-                                onChange={(e) => setConfig({ ...config, nx: +e.target.value })}
-                            />
+                            <label>Grid</label>
+                            <div className="slider-with-input">
+                                <input
+                                    type="range"
+                                    min="100"
+                                    max="2000"
+                                    step="100"
+                                    value={config.nx}
+                                    onChange={(e) => setConfig({ ...config, nx: +e.target.value })}
+                                />
+                                <input
+                                    type="number"
+                                    className="slider-value"
+                                    min="100"
+                                    max="2000"
+                                    step="100"
+                                    value={config.nx}
+                                    onChange={(e) => setConfig({ ...config, nx: Math.max(100, Math.min(2000, +e.target.value || 100)) })}
+                                />
+                                <span className="slider-unit">x</span>
+                                <input
+                                    type="number"
+                                    className="slider-value"
+                                    min="100"
+                                    max="2000"
+                                    step="100"
+                                    value={config.ny}
+                                    onChange={(e) => setConfig({ ...config, ny: Math.max(100, Math.min(2000, +e.target.value || 100)) })}
+                                />
+                            </div>
                         </div>
 
                         <div className="form-group">
-                            <label>Reynolds Number: {config.re}</label>
-                            <input
-                                type="range"
-                                min="10"
-                                max="2000"
-                                step="10"
-                                value={config.re}
-                                onChange={(e) => setConfig({ ...config, re: +e.target.value })}
-                            />
+                            <label>Reynolds Number</label>
+                            <div className="slider-with-input">
+                                <input
+                                    type="range"
+                                    min="10"
+                                    max="2000"
+                                    step="10"
+                                    value={config.re}
+                                    onChange={(e) => setConfig({ ...config, re: +e.target.value })}
+                                />
+                                <input
+                                    type="number"
+                                    className="slider-value"
+                                    min="10"
+                                    max="2000"
+                                    step="10"
+                                    value={config.re}
+                                    onChange={(e) => setConfig({ ...config, re: Math.max(10, Math.min(2000, +e.target.value || 10)) })}
+                                />
+                            </div>
                         </div>
 
                         <div className="form-group">
-                            <label>Max Steps: {config.maxSteps.toLocaleString()}</label>
-                            <input
-                                type="range"
-                                min="1000"
-                                max="100000"
-                                step="1000"
-                                value={config.maxSteps}
-                                onChange={(e) => setConfig({ ...config, maxSteps: +e.target.value })}
-                            />
+                            <label>Max Steps</label>
+                            <div className="slider-with-input">
+                                <input
+                                    type="range"
+                                    min="1000"
+                                    max="100000"
+                                    step="1000"
+                                    value={config.maxSteps}
+                                    onChange={(e) => setConfig({ ...config, maxSteps: +e.target.value })}
+                                />
+                                <input
+                                    type="number"
+                                    className="slider-value"
+                                    min="1000"
+                                    max="100000"
+                                    step="1000"
+                                    value={config.maxSteps}
+                                    onChange={(e) => setConfig({ ...config, maxSteps: Math.max(1000, Math.min(100000, +e.target.value || 1000)) })}
+                                />
+                            </div>
                         </div>
 
                         {running ? (

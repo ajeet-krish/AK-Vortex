@@ -35,9 +35,94 @@ inline void enforce_inflow(LBMCapabilities& sys, double u_inflow) {
 }
 
 // ------------------------------------------------------------------
-// Parabolic velocity inlet for backward-facing step
-// Enforces u(y) as a parabola from y = h_step to y = NY-1, with max u_max
+// Zou/He south inlet: enforce u = 0, v = v_inflow at y = 0
+// Flow enters from the bottom boundary in the +y direction.
+// Known: f0, f1, f3, f4, f7, f8. Unknown: f2, f5, f6.
 // ------------------------------------------------------------------
+inline void enforce_south_inflow(LBMCapabilities& sys, double v_inflow) {
+    for (int x = 0; x < NX; ++x) {
+        int idx = node_index(x, 0);
+        double* f_node = &sys.f[idx * 9];
+
+        double rho = (f_node[0] + f_node[1] + f_node[3]
+                    + 2.0 * (f_node[2] + f_node[5] + f_node[6]))
+                    / (1.0 - v_inflow);
+
+        f_node[4] = f_node[2];
+        f_node[7] = f_node[5] + 0.5 * (f_node[1] - f_node[3])
+                   + 0.5 * rho * v_inflow;
+        f_node[8] = f_node[6] - 0.5 * (f_node[1] - f_node[3])
+                   + 0.5 * rho * v_inflow;
+    }
+}
+
+// ------------------------------------------------------------------
+// Zou/He west inlet: enforce u = -u_inflow, v = 0 at x = NX-1
+// Flow enters from the right boundary in the -x direction.
+// Known: f0, f2, f4, f1, f5, f8. Unknown: f3, f6, f7.
+// ------------------------------------------------------------------
+inline void enforce_west_inflow(LBMCapabilities& sys, double u_inflow) {
+    for (int y = 0; y < NY; ++y) {
+        int idx = node_index(NX - 1, y);
+        double* f_node = &sys.f[idx * 9];
+
+        // u_inflow is positive magnitude; actual velocity is -u_inflow
+        double rho = (f_node[0] + f_node[2] + f_node[4]
+                    + 2.0 * (f_node[1] + f_node[5] + f_node[8]))
+                    / (1.0 + u_inflow);
+
+        f_node[3] = f_node[1];
+        f_node[6] = f_node[8] + 0.5 * (f_node[2] - f_node[4])
+                   - 0.5 * rho * u_inflow;
+        f_node[7] = f_node[5] - 0.5 * (f_node[2] - f_node[4])
+                   - 0.5 * rho * u_inflow;
+    }
+}
+
+// ------------------------------------------------------------------
+// Convective outlet: zero-gradient at x = NX-1
+// ------------------------------------------------------------------
+inline void enforce_outflow(LBMCapabilities& sys) {
+    for (int y = 0; y < NY; ++y) {
+        int idx = node_index(NX - 1, y);
+        int idx_in = node_index(NX - 2, y);
+        double* f_node = &sys.f[idx * 9];
+        const double* f_in = &sys.f[idx_in * 9];
+        for (int i = 0; i < 9; ++i) {
+            f_node[i] = f_in[i];
+        }
+    }
+}
+
+// ------------------------------------------------------------------
+// Convective outlet at y = NY-1 (north boundary outflow)
+// ------------------------------------------------------------------
+inline void enforce_north_outflow(LBMCapabilities& sys) {
+    for (int x = 0; x < NX; ++x) {
+        int idx = node_index(x, NY - 1);
+        int idx_in = node_index(x, NY - 2);
+        double* f_node = &sys.f[idx * 9];
+        const double* f_in = &sys.f[idx_in * 9];
+        for (int i = 0; i < 9; ++i) {
+            f_node[i] = f_in[i];
+        }
+    }
+}
+
+// ------------------------------------------------------------------
+// Convective outlet at x = 0 (east boundary outflow for west inlet)
+// ------------------------------------------------------------------
+inline void enforce_east_outflow(LBMCapabilities& sys) {
+    for (int y = 0; y < NY; ++y) {
+        int idx = node_index(0, y);
+        int idx_in = node_index(1, y);
+        double* f_node = &sys.f[idx * 9];
+        const double* f_in = &sys.f[idx_in * 9];
+        for (int i = 0; i < 9; ++i) {
+            f_node[i] = f_in[i];
+        }
+    }
+}
 inline void enforce_step_inflow(LBMCapabilities& sys, int h_step, int h_inlet, double u_max) {
     for (int y = h_step; y < NY; ++y) {
         if (sys.obstacle[node_index(0, y)]) continue;
@@ -55,21 +140,6 @@ inline void enforce_step_inflow(LBMCapabilities& sys, int h_step, int h_inlet, d
         f_node[1] = f_node[3] + (2.0 / 3.0) * rho * u_local;
         f_node[5] = f_node[7] + (1.0 / 6.0) * rho * u_local;
         f_node[8] = f_node[6] + (1.0 / 6.0) * rho * u_local;
-    }
-}
-
-// ------------------------------------------------------------------
-// Convective outlet: zero-gradient at x = NX-1
-// ------------------------------------------------------------------
-inline void enforce_outflow(LBMCapabilities& sys) {
-    for (int y = 0; y < NY; ++y) {
-        int idx = node_index(NX - 1, y);
-        int idx_in = node_index(NX - 2, y);
-        double* f_node = &sys.f[idx * 9];
-        const double* f_in = &sys.f[idx_in * 9];
-        for (int i = 0; i < 9; ++i) {
-            f_node[i] = f_in[i];
-        }
     }
 }
 
@@ -457,8 +527,9 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
                 }
             }
         }
-    } else {
-        // Default: periodic in y, convective outlet at x
+    } else if (g_case == CaseType::URBAN_CITYGRID) {
+        // No periodic wrapping -- all boundaries are solid walls or BCs.
+        // BCs (enforce_inflow/enforce_outflow) are applied after streaming.
         #pragma omp parallel for collapse(2)
         for (int y = 0; y < NY; ++y) {
             for (int x = 0; x < NX; ++x) {
@@ -468,15 +539,78 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
                 for (int i = 0; i < 9; ++i) {
                     int next_x = x + cx[i];
                     int next_y = y + cy[i];
-                    if (next_y < 0) next_y += NY;
-                    if (next_y >= NY) next_y -= NY;
-                    if (next_x >= 0 && next_x < NX) {
+                    if (next_x < 0 || next_x >= NX || next_y < 0 || next_y >= NY) {
+                        // Bounce-back at domain boundaries (BCs overwrite after swap)
+                        sys.f_next[node_idx * 9 + bounce_back[i]] = f_node[i];
+                    } else {
                         int target_node = node_index(next_x, next_y);
                         if (sys.obstacle[target_node]) {
                             if (use_interp_global)
                                 apply_bouzidi_bb(sys, x, y, i, f_node, node_idx);
                             else
                                 sys.f_next[node_idx * 9 + bounce_back[i]] = f_node[i];
+                        } else {
+                            sys.f_next[target_node * 9 + i] = f_node[i];
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Default: periodic in y, convective outlet at x
+        // Wall functions: when enabled, apply log-law slip velocity at walls
+        // instead of no-slip bounce-back for nodes with y+ > threshold.
+        double nu = (tau - 0.5) / 3.0;
+        #pragma omp parallel for collapse(2)
+        for (int y = 0; y < NY; ++y) {
+            for (int x = 0; x < NX; ++x) {
+                int node_idx = node_index(x, y);
+                if (sys.obstacle[node_idx]) continue;
+                double* f_node = &sys.f[node_idx * 9];
+                double rho, u, v;
+                compute_macros(f_node, rho, u, v);
+                for (int i = 0; i < 9; ++i) {
+                    int next_x = x + cx[i];
+                    int next_y = y + cy[i];
+                    if (next_y < 0) next_y += NY;
+                    if (next_y >= NY) next_y -= NY;
+                    if (next_x >= 0 && next_x < NX) {
+                        int target_node = node_index(next_x, next_y);
+                        if (sys.obstacle[target_node]) {
+                            // Wall function check: apply log-law slip if y+ is high enough
+                            bool use_wf = false;
+                            double u_slip_x = 0.0, u_slip_y = 0.0;
+                            if (g_wf.enabled && nu > 0.0) {
+                                double wall_d = sys.wall_dist[node_idx];
+                                double speed = std::sqrt(u * u + v * v);
+                                double u_tau_est = std::sqrt(speed * speed + 1e-12);
+                                double y_plus = wall_d * u_tau_est / nu;
+                                if (y_plus > g_wf.y_plus_min && u_tau_est > 1e-12) {
+                                    // Log-law slip velocity (tangential to wall)
+                                    double u_plus = (1.0 / g_wf.kappa) * std::log(y_plus) + g_wf.B;
+                                    double slip_mag = u_tau_est * u_plus;
+                                    // Tangential direction: perpendicular to wall-normal
+                                    // Wall-normal is roughly (cx[i], cy[i]) direction
+                                    // Tangential is perpendicular: (-cy[i], cx[i])
+                                    double len = std::sqrt(cx[i] * cx[i] + cy[i] * cy[i]);
+                                    if (len > 0.0) {
+                                        u_slip_x = -cy[i] / len * slip_mag;
+                                        u_slip_y = cx[i] / len * slip_mag;
+                                    }
+                                    use_wf = true;
+                                }
+                            }
+                            if (use_wf) {
+                                // Wall function bounce-back with slip velocity
+                                double f_opp = f_node[i];
+                                double edot_u = cx[i] * u_slip_x + cy[i] * u_slip_y;
+                                double correction = 2.0 * weights[i] * rho * edot_u * 3.0;
+                                sys.f_next[node_idx * 9 + bounce_back[i]] = f_opp - correction;
+                            } else if (use_interp_global) {
+                                apply_bouzidi_bb(sys, x, y, i, f_node, node_idx);
+                            } else {
+                                sys.f_next[node_idx * 9 + bounce_back[i]] = f_node[i];
+                            }
                         } else {
                             sys.f_next[target_node * 9 + i] = f_node[i];
                         }
@@ -528,6 +662,39 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
             }
         }
         sys.g_thermal.swap(sys.g_thermal_next);
+
+        // Apply isothermal (Dirichlet) thermal BC at heated walls.
+        // The adiabatic bounce-back above handles adiabatic walls.
+        // For isothermal walls (T = T_wall), enforce equilibrium distribution.
+        // This runs after streaming to ensure correct post-streaming values.
+        if (sys.T_wall != sys.T_ref) {
+            #pragma omp parallel for collapse(2)
+            for (int y = 0; y < NY; ++y) {
+                for (int x = 0; x < NX; ++x) {
+                    int idx = node_index(x, y);
+                    if (!sys.obstacle[idx]) continue;
+                    // Check if this obstacle node has a fluid neighbor (i.e., is a wall node)
+                    bool has_fluid = false;
+                    for (int d = 0; d < 4; ++d) {
+                        int nx = x + (d == 0 ? -1 : d == 1 ? 1 : 0);
+                        int ny = y + (d == 2 ? -1 : d == 3 ? 1 : 0);
+                        if (nx >= 0 && nx < NX && ny >= 0 && ny < NY) {
+                            if (!sys.obstacle[node_index(nx, ny)]) {
+                                has_fluid = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (has_fluid) {
+                        // Enforce isothermal BC: g_i = w_i * T_wall
+                        double* g_node = &sys.g_thermal[idx * 9];
+                        for (int i = 0; i < 9; ++i) {
+                            g_node[i] = weights[i] * sys.T_wall;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // --- Passive scalar transport (ONE-WAY coupling: flow carries scalar) ---
@@ -572,11 +739,20 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
         enforce_step_inflow(sys, sh, si, u_inflow);
         enforce_outflow(sys);
     } else if (g_case == CaseType::URBAN_CITYGRID) {
-        // East inlet only (south/west deferred). Default BCs work: inflow at x=0,
-        // outflow at x=NX-1, no-slip walls at y=0 and y=NY-1.
+        // Three inlet configurations: East (left->right), South (bottom->top),
+        // West (right->left). Each requires different Zou-He BCs and outflow.
         if (g_inlet_dir == 0) {
+            // East inlet: flow from left to right
             enforce_inflow(sys, u_inflow);
             enforce_outflow(sys);
+        } else if (g_inlet_dir == 1) {
+            // South inlet: flow from bottom to top
+            enforce_south_inflow(sys, u_inflow);
+            enforce_north_outflow(sys);
+        } else if (g_inlet_dir == 2) {
+            // West inlet: flow from right to left
+            enforce_west_inflow(sys, u_inflow);
+            enforce_east_outflow(sys);
         }
     } else if (g_case != CaseType::RIBS && g_case != CaseType::PERIODIC_HILLS) {
         enforce_inflow(sys, u_inflow);
@@ -726,7 +902,8 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
     out << "],\"p\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << (rho_arr[i] / 3.0);
+        // Pressure perturbation: p' = (rho - 1) / 3 (relative to reference density)
+        out << ((rho_arr[i] - 1.0) / 3.0);
     }
 
     out << "],\"omega\":[";
@@ -933,7 +1110,8 @@ inline void save_json_frame_thermal(LBMCapabilities& sys, int step,
     out << "],\"p\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << (rho_arr[i] / 3.0);
+        // Pressure perturbation: p' = (rho - 1) / 3 (relative to reference density)
+        out << ((rho_arr[i] - 1.0) / 3.0);
     }
     out << "],\"omega\":[";
     for (int i = 0; i < n_ds; ++i) {

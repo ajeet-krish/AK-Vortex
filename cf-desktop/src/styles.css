@@ -138,6 +138,37 @@ body {
   cursor: pointer;
 }
 
+.slider-with-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-with-input input[type="range"] {
+  flex: 1;
+}
+
+.slider-value {
+  width: 60px;
+  padding: 4px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-size: 11px;
+  text-align: right;
+}
+
+.slider-value:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.slider-unit {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 .form-group select {
   width: 100%;
   padding: 5px 8px;
