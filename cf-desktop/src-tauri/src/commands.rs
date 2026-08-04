@@ -1,6 +1,15 @@
+use std::path::Path;
 use tauri::command;
 use tauri::Manager;
 use crate::solver::{self, SolverConfig};
+
+fn validate_path(path: &str) -> Result<(), String> {
+    let p = Path::new(path);
+    if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        return Err("Invalid path: contains ..".to_string());
+    }
+    Ok(())
+}
 
 #[command]
 pub fn run_simulation(
@@ -13,6 +22,11 @@ pub fn run_simulation(
     case_type: String,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
+    let valid_cases = ["cylinder", "cavity", "step", "custom"];
+    if !valid_cases.contains(&case_type.as_str()) {
+        return Err(format!("Invalid case type: {}", case_type));
+    }
+
     let output_dir = app.path()
         .app_data_dir()
         .unwrap()
@@ -63,6 +77,7 @@ pub fn run_geometry_simulation(
 
 #[command]
 pub fn read_frame_json(path: String, step: i32) -> Result<serde_json::Value, String> {
+    validate_path(&path)?;
     let frame_path = format!("{}/frames/frame_{}.json", path, step);
     let data = std::fs::read_to_string(&frame_path)
         .map_err(|e| format!("Failed to read frame: {}", e))?;
@@ -72,6 +87,7 @@ pub fn read_frame_json(path: String, step: i32) -> Result<serde_json::Value, Str
 
 #[command]
 pub fn list_frames(path: String) -> Result<Vec<i32>, String> {
+    validate_path(&path)?;
     let frames_dir = format!("{}/frames", path);
     let mut frames: Vec<i32> = std::fs::read_dir(&frames_dir)
         .map_err(|e| format!("Failed to read frames dir: {}", e))?

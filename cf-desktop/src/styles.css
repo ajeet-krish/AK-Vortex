@@ -412,3 +412,133 @@ canvas {
 .shape-delete:hover {
   color: #ff7b72;
 }
+
+/* Flow Canvas */
+.flow-canvas-container {
+  position: relative;
+  display: inline-block;
+}
+
+.flow-canvas-container canvas {
+  display: block;
+}
+
+/* Probe Tooltip */
+.probe-tooltip {
+  position: absolute;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #c9d1d9;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+/* Probe Panel in Sidebar */
+.probe-panel .probe-values {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #c9d1d9;
+}
+
+/* Color Scale Bar */
+.color-scale-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.scale-label {
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #8b949e;
+  text-align: center;
+}
+
+/* Visualization Body Layout */
+.visualization-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* Checkbox Label */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: #c9d1d9;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #1f6feb;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Range Inputs */
+.range-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.range-inputs .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.range-inputs input[type="number"] {
+  width: 100%;
+  padding: 6px 8px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  font-size: 0.8125rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.range-inputs input[type="number"]:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+
+/* Export Button */
+.btn-export {
+  width: 100%;
+  padding: 8px 16px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 8px;
+}
+
+.btn-export:hover {
+  background: #30363d;
+  color: #e6edf3;
+  border-color: #58a6ff;
+}

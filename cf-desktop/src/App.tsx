@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
+import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
+import ColorScaleBar from './components/ColorScaleBar';
 
 interface SimConfig {
     nx: number;
@@ -52,12 +54,18 @@ function App() {
     const [playing, setPlaying] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(200);
 
+    // Visualization state
+    const [showStreamlines, setShowStreamlines] = useState(true);
+    const [useManualRange, setUseManualRange] = useState(false);
+    const [manualMin, setManualMin] = useState('0');
+    const [manualMax, setManualMax] = useState('0.1');
+    const [probe, setProbe] = useState<ProbeInfo | null>(null);
+
     // Geometry editor state
     const [shapes, setShapes] = useState<Shape[]>([]);
 
     // Responsive canvas sizing
     const containerRef = useRef<HTMLDivElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 400 });
 
     const currentStep = frames.length > 0 ? frames[frameIndex] : 0;
@@ -98,16 +106,6 @@ function App() {
         return () => observer.disconnect();
     }, [frameData]);
 
-    // Render canvas when data, field, or display size changes
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas || !frameData) return;
-
-        canvas.width = canvasSize.width;
-        canvas.height = canvasSize.height;
-        renderField(canvas, frameData, field);
-    }, [frameData, field, canvasSize]);
-
     // Auto-load frame when frameIndex changes
     useEffect(() => {
         if (frames.length === 0 || !outputDir) return;
@@ -140,6 +138,33 @@ function App() {
         return () => clearInterval(timer);
     }, [playing, playbackSpeed, frames.length]);
 
+    // Compute color range for the color scale bar
+    const colorRange = useMemo(() => {
+        if (!frameData) return { min: 0, max: 1 };
+
+        if (useManualRange) {
+            return { min: parseFloat(manualMin) || 0, max: parseFloat(manualMax) || 1 };
+        }
+
+        if (field === 'velocity') {
+            let maxVal = 0;
+            for (const val of frameData.velocity) if (val > maxVal) maxVal = val;
+            return { min: 0, max: maxVal };
+        } else if (field === 'pressure') {
+            let minVal = Infinity;
+            let maxVal = -Infinity;
+            for (const val of frameData.p) {
+                if (val < minVal) minVal = val;
+                if (val > maxVal) maxVal = val;
+            }
+            return { min: minVal, max: maxVal };
+        } else {
+            let maxAbs = 0;
+            for (const val of frameData.omega) if (Math.abs(val) > maxAbs) maxAbs = Math.abs(val);
+            return { min: -maxAbs, max: maxAbs };
+        }
+    }, [frameData, field, useManualRange, manualMin, manualMax]);
+
     const runSimulation = async () => {
         setRunning(true);
         setPlaying(false);
@@ -148,7 +173,6 @@ function App() {
         try {
             let dir: string;
             if (config.caseType === 'custom') {
-                // Convert shapes to JSON for the C++ solver
                 const geometryJson = JSON.stringify(shapes.map(s => {
                     if (s.type === 'circle') {
                         return { type: 'circle', x: s.x, y: s.y, radius: s.radius };
@@ -209,6 +233,15 @@ function App() {
             }
             setPlaying(true);
         }
+    };
+
+    const handleExportPng = () => {
+        const canvas = document.querySelector('.flow-canvas-container canvas') as HTMLCanvasElement | null;
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.download = `lbm_${config.caseType}_re${config.re}_step${currentStep}_${field}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     };
 
     return (
@@ -335,13 +368,98 @@ function App() {
                             </div>
                         </div>
                     )}
+
+                    {frameData && (
+                        <div className="panel">
+                            <h2>Visualization</h2>
+
+                            <div className="form-group">
+                                <label className="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={showStreamlines}
+                                        onChange={(e) => setShowStreamlines(e.target.checked)}
+                                        disabled={field !== 'velocity'}
+                                    />
+                                    Streamlines
+                                </label>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={useManualRange}
+                                        onChange={(e) => setUseManualRange(e.target.checked)}
+                                    />
+                                    Manual Color Range
+                                </label>
+                            </div>
+
+                            {useManualRange && (
+                                <div className="range-inputs">
+                                    <div className="form-group">
+                                        <label>Min</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            value={manualMin}
+                                            onChange={(e) => setManualMin(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Max</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            value={manualMax}
+                                            onChange={(e) => setManualMax(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <button className="btn-export" onClick={handleExportPng}>
+                                Export PNG
+                            </button>
+                        </div>
+                    )}
+
+                    {probe && (
+                        <div className="panel probe-panel">
+                            <h2>Probe</h2>
+                            <div className="probe-values">
+                                <span>x: {probe.x}</span>
+                                <span>y: {probe.y}</span>
+                                <span>u: {probe.u.toFixed(4)}</span>
+                                <span>v: {probe.v.toFixed(4)}</span>
+                                <span>|V|: {probe.speed.toFixed(4)}</span>
+                                <span>p: {probe.p.toFixed(4)}</span>
+                                <span>&omega;: {probe.omega.toFixed(4)}</span>
+                            </div>
+                        </div>
+                    )}
                 </aside>
 
                 <main className="content">
                     {frameData ? (
                         <div className="visualization" ref={containerRef}>
                             <h2>{field.charAt(0).toUpperCase() + field.slice(1)} Field - Step {currentStep}</h2>
-                            <canvas ref={canvasRef} />
+                            <div className="visualization-body">
+                                <FlowCanvas
+                                    frameData={frameData}
+                                    field={field}
+                                    showStreamlines={showStreamlines}
+                                    canvasSize={canvasSize}
+                                    colorRange={useManualRange ? colorRange : null}
+                                    onProbe={setProbe}
+                                />
+                                <ColorScaleBar
+                                    min={colorRange.min}
+                                    max={colorRange.max}
+                                    cmap={field === 'vorticity' ? 'rdbu' : 'jet'}
+                                />
+                            </div>
                         </div>
                     ) : config.caseType === 'custom' && !running ? (
                         <div className="geometry-container">
@@ -361,89 +479,6 @@ function App() {
             </div>
         </div>
     );
-}
-
-function renderField(
-    canvas: HTMLCanvasElement,
-    data: FrameData,
-    field: 'velocity' | 'pressure' | 'vorticity'
-) {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { nx, ny, velocity, p, omega, obstacle } = data;
-
-    let values: number[];
-    let minVal = 0;
-    let maxVal = 0;
-
-    if (field === 'velocity') {
-        values = velocity;
-        for (const v of values) if (v > maxVal) maxVal = v;
-    } else if (field === 'pressure') {
-        values = p;
-        minVal = Infinity;
-        maxVal = -Infinity;
-        for (const v of values) {
-            if (v < minVal) minVal = v;
-            if (v > maxVal) maxVal = v;
-        }
-    } else {
-        values = omega;
-        maxVal = 0;
-        for (const v of values) if (Math.abs(v) > maxVal) maxVal = Math.abs(v);
-        minVal = -maxVal;
-    }
-
-    const imageData = ctx.createImageData(nx, ny);
-    const range = maxVal - minVal || 1;
-
-    for (let i = 0; i < values.length; i++) {
-        const idx = i * 4;
-        if (obstacle[i]) {
-            imageData.data[idx] = 30;
-            imageData.data[idx + 1] = 30;
-            imageData.data[idx + 2] = 30;
-            imageData.data[idx + 3] = 255;
-            continue;
-        }
-
-        const t = (values[i] - minVal) / range;
-        const c = jetColormap(t);
-        imageData.data[idx] = c[0];
-        imageData.data[idx + 1] = c[1];
-        imageData.data[idx + 2] = c[2];
-        imageData.data[idx + 3] = 255;
-    }
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = nx;
-    tempCanvas.height = ny;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
-    tempCtx.putImageData(imageData, 0, 0);
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
-}
-
-function jetColormap(t: number): [number, number, number] {
-    t = Math.max(0, Math.min(1, t));
-    let r: number, g: number, b: number;
-
-    if (t < 0.125) {
-        r = 0; g = 0; b = 0.5 + t * 4;
-    } else if (t < 0.375) {
-        r = 0; g = (t - 0.125) * 4; b = 1;
-    } else if (t < 0.625) {
-        r = (t - 0.375) * 4; g = 1; b = 1 - (t - 0.375) * 4;
-    } else if (t < 0.875) {
-        r = 1; g = 1 - (t - 0.625) * 4; b = 0;
-    } else {
-        r = 1 - (t - 0.875) * 4 * 0.5; g = 0; b = 0;
-    }
-
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
 export default App;
