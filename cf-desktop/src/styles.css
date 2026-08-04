@@ -244,3 +244,171 @@ canvas {
   color: #8b949e;
   font-size: 1rem;
 }
+
+/* Geometry Editor */
+.geometry-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.geometry-container h2 {
+  margin-bottom: 12px;
+  color: #8b949e;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.geometry-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tool-group {
+  display: flex;
+  gap: 4px;
+}
+
+.tool-btn {
+  padding: 6px 12px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tool-btn:hover {
+  background: #30363d;
+  color: #e6edf3;
+}
+
+.tool-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: white;
+}
+
+.tool-btn.danger {
+  color: #f85149;
+}
+
+.tool-btn.danger:hover {
+  background: #f85149;
+  color: white;
+}
+
+.editor-presets {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.preset-label {
+  font-size: 0.75rem;
+  color: #8b949e;
+}
+
+.preset-btn {
+  padding: 4px 8px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #8b949e;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.preset-btn:hover {
+  background: #30363d;
+  color: #e6edf3;
+}
+
+.editor-canvas-container {
+  flex: 1;
+  min-height: 300px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.editor-canvas-container canvas {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  cursor: crosshair;
+}
+
+.editor-hint {
+  font-size: 0.75rem;
+  color: #8b949e;
+  text-align: center;
+}
+
+.shape-list {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.shape-list h3 {
+  font-size: 0.75rem;
+  color: #8b949e;
+  margin-bottom: 6px;
+}
+
+.shape-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.shape-item:hover {
+  background: #21262d;
+}
+
+.shape-item.selected {
+  border-color: #58a6ff;
+  background: #1c2333;
+}
+
+.shape-info {
+  color: #c9d1d9;
+}
+
+.shape-delete {
+  background: none;
+  border: none;
+  color: #f85149;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0 4px;
+}
+
+.shape-delete:hover {
+  color: #ff7b72;
+}

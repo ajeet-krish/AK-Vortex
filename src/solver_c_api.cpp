@@ -2,9 +2,288 @@
 #include "lbm.hpp"
 #include "geometry.hpp"
 #include <string>
+#include <vector>
 #include <filesystem>
 #include <cmath>
 #include <random>
+
+// ==========================================================================
+// Simple JSON shape parser (no external dependencies)
+// Parses geometry JSON array of shape primitives:
+//   {"type":"circle",    "x":N, "y":N, "radius":N}
+//   {"type":"rectangle", "x":N, "y":N, "width":N, "height":N}
+//   {"type":"polygon",   "points":[[x,y],[x,y],...]}
+// ==========================================================================
+
+struct Shape {
+    std::string type;
+    double x = 0.0;
+    double y = 0.0;
+    double radius = 0.0;
+    double width = 0.0;
+    double height = 0.0;
+    std::vector<std::pair<double, double>> points;
+};
+
+// Skip whitespace, return position after whitespace
+static size_t skip_ws(const std::string& s, size_t pos) {
+    while (pos < s.size() && (s[pos] == ' ' || s[pos] == '\t' ||
+           s[pos] == '\n' || s[pos] == '\r')) {
+        ++pos;
+    }
+    return pos;
+}
+
+// Extract a double value after a colon
+static double parse_number(const std::string& s, size_t& pos) {
+    pos = skip_ws(s, pos);
+    // Handle negative sign
+    bool neg = false;
+    if (pos < s.size() && s[pos] == '-') {
+        neg = true;
+        ++pos;
+    }
+    double val = 0.0;
+    while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') {
+        val = val * 10.0 + (s[pos] - '0');
+        ++pos;
+    }
+    if (pos < s.size() && s[pos] == '.') {
+        ++pos;
+        double frac = 0.1;
+        while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') {
+            val += (s[pos] - '0') * frac;
+            frac *= 0.1;
+            ++pos;
+        }
+    }
+    return neg ? -val : val;
+}
+
+// Find the next occurrence of a character, skipping quoted strings
+static size_t find_char(const std::string& s, char ch, size_t pos) {
+    bool in_str = false;
+    while (pos < s.size()) {
+        if (in_str) {
+            if (s[pos] == '\\') { pos += 2; continue; }
+            if (s[pos] == '"') in_str = false;
+        } else {
+            if (s[pos] == '"') { in_str = true; }
+            else if (s[pos] == ch) return pos;
+        }
+        ++pos;
+    }
+    return std::string::npos;
+}
+
+// Extract a quoted string value
+static std::string parse_string(const std::string& s, size_t& pos) {
+    pos = skip_ws(s, pos);
+    if (pos >= s.size() || s[pos] != '"') return "";
+    ++pos; // skip opening quote
+    std::string result;
+    while (pos < s.size() && s[pos] != '"') {
+        if (s[pos] == '\\') {
+            ++pos;
+            if (pos < s.size()) result += s[pos];
+        } else {
+            result += s[pos];
+        }
+        ++pos;
+    }
+    if (pos < s.size()) ++pos; // skip closing quote
+    return result;
+}
+
+// Find a key in a JSON object and return position after its value
+static size_t find_key(const std::string& s, const std::string& key, size_t start) {
+    size_t pos = start;
+    while (pos < s.size()) {
+        pos = skip_ws(s, pos);
+        if (pos >= s.size() || s[pos] == '}') return std::string::npos;
+        std::string k = parse_string(s, pos);
+        pos = skip_ws(s, pos);
+        if (pos < s.size() && s[pos] == ':') ++pos;
+        if (k == key) return pos;
+        // skip value
+        pos = skip_ws(s, pos);
+        if (pos >= s.size()) break;
+        if (s[pos] == '"') {
+            parse_string(s, pos);
+        } else if (s[pos] == '[') {
+            int depth = 1;
+            ++pos;
+            while (pos < s.size() && depth > 0) {
+                if (s[pos] == '[') ++depth;
+                else if (s[pos] == ']') --depth;
+                ++pos;
+            }
+        } else if (s[pos] == '{') {
+            int depth = 1;
+            ++pos;
+            while (pos < s.size() && depth > 0) {
+                if (s[pos] == '{') ++depth;
+                else if (s[pos] == '}') --depth;
+                ++pos;
+            }
+        } else {
+            // number or true/false/null
+            while (pos < s.size() && s[pos] != ',' && s[pos] != '}' && s[pos] != ']') ++pos;
+        }
+        pos = skip_ws(s, pos);
+        if (pos < s.size() && s[pos] == ',') ++pos;
+    }
+    return std::string::npos;
+}
+
+// Parse a polygon points array: [[x1,y1],[x2,y2],...]
+static std::vector<std::pair<double, double>> parse_points_array(const std::string& s,
+                                                                 size_t pos) {
+    std::vector<std::pair<double, double>> result;
+    pos = skip_ws(s, pos);
+    if (pos >= s.size() || s[pos] != '[') return result;
+    ++pos; // skip outer [
+
+    while (pos < s.size()) {
+        pos = skip_ws(s, pos);
+        if (pos >= s.size() || s[pos] == ']') break;
+        if (s[pos] == ',') { ++pos; continue; }
+        if (s[pos] == '[') {
+            ++pos; // inner [
+            double x = parse_number(s, pos);
+            pos = skip_ws(s, pos);
+            if (pos < s.size() && s[pos] == ',') ++pos;
+            double y = parse_number(s, pos);
+            result.push_back({x, y});
+            pos = skip_ws(s, pos);
+            if (pos < s.size() && s[pos] == ']') ++pos; // inner ]
+        } else {
+            ++pos;
+        }
+    }
+    return result;
+}
+
+// Parse a JSON array of shapes
+static std::vector<Shape> parse_geometry_json(const char* json) {
+    std::vector<Shape> shapes;
+    if (!json || !json[0]) return shapes;
+
+    std::string s(json);
+    size_t pos = 0;
+    pos = skip_ws(s, pos);
+    if (pos >= s.size() || s[pos] != '[') return shapes;
+    ++pos; // skip outer [
+
+    while (pos < s.size()) {
+        pos = skip_ws(s, pos);
+        if (pos >= s.size() || s[pos] == ']') break;
+        if (s[pos] == ',') { ++pos; continue; }
+        if (s[pos] != '{') { ++pos; continue; }
+
+        // Parse a shape object
+        Shape shape;
+        size_t obj_start = pos;
+        // Find matching closing brace
+        int depth = 1;
+        ++pos;
+        while (pos < s.size() && depth > 0) {
+            if (s[pos] == '{') ++depth;
+            else if (s[pos] == '}') --depth;
+            ++pos;
+        }
+        size_t obj_end = pos;
+        std::string obj = s.substr(obj_start, obj_end - obj_start);
+
+        // Extract type
+        size_t key_pos = find_key(obj, "type", 1);
+        if (key_pos != std::string::npos) {
+            shape.type = parse_string(obj, key_pos);
+        }
+
+        // Extract numeric fields
+        key_pos = find_key(obj, "x", 1);
+        if (key_pos != std::string::npos) shape.x = parse_number(obj, key_pos);
+
+        key_pos = find_key(obj, "y", 1);
+        if (key_pos != std::string::npos) shape.y = parse_number(obj, key_pos);
+
+        key_pos = find_key(obj, "radius", 1);
+        if (key_pos != std::string::npos) shape.radius = parse_number(obj, key_pos);
+
+        key_pos = find_key(obj, "width", 1);
+        if (key_pos != std::string::npos) shape.width = parse_number(obj, key_pos);
+
+        key_pos = find_key(obj, "height", 1);
+        if (key_pos != std::string::npos) shape.height = parse_number(obj, key_pos);
+
+        // Extract points array for polygon
+        key_pos = find_key(obj, "points", 1);
+        if (key_pos != std::string::npos) {
+            shape.points = parse_points_array(obj, key_pos);
+        }
+
+        if (!shape.type.empty()) {
+            shapes.push_back(shape);
+        }
+    }
+    return shapes;
+}
+
+// Mark obstacle nodes in the solver from parsed shape primitives
+static void mark_obstacles_from_shapes(LBMCapabilities& sys,
+                                       const std::vector<Shape>& shapes) {
+    for (const auto& shape : shapes) {
+        if (shape.type == "circle") {
+            int ix = static_cast<int>(shape.x);
+            int iy = static_cast<int>(shape.y);
+            int ir = static_cast<int>(shape.radius);
+            // Add circle to bounce-back geometry for interpolated BB
+            sys.bb_geom.cylinders.push_back({shape.x, shape.y, shape.radius});
+            for (int y = std::max(0, iy - ir - 1); y <= std::min(NY - 1, iy + ir + 1); ++y) {
+                for (int x = std::max(0, ix - ir - 1); x <= std::min(NX - 1, ix + ir + 1); ++x) {
+                    double dx = static_cast<double>(x) - shape.x;
+                    double dy = static_cast<double>(y) - shape.y;
+                    if (dx * dx + dy * dy <= shape.radius * shape.radius) {
+                        sys.obstacle[node_index(x, y)] = true;
+                    }
+                }
+            }
+        } else if (shape.type == "rectangle") {
+            int x0 = std::max(0, static_cast<int>(shape.x));
+            int y0 = std::max(0, static_cast<int>(shape.y));
+            int x1 = std::min(NX, static_cast<int>(shape.x + shape.width));
+            int y1 = std::min(NY, static_cast<int>(shape.y + shape.height));
+            for (int y = y0; y < y1; ++y) {
+                for (int x = x0; x < x1; ++x) {
+                    sys.obstacle[node_index(x, y)] = true;
+                }
+            }
+        } else if (shape.type == "polygon") {
+            if (shape.points.size() >= 3) {
+                // Convert to the format expected by point_in_polygon
+                std::vector<std::pair<double, double>> poly;
+                poly.reserve(shape.points.size());
+                for (const auto& pt : shape.points) {
+                    poly.push_back(pt);
+                }
+                for (int y = 0; y < NY; ++y) {
+                    for (int x = 0; x < NX; ++x) {
+                        if (point_in_polygon(static_cast<double>(x),
+                                             static_cast<double>(y), poly)) {
+                            sys.obstacle[node_index(x, y)] = true;
+                        }
+                    }
+                }
+                // Store polygon vertices for interpolated bounce-back
+                if (!sys.bb_geom.is_polygon) {
+                    sys.bb_geom.poly_vertices = poly;
+                    sys.bb_geom.is_polygon = true;
+                }
+            }
+        }
+    }
+}
 
 int lbm_solve_c(
     int nx, int ny,
@@ -106,6 +385,121 @@ int lbm_solve_c(
 
     // Save metadata
     save_meta_json(out_dir, re, tau, u_inflow, D, case_str, NX, NY);
+
+    // Run simulation
+    for (int step = 0; step <= max_steps; ++step) {
+        execute_time_step(system, tau, u_inflow);
+
+        // Save forces
+        double fx_total = 0.0, fy_total = 0.0;
+        for (int n = 0; n < NX * NY; ++n) {
+            fx_total += system.fx_body[n];
+            fy_total += system.fy_body[n];
+        }
+        save_forces_jsonl(out_dir, step, fx_total, fy_total);
+
+        // Save frames
+        if (step % save_interval == 0) {
+            save_json_frame(system, step, out_dir);
+        }
+    }
+
+    return 0;
+}
+
+int lbm_solve_geometry(
+    int nx, int ny,
+    double re, double u_inflow,
+    int max_steps, int save_interval,
+    const char* output_dir,
+    const char* geometry_json
+) {
+    // Set global grid dimensions
+    NX = nx;
+    NY = ny;
+
+    // Use CYLINDER case type (flow-through domain, no walls)
+    g_case = CaseType::CYLINDER;
+
+    // Compute characteristic length from obstacle bounding box
+    // Default to 60 if geometry is empty
+    std::vector<Shape> shapes = parse_geometry_json(geometry_json);
+    double D = 60.0;
+    if (!shapes.empty()) {
+        double xmin = 1e18, xmax = -1e18, ymin = 1e18, ymax = -1e18;
+        for (const auto& shape : shapes) {
+            if (shape.type == "circle") {
+                xmin = std::min(xmin, shape.x - shape.radius);
+                xmax = std::max(xmax, shape.x + shape.radius);
+                ymin = std::min(ymin, shape.y - shape.radius);
+                ymax = std::max(ymax, shape.y + shape.radius);
+            } else if (shape.type == "rectangle") {
+                xmin = std::min(xmin, shape.x);
+                xmax = std::max(xmax, shape.x + shape.width);
+                ymin = std::min(ymin, shape.y);
+                ymax = std::max(ymax, shape.y + shape.height);
+            } else if (shape.type == "polygon") {
+                for (const auto& pt : shape.points) {
+                    xmin = std::min(xmin, pt.first);
+                    xmax = std::max(xmax, pt.first);
+                    ymin = std::min(ymin, pt.second);
+                    ymax = std::max(ymax, pt.second);
+                }
+            }
+        }
+        double w = xmax - xmin;
+        double h = ymax - ymin;
+        D = std::max(w, h);
+        if (D < 1.0) D = 60.0;
+    }
+
+    // Compute tau from Re
+    double nu = u_inflow * D / re;
+    double tau = 0.5 + 3.0 * nu;
+
+    // Auto-LES for high Re
+    if (tau < 0.55) {
+        g_use_les = true;
+    }
+
+    // Create output directory
+    std::string out_dir(output_dir);
+    std::filesystem::create_directories(out_dir + "/frames");
+
+    // Initialize system
+    LBMCapabilities system;
+
+    // Mark obstacles from geometry
+    mark_obstacles_from_shapes(system, shapes);
+
+    // Initialize with uniform inflow equilibrium
+    for (int n = 0; n < NX * NY; ++n) {
+        double* f_node = &system.f[n * 9];
+        for (int i = 0; i < 9; ++i) {
+            f_node[i] = compute_equilibrium(i, 1.0, u_inflow, 0.0);
+        }
+    }
+
+    // Add perturbation downstream of obstacles to trigger instabilities
+    std::mt19937 rng(42);
+    std::uniform_real_distribution<double> pert_dist(-1e-4, 1e-4);
+    for (int x = NX / 3; x < std::min(NX, NX / 3 + 60); ++x) {
+        for (int y = 0; y < NY; ++y) {
+            int n = node_index(x, y);
+            if (system.obstacle[n]) continue;
+            double* f_node = &system.f[n * 9];
+            double v_pert = pert_dist(rng);
+            double rho, u, v;
+            compute_macros(f_node, rho, u, v);
+            for (int i = 0; i < 9; ++i) {
+                f_node[i] = compute_equilibrium(i, rho, u, v + v_pert);
+            }
+        }
+    }
+
+    // Save metadata
+    std::string case_label = "custom";
+    save_meta_json(out_dir, re, tau, u_inflow, D, case_label, NX, NY);
 
     // Run simulation
     for (int step = 0; step <= max_steps; ++step) {

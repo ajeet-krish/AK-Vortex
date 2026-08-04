@@ -34,6 +34,34 @@ pub fn run_simulation(
 }
 
 #[command]
+pub fn run_geometry_simulation(
+    nx: i32,
+    ny: i32,
+    re: f64,
+    u_inflow: f64,
+    max_steps: i32,
+    save_interval: i32,
+    geometry_json: String,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let output_dir = app.path()
+        .app_data_dir()
+        .unwrap()
+        .join("simulations")
+        .join("custom")
+        .join(format!("re{}", re as i32))
+        .to_string_lossy()
+        .to_string();
+
+    solver::run_geometry_solver(
+        nx, ny, re, u_inflow, max_steps, save_interval,
+        &output_dir, &geometry_json,
+    )?;
+
+    Ok(output_dir)
+}
+
+#[command]
 pub fn read_frame_json(path: String, step: i32) -> Result<serde_json::Value, String> {
     let frame_path = format!("{}/frames/frame_{}.json", path, step);
     let data = std::fs::read_to_string(&frame_path)

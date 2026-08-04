@@ -12,6 +12,17 @@ extern "C" {
         output_dir: *const c_char,
         case_type: *const c_char,
     ) -> c_int;
+
+    fn lbm_solve_geometry(
+        nx: c_int,
+        ny: c_int,
+        re: c_double,
+        u_inflow: c_double,
+        max_steps: c_int,
+        save_interval: c_int,
+        output_dir: *const c_char,
+        geometry_json: *const c_char,
+    ) -> c_int;
 }
 
 pub struct SolverConfig {
@@ -41,6 +52,25 @@ pub fn run_solver(config: &SolverConfig) -> Result<i32, String> {
             config.save_interval,
             c_output_dir.as_ptr(),
             c_case_type.as_ptr(),
+        );
+        Ok(result)
+    }
+}
+
+pub fn run_geometry_solver(
+    nx: i32, ny: i32, re: f64, u_inflow: f64,
+    max_steps: i32, save_interval: i32,
+    output_dir: &str, geometry_json: &str,
+) -> Result<i32, String> {
+    let c_output_dir = CString::new(output_dir.to_string())
+        .map_err(|e| e.to_string())?;
+    let c_geometry = CString::new(geometry_json.to_string())
+        .map_err(|e| e.to_string())?;
+
+    unsafe {
+        let result = lbm_solve_geometry(
+            nx, ny, re, u_inflow, max_steps, save_interval,
+            c_output_dir.as_ptr(), c_geometry.as_ptr(),
         );
         Ok(result)
     }

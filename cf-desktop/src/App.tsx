@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import GeometryEditor, { type Shape } from './components/GeometryEditor';
 
 interface SimConfig {
     nx: number;
@@ -50,6 +51,9 @@ function App() {
     // Playback state
     const [playing, setPlaying] = useState(false);
     const [playbackSpeed, setPlaybackSpeed] = useState(200);
+
+    // Geometry editor state
+    const [shapes, setShapes] = useState<Shape[]>([]);
 
     // Responsive canvas sizing
     const containerRef = useRef<HTMLDivElement>(null);
@@ -142,15 +146,38 @@ function App() {
         setFrames([]);
         setFrameData(null);
         try {
-            const dir = await invoke<string>('run_simulation', {
-                nx: config.nx,
-                ny: config.ny,
-                re: config.re,
-                uInflow: config.uInflow,
-                maxSteps: config.maxSteps,
-                saveInterval: config.saveInterval,
-                caseType: config.caseType,
-            });
+            let dir: string;
+            if (config.caseType === 'custom') {
+                // Convert shapes to JSON for the C++ solver
+                const geometryJson = JSON.stringify(shapes.map(s => {
+                    if (s.type === 'circle') {
+                        return { type: 'circle', x: s.x, y: s.y, radius: s.radius };
+                    } else if (s.type === 'rectangle') {
+                        return { type: 'rectangle', x: s.x, y: s.y, width: s.width, height: s.height };
+                    } else {
+                        return { type: 'polygon', points: s.points };
+                    }
+                }));
+                dir = await invoke<string>('run_geometry_simulation', {
+                    nx: config.nx,
+                    ny: config.ny,
+                    re: config.re,
+                    uInflow: config.uInflow,
+                    maxSteps: config.maxSteps,
+                    saveInterval: config.saveInterval,
+                    geometryJson,
+                });
+            } else {
+                dir = await invoke<string>('run_simulation', {
+                    nx: config.nx,
+                    ny: config.ny,
+                    re: config.re,
+                    uInflow: config.uInflow,
+                    maxSteps: config.maxSteps,
+                    saveInterval: config.saveInterval,
+                    caseType: config.caseType,
+                });
+            }
             setOutputDir(dir);
             const frameList = await invoke<number[]>('list_frames', { path: dir });
             setFrames(frameList);
@@ -205,6 +232,7 @@ function App() {
                                 <option value="cylinder">Cylinder Flow</option>
                                 <option value="cavity">Lid-Driven Cavity</option>
                                 <option value="step">Backward Step</option>
+                                <option value="custom">Custom Geometry</option>
                             </select>
                         </div>
 
@@ -314,6 +342,15 @@ function App() {
                         <div className="visualization" ref={containerRef}>
                             <h2>{field.charAt(0).toUpperCase() + field.slice(1)} Field - Step {currentStep}</h2>
                             <canvas ref={canvasRef} />
+                        </div>
+                    ) : config.caseType === 'custom' && !running ? (
+                        <div className="geometry-container">
+                            <h2>Draw Geometry</h2>
+                            <GeometryEditor
+                                nx={config.nx}
+                                ny={config.ny}
+                                onGeometryChange={setShapes}
+                            />
                         </div>
                     ) : (
                         <div className="placeholder">
