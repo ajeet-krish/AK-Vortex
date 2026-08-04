@@ -1,7 +1,19 @@
 use std::path::Path;
+use std::sync::Mutex;
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 use tauri::command;
 use tauri::Manager;
 use crate::solver::{self, SolverConfig};
+
+// Global solver log storage
+static SOLVER_LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+pub fn log_message(msg: &str) {
+    if let Ok(mut log) = SOLVER_LOG.lock() {
+        log.push(msg.to_string());
+    }
+}
 
 fn validate_path(path: &str) -> Result<(), String> {
     let p = Path::new(path);
@@ -36,13 +48,21 @@ pub fn run_simulation(
         .to_string_lossy()
         .to_string();
 
+    log_message(&format!(
+        "[solver] Starting {} simulation: {}x{}, Re={}, u={}, steps={}, interval={}",
+        case_type, nx, ny, re, u_inflow, max_steps, save_interval
+    ));
+    log_message(&format!("[solver] Output directory: {}", output_dir));
+
     let config = SolverConfig {
         nx, ny, re, u_inflow, max_steps, save_interval,
         output_dir: output_dir.clone(),
         case_type,
     };
 
+    log_message("[solver] Running LBM solver...");
     solver::run_solver(&config)?;
+    log_message("[solver] Simulation complete.");
 
     Ok(output_dir)
 }
@@ -67,10 +87,19 @@ pub fn run_geometry_simulation(
         .to_string_lossy()
         .to_string();
 
+    log_message(&format!(
+        "[solver] Starting custom geometry simulation: {}x{}, Re={}, steps={}",
+        nx, ny, re, max_steps
+    ));
+    log_message(&format!("[solver] Geometry JSON length: {} bytes", geometry_json.len()));
+    log_message(&format!("[solver] Output directory: {}", output_dir));
+
+    log_message("[solver] Running LBM solver with custom geometry...");
     solver::run_geometry_solver(
         nx, ny, re, u_inflow, max_steps, save_interval,
         &output_dir, &geometry_json,
     )?;
+    log_message("[solver] Simulation complete.");
 
     Ok(output_dir)
 }
@@ -101,4 +130,57 @@ pub fn list_frames(path: String) -> Result<Vec<i32>, String> {
         .collect();
     frames.sort();
     Ok(frames)
+}
+
+#[command]
+pub fn get_solver_log(last_n: Option<usize>) -> Result<Vec<String>, String> {
+    let log = SOLVER_LOG.lock()
+        .map_err(|e| format!("Failed to lock log: {}", e))?;
+    match last_n {
+        Some(n) => {
+            let start = log.len().saturating_sub(n);
+            Ok(log[start..].to_vec())
+        }
+        None => Ok(log.clone()),
+    }
+}
+
+#[command]
+pub fn clear_solver_log() -> Result<(), String> {
+    let mut log = SOLVER_LOG.lock()
+        .map_err(|e| format!("Failed to lock log: {}", e))?;
+    log.clear();
+    Ok(())
+}
+
+#[command]
+pub fn get_simulation_plots(path: String) -> Result<Vec<String>, String> {
+    validate_path(&path)?;
+    let mut plots: Vec<String> = std::fs::read_dir(&path)
+        .map_err(|e| format!("Failed to read output directory: {}", e))?
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            if name.ends_with(".png") {
+                Some(name)
+            } else {
+                None
+            }
+        })
+        .collect();
+    plots.sort();
+    Ok(plots)
+}
+
+#[command]
+pub fn read_plot_image(path: String, filename: String) -> Result<String, String> {
+    validate_path(&path)?;
+    // Reject path traversal in filename
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err("Invalid filename: contains path separator or ..".to_string());
+    }
+    let filepath = format!("{}/{}", path, filename);
+    let data = std::fs::read(&filepath)
+        .map_err(|e| format!("Failed to read image: {}", e))?;
+    Ok(STANDARD.encode(&data))
 }

@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
 import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
+import StaticPlots from './components/StaticPlots';
 
 interface SimConfig {
     nx: number;
@@ -44,6 +45,7 @@ function App() {
         caseType: DEFAULT_CASE,
     });
     const [running, setRunning] = useState(false);
+    const [simProgress, setSimProgress] = useState({ step: 0, total: 0, status: '' });
     const [outputDir, setOutputDir] = useState<string | null>(null);
     const [frames, setFrames] = useState<number[]>([]);
     const [frameIndex, setFrameIndex] = useState(0);
@@ -63,6 +65,11 @@ function App() {
 
     // Geometry editor state
     const [shapes, setShapes] = useState<Shape[]>([]);
+
+    // Solver log state
+    const [solverLog, setSolverLog] = useState<string[]>([]);
+    const [showLog, setShowLog] = useState(false);
+    const logEndRef = useRef<HTMLDivElement>(null);
 
     // Responsive canvas sizing
     const containerRef = useRef<HTMLDivElement>(null);
@@ -138,7 +145,30 @@ function App() {
         return () => clearInterval(timer);
     }, [playing, playbackSpeed, frames.length]);
 
-    // Compute color range for the color scale bar
+    // Poll solver log while simulation is running
+    useEffect(() => {
+        if (!running) return;
+
+        const pollLog = async () => {
+            try {
+                const entries = await invoke<string[]>('get_solver_log', {});
+                setSolverLog(entries);
+                // Auto-scroll to bottom
+                if (logEndRef.current) {
+                    logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (e) {
+                console.error('Failed to fetch solver log:', e);
+            }
+        };
+
+        // Initial fetch
+        pollLog();
+        const timer = setInterval(pollLog, 500);
+        return () => clearInterval(timer);
+    }, [running]);
+
+    // Compute color range for the color scale bar (NaN-safe, symmetric for pressure)
     const colorRange = useMemo(() => {
         if (!frameData) return { min: 0, max: 1 };
 
@@ -148,20 +178,32 @@ function App() {
 
         if (field === 'velocity') {
             let maxVal = 0;
-            for (const val of frameData.velocity) if (val > maxVal) maxVal = val;
-            return { min: 0, max: maxVal };
+            for (const val of frameData.velocity) {
+                if (Number.isFinite(val) && val > maxVal) maxVal = val;
+            }
+            return { min: 0, max: maxVal || 1 };
         } else if (field === 'pressure') {
             let minVal = Infinity;
             let maxVal = -Infinity;
             for (const val of frameData.p) {
+                if (!Number.isFinite(val)) continue;
                 if (val < minVal) minVal = val;
                 if (val > maxVal) maxVal = val;
             }
-            return { min: minVal, max: maxVal };
+            if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
+                return { min: -1, max: 1 };
+            }
+            const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
+            return { min: -absMax, max: absMax };
         } else {
             let maxAbs = 0;
-            for (const val of frameData.omega) if (Math.abs(val) > maxAbs) maxAbs = Math.abs(val);
-            return { min: -maxAbs, max: maxAbs };
+            for (const val of frameData.omega) {
+                if (Number.isFinite(val)) {
+                    const abs = Math.abs(val);
+                    if (abs > maxAbs) maxAbs = abs;
+                }
+            }
+            return { min: -maxAbs, max: maxAbs || 1 };
         }
     }, [frameData, field, useManualRange, manualMin, manualMax]);
 
@@ -170,6 +212,7 @@ function App() {
         setPlaying(false);
         setFrames([]);
         setFrameData(null);
+        setSimProgress({ step: 0, total: config.maxSteps, status: 'Initializing...' });
         try {
             let dir: string;
             if (config.caseType === 'custom') {
@@ -179,9 +222,11 @@ function App() {
                     } else if (s.type === 'rectangle') {
                         return { type: 'rectangle', x: s.x, y: s.y, width: s.width, height: s.height };
                     } else {
-                        return { type: 'polygon', points: s.points };
+                        // Convert {x,y} objects to [x,y] arrays for C++ parser
+                        return { type: 'polygon', points: s.points?.map(p => [p.x, p.y]) || [] };
                     }
                 }));
+                setSimProgress({ step: 0, total: config.maxSteps, status: 'Building geometry mesh...' });
                 dir = await invoke<string>('run_geometry_simulation', {
                     nx: config.nx,
                     ny: config.ny,
@@ -192,6 +237,7 @@ function App() {
                     geometryJson,
                 });
             } else {
+                setSimProgress({ step: 0, total: config.maxSteps, status: 'Setting up simulation...' });
                 dir = await invoke<string>('run_simulation', {
                     nx: config.nx,
                     ny: config.ny,
@@ -202,6 +248,7 @@ function App() {
                     caseType: config.caseType,
                 });
             }
+            setSimProgress({ step: config.maxSteps, total: config.maxSteps, status: 'Complete!' });
             setOutputDir(dir);
             const frameList = await invoke<number[]>('list_frames', { path: dir });
             setFrames(frameList);
@@ -210,6 +257,7 @@ function App() {
             }
         } catch (e) {
             console.error(e);
+            setSimProgress({ step: 0, total: 0, status: 'Failed!' });
             alert(`Simulation failed: ${e}`);
         }
         setRunning(false);
@@ -314,9 +362,18 @@ function App() {
                             />
                         </div>
 
-                        <button className="btn-primary" onClick={runSimulation} disabled={running}>
-                            {running ? 'Running...' : 'Run Simulation'}
-                        </button>
+                        {running ? (
+                            <div className="sim-progress">
+                                <div className="sim-progress-bar">
+                                    <div className="sim-progress-fill" style={{ width: `${simProgress.total > 0 ? (simProgress.step / simProgress.total) * 100 : 0}%` }} />
+                                </div>
+                                <span className="sim-progress-text">{simProgress.status}</span>
+                            </div>
+                        ) : (
+                            <button className="btn-primary" onClick={runSimulation}>
+                                Run Simulation
+                            </button>
+                        )}
                     </div>
 
                     {frames.length > 0 && (
@@ -473,6 +530,10 @@ function App() {
                                     cmap={field === 'vorticity' ? 'rdbu' : 'jet'}
                                 />
                             </div>
+                            <StaticPlots
+                                frameData={frameData}
+                                width={Math.min(canvasSize.width, 400)}
+                            />
                         </div>
                     ) : config.caseType === 'custom' && !running ? (
                         <div className="geometry-container">
@@ -490,6 +551,37 @@ function App() {
                     )}
                 </main>
             </div>
+
+            {/* Solver Log Panel */}
+            {solverLog.length > 0 && (
+                <div className="log-panel">
+                    <div className="log-header">
+                        <button
+                            className="log-toggle"
+                            onClick={() => setShowLog(!showLog)}
+                        >
+                            {showLog ? 'Hide Log' : 'Show Log'} ({solverLog.length})
+                        </button>
+                        <button
+                            className="log-clear"
+                            onClick={() => {
+                                setSolverLog([]);
+                                invoke('clear_solver_log');
+                            }}
+                        >
+                            Clear
+                        </button>
+                    </div>
+                    {showLog && (
+                        <div className="log-content">
+                            {solverLog.map((entry, i) => (
+                                <div key={i} className="log-entry">{entry}</div>
+                            ))}
+                            <div ref={logEndRef} />
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

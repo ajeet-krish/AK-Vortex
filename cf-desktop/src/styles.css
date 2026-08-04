@@ -79,8 +79,8 @@ body {
 
 /* Sidebar / Panels */
 .sidebar {
-  width: 280px;
-  min-width: 280px;
+  width: 300px;
+  min-width: 300px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
   display: flex;
@@ -91,6 +91,7 @@ body {
 .panel {
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
 }
 
 .panel h2 {
@@ -98,18 +99,18 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 8px 12px;
+  padding: 10px 16px;
   background: var(--panel-header-bg);
   border-bottom: 1px solid var(--border);
   margin: 0;
 }
 
 .panel-body {
-  padding: 10px 12px;
+  padding: 12px 16px;
 }
 
 .form-group {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .form-group label {
@@ -174,6 +175,35 @@ body {
 .btn-primary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Simulation Progress */
+.sim-progress {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.sim-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-primary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.sim-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.sim-progress-text {
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 .btn-reset {
@@ -260,19 +290,20 @@ body {
 .content {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   background: var(--bg-canvas);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .visualization {
   text-align: center;
   width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 16px;
 }
 
 .visualization h2 {
@@ -406,13 +437,13 @@ canvas {
 
 .editor-hint {
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   text-align: center;
 }
 
 .shape-list {
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px;
   max-height: 150px;
@@ -421,7 +452,7 @@ canvas {
 
 .shape-list h3 {
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
@@ -430,8 +461,8 @@ canvas {
   justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 4px;
   margin-bottom: 4px;
   cursor: pointer;
@@ -439,22 +470,22 @@ canvas {
 }
 
 .shape-item:hover {
-  background: #21262d;
+  background: var(--bg-tertiary);
 }
 
 .shape-item.selected {
-  border-color: #58a6ff;
-  background: #1c2333;
+  border-color: var(--accent);
+  background: var(--bg-primary);
 }
 
 .shape-info {
-  color: #c9d1d9;
+  color: var(--text-primary);
 }
 
 .shape-delete {
   background: none;
   border: none;
-  color: #f85149;
+  color: var(--danger);
   cursor: pointer;
   font-size: 0.875rem;
   padding: 0 4px;
@@ -477,13 +508,13 @@ canvas {
 /* Probe Tooltip */
 .probe-tooltip {
   position: absolute;
-  background: rgba(13, 17, 23, 0.92);
-  border: 1px solid #30363d;
+  background: rgba(30, 30, 30, 0.92);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 0.7rem;
   font-family: 'JetBrains Mono', monospace;
-  color: #c9d1d9;
+  color: var(--text-primary);
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -499,7 +530,7 @@ canvas {
   gap: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
-  color: #c9d1d9;
+  color: var(--text-primary);
 }
 
 /* Color Scale Bar */
@@ -514,7 +545,7 @@ canvas {
 .scale-label {
   font-size: 0.7rem;
   font-family: 'JetBrains Mono', monospace;
-  color: #8b949e;
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -531,14 +562,14 @@ canvas {
   align-items: center;
   gap: 8px;
   font-size: 0.8125rem;
-  color: #c9d1d9;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
 .checkbox-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #1f6feb;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -561,27 +592,27 @@ canvas {
 .range-inputs input[type="number"] {
   width: 100%;
   padding: 6px 8px;
-  background: #21262d;
-  border: 1px solid #30363d;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #e6edf3;
+  color: var(--text-primary);
   font-size: 0.8125rem;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .range-inputs input[type="number"]:focus {
   outline: none;
-  border-color: #58a6ff;
+  border-color: var(--accent);
 }
 
 /* Export Button */
 .btn-export {
   width: 100%;
   padding: 8px 16px;
-  background: #21262d;
-  border: 1px solid #30363d;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: #c9d1d9;
+  color: var(--text-primary);
   font-size: 0.8125rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -589,15 +620,15 @@ canvas {
 }
 
 .btn-export:hover {
-  background: #30363d;
-  color: #e6edf3;
-  border-color: #58a6ff;
+  background: var(--border);
+  color: var(--text-primary);
+  border-color: var(--accent);
 }
 
 /* NACA Parameter Panel */
 .naca-params {
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
 }
@@ -612,17 +643,17 @@ canvas {
 .naca-code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.875rem;
-  color: #58a6ff;
+  color: var(--accent);
   font-weight: 600;
 }
 
 .naca-params .form-group {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .naca-params .form-group label {
   font-size: 0.75rem;
-  color: #8b949e;
+  color: var(--text-secondary);
   margin-bottom: 4px;
 }
 
@@ -630,7 +661,7 @@ canvas {
   width: 100%;
   height: 4px;
   -webkit-appearance: none;
-  background: #21262d;
+  background: var(--bg-tertiary);
   border-radius: 2px;
   outline: none;
 }
@@ -639,18 +670,134 @@ canvas {
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
-  background: #58a6ff;
+  background: var(--accent);
   border-radius: 50%;
   cursor: pointer;
 }
 
 /* Collision Warning */
 .collision-warning {
-  background: rgba(248, 81, 73, 0.15);
-  border: 1px solid #f85149;
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid var(--danger);
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.75rem;
-  color: #f85149;
+  color: var(--danger);
   text-align: center;
+}
+
+/* Solver Log Panel */
+.log-panel {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.log-toggle {
+  padding: 3px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.log-toggle:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.log-clear {
+  padding: 3px 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.log-clear:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.log-content {
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.log-entry {
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-entry:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Static Plots Grid */
+.static-plots-section {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.static-plots-section h2 {
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.static-plots-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.static-plot-cell {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.static-plot-label {
+  display: block;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.static-plot-cell canvas {
+  border: none;
+  width: 100%;
+  height: auto;
 }

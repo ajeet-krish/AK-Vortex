@@ -50,26 +50,40 @@ export default function FlowCanvas({
 
     const { nx, ny, velocity, u, v, p, omega, obstacle } = frameData;
 
-    // Compute color range from data
+    // Compute color range from data (NaN-safe, symmetric for pressure)
     const range = useMemo(() => {
         if (colorRange) return colorRange;
 
         if (field === 'velocity') {
             let maxVal = 0;
-            for (const val of velocity) if (val > maxVal) maxVal = val;
-            return { min: 0, max: maxVal };
+            for (const val of velocity) {
+                if (Number.isFinite(val) && val > maxVal) maxVal = val;
+            }
+            return { min: 0, max: maxVal || 1 };
         } else if (field === 'pressure') {
             let minVal = Infinity;
             let maxVal = -Infinity;
             for (const val of p) {
+                if (!Number.isFinite(val)) continue;
                 if (val < minVal) minVal = val;
                 if (val > maxVal) maxVal = val;
             }
-            return { min: minVal, max: maxVal };
+            // Fallback for empty, NaN-only, or constant fields
+            if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
+                return { min: -1, max: 1 };
+            }
+            // Use symmetric range around 0 for pressure (fluctuations are symmetric)
+            const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
+            return { min: -absMax, max: absMax };
         } else {
             let maxAbs = 0;
-            for (const val of omega) if (Math.abs(val) > maxAbs) maxAbs = Math.abs(val);
-            return { min: -maxAbs, max: maxAbs };
+            for (const val of omega) {
+                if (Number.isFinite(val)) {
+                    const abs = Math.abs(val);
+                    if (abs > maxAbs) maxAbs = abs;
+                }
+            }
+            return { min: -maxAbs, max: maxAbs || 1 };
         }
     }, [field, velocity, p, omega, colorRange]);
 

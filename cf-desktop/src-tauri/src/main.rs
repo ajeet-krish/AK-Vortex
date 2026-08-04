@@ -10,6 +10,10 @@ fn main() {
             commands::run_geometry_simulation,
             commands::read_frame_json,
             commands::list_frames,
+            commands::get_solver_log,
+            commands::clear_solver_log,
+            commands::get_simulation_plots,
+            commands::read_plot_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

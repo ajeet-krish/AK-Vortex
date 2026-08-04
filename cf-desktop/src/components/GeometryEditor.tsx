@@ -60,6 +60,11 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [dragStartGrid, setDragStartGrid] = useState<Point | null>(null);
 
+    // Resize state
+    const [resizingId, setResizingId] = useState<string | null>(null);
+    const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+    const [resizeShapeSnapshot, setResizeShapeSnapshot] = useState<Shape | null>(null);
+
     // Convert grid coordinates to canvas pixel coordinates
     const gridToCanvas = useCallback((gx: number, gy: number, canvasW: number, canvasH: number) => {
         const scaleX = canvasW / nx;
@@ -146,6 +151,126 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
             });
         },
         [onGeometryChange]
+    );
+
+    // Get resize handle positions in grid coordinates for a shape
+    const getResizeHandles = useCallback(
+        (shape: Shape): Array<{ id: string; gx: number; gy: number }> => {
+            const handles: Array<{ id: string; gx: number; gy: number }> = [];
+            if (shape.type === 'circle' && shape.radius !== undefined) {
+                handles.push(
+                    { id: 'n', gx: shape.x, gy: shape.y + shape.radius },
+                    { id: 's', gx: shape.x, gy: shape.y - shape.radius },
+                    { id: 'e', gx: shape.x + shape.radius, gy: shape.y },
+                    { id: 'w', gx: shape.x - shape.radius, gy: shape.y },
+                );
+            } else if (shape.type === 'rectangle' && shape.width !== undefined && shape.height !== undefined) {
+                const x0 = shape.x, y0 = shape.y;
+                const x1 = shape.x + shape.width, y1 = shape.y + shape.height;
+                handles.push(
+                    { id: 'nw', gx: x0, gy: y0 },
+                    { id: 'ne', gx: x1, gy: y0 },
+                    { id: 'sw', gx: x0, gy: y1 },
+                    { id: 'se', gx: x1, gy: y1 },
+                    { id: 'n', gx: (x0 + x1) / 2, gy: y0 },
+                    { id: 's', gx: (x0 + x1) / 2, gy: y1 },
+                    { id: 'w', gx: x0, gy: (y0 + y1) / 2 },
+                    { id: 'e', gx: x1, gy: (y0 + y1) / 2 },
+                );
+            } else if (shape.type === 'polygon' && shape.points && shape.points.length >= 3) {
+                for (let i = 0; i < shape.points.length; i++) {
+                    handles.push({ id: `v${i}`, gx: shape.points[i].x, gy: shape.points[i].y });
+                }
+            }
+            return handles;
+        },
+        []
+    );
+
+    // Hit-test: find if a grid point is near any resize handle (threshold in grid units)
+    const findHandleAtPoint = useCallback(
+        (gx: number, gy: number, shapeId: string): string | null => {
+            const shape = shapes.find((s) => s.id === shapeId);
+            if (!shape) return null;
+            const handles = getResizeHandles(shape);
+            const THRESH = 15; // grid units for hit detection
+            for (const h of handles) {
+                const dx = gx - h.gx;
+                const dy = gy - h.gy;
+                if (dx * dx + dy * dy <= THRESH * THRESH) return h.id;
+            }
+            return null;
+        },
+        [shapes, getResizeHandles]
+    );
+
+    // Apply resize to shape based on handle and mouse position
+    const applyResize = useCallback(
+        (id: string, handle: string, gx: number, gy: number) => {
+            if (!resizeShapeSnapshot) return;
+            const snap = resizeShapeSnapshot;
+            setShapes((prev) => prev.map((s) => {
+                if (s.id !== id) return s;
+
+                if (s.type === 'circle' && snap.type === 'circle' && snap.radius !== undefined) {
+                    const dx = gx - snap.x;
+                    const dy = gy - snap.y;
+                    const newR = Math.max(3, Math.sqrt(dx * dx + dy * dy));
+                    return { ...s, radius: newR };
+                }
+
+                if (s.type === 'rectangle' && snap.type === 'rectangle'
+                    && snap.width !== undefined && snap.height !== undefined) {
+                    const x0 = snap.x, y0 = snap.y;
+                    const x1 = snap.x + snap.width;
+                    const y1 = snap.y + snap.height;
+                    let nx0 = x0, ny0 = y0, nx1 = x1, ny1 = y1;
+
+                    // Corners
+                    if (handle === 'nw') { nx0 = gx; ny0 = gy; }
+                    else if (handle === 'ne') { nx1 = gx; ny0 = gy; }
+                    else if (handle === 'sw') { nx0 = gx; ny1 = gy; }
+                    else if (handle === 'se') { nx1 = gx; ny1 = gy; }
+                    // Edges
+                    else if (handle === 'n') { ny0 = gy; }
+                    else if (handle === 's') { ny1 = gy; }
+                    else if (handle === 'w') { nx0 = gx; }
+                    else if (handle === 'e') { nx1 = gx; }
+
+                    const finalX = Math.min(nx0, nx1);
+                    const finalY = Math.min(ny0, ny1);
+                    const finalW = Math.max(3, Math.abs(nx1 - nx0));
+                    const finalH = Math.max(3, Math.abs(ny1 - ny0));
+                    return { ...s, x: finalX, y: finalY, width: finalW, height: finalH };
+                }
+
+                if (s.type === 'polygon' && snap.type === 'polygon'
+                    && snap.points && s.points && handle.startsWith('v')) {
+                    const vi = parseInt(handle.slice(1));
+                    if (vi >= 0 && vi < snap.points.length) {
+                        // Compute centroid of snapshot
+                        let cx = 0, cy = 0;
+                        for (const pt of snap.points) { cx += pt.x; cy += pt.y; }
+                        cx /= snap.points.length;
+                        cy /= snap.points.length;
+                        // Compute scale factor from old vertex distance to new
+                        const oldPt = snap.points[vi];
+                        const oldDist = Math.hypot(oldPt.x - cx, oldPt.y - cy);
+                        const newDist = Math.hypot(gx - cx, gy - cy);
+                        const scale = oldDist > 0.1 ? newDist / oldDist : 1;
+                        // Scale all points relative to centroid
+                        const newPoints = snap.points.map((pt) => ({
+                            x: cx + (pt.x - cx) * scale,
+                            y: cy + (pt.y - cy) * scale,
+                        }));
+                        return { ...s, points: newPoints };
+                    }
+                }
+
+                return s;
+            }));
+        },
+        [resizeShapeSnapshot]
     );
 
     // Check for collisions when adding a shape
@@ -255,6 +380,21 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 ctx.textBaseline = 'middle';
                 ctx.fillText(shape.name, labelX, labelY);
             }
+
+            // Draw resize handles for selected shape
+            if (isSelected) {
+                const handles = getResizeHandles(shape);
+                for (const handle of handles) {
+                    const { px: hx, py: hy } = gridToCanvas(handle.gx, handle.gy, w, h);
+                    ctx.fillStyle = '#f0883e';
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
         }
 
         // Draw in-progress shape
@@ -321,7 +461,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         ctx.font = '14px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Flow ->', offsetX + nx * scale * 0.15, offsetY - 10);
-    }, [shapes, selectedId, isDrawing, drawStart, drawCurrent, activeTool, polygonPoints, nx, ny, gridToCanvas]);
+    }, [shapes, selectedId, isDrawing, drawStart, drawCurrent, activeTool, polygonPoints, nx, ny, gridToCanvas, getResizeHandles]);
 
     useEffect(() => {
         draw();
@@ -355,6 +495,20 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const pt = getMouseGrid(e);
+
+        // If a shape is selected, check for resize handle hit first
+        if (selectedId) {
+            const handle = findHandleAtPoint(pt.x, pt.y, selectedId);
+            if (handle) {
+                const shape = shapes.find((s) => s.id === selectedId);
+                if (shape) {
+                    setResizingId(selectedId);
+                    setResizeHandle(handle);
+                    setResizeShapeSnapshot({ ...shape, points: shape.points ? shape.points.map((p) => ({ ...p })) : undefined });
+                    return;
+                }
+            }
+        }
 
         // Check if clicking on an existing shape (for drag-to-move, any tool)
         const hitShape = findShapeAtPoint(pt.x, pt.y);
@@ -432,6 +586,12 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const pt = getMouseGrid(e);
 
+        // Handle resize
+        if (resizingId && resizeHandle) {
+            applyResize(resizingId, resizeHandle, pt.x, pt.y);
+            return;
+        }
+
         // Handle drag-to-move
         if (draggingId && dragStartGrid) {
             const dx = pt.x - dragStartGrid.x;
@@ -446,6 +606,14 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        // Finalize resize
+        if (resizingId) {
+            setResizingId(null);
+            setResizeHandle(null);
+            setResizeShapeSnapshot(null);
+            return;
+        }
+
         // Finalize drag-to-move
         if (draggingId) {
             setDraggingId(null);
@@ -581,6 +749,14 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         return `${mDigit}${pDigit}${tDigit.toString().padStart(2, '0')}`;
     })();
 
+    // Cursor style based on current operation
+    const cursorStyle = (() => {
+        if (resizingId) return 'nwse-resize';
+        if (draggingId) return 'grabbing';
+        if (activeTool === 'move') return 'grab';
+        return 'crosshair';
+    })();
+
     return (
         <div className="geometry-editor">
             <div className="editor-toolbar">
@@ -705,7 +881,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
-                    style={{ cursor: activeTool === 'move' ? 'grab' : draggingId ? 'grabbing' : 'crosshair' }}
+                    style={{ cursor: cursorStyle }}
                 />
             </div>
 
@@ -728,15 +904,9 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 </div>
             )}
 
-            {activeTool === 'move' && (
+            {activeTool === 'move' && !draggingId && (
                 <div className="editor-hint">
                     Click and drag shapes to reposition them.
-                </div>
-            )}
-
-            {draggingId && (
-                <div className="editor-hint">
-                    Dragging... release to drop.
                 </div>
             )}
 
