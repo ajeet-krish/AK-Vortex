@@ -158,3 +158,26 @@ add_custom_target(serve-docs
   COMMAND python3 -m http.server 8765 -d ${CMAKE_SOURCE_DIR}/docs
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+
+# ------------------------------------------------------------------
+# Shared library for Tauri FFI (desktop app)
+# ------------------------------------------------------------------
+add_library(lbm_solver_shared SHARED
+    src/solver_c_api.cpp
+    src/lbm.hpp
+    src/lbm_types.hpp
+    src/geometry.hpp
+    src/thermal.hpp
+    src/ibm.hpp
+    src/wall_functions.hpp
+    src/scalar_transport.hpp
+)
+target_include_directories(lbm_solver_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(lbm_solver_shared PRIVATE OpenMP::OpenMP_CXX)
+set_target_properties(lbm_solver_shared PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    MACOSX_RPATH ON
+    INSTALL_NAME_DIR "@rpath"
+    BUILD_RPATH "${CMAKE_SOURCE_DIR}/build"
+    INSTALL_RPATH "@loader_path/../lib"
+)
