@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { naca4Airfoil, transformPoints, shapesOverlap } from '../utils/naca';
 
 interface Point {
     x: number;
@@ -8,6 +9,7 @@ interface Point {
 interface Shape {
     id: string;
     type: 'circle' | 'rectangle' | 'polygon';
+    name: string;
     x: number;
     y: number;
     radius?: number;
@@ -22,7 +24,17 @@ interface GeometryEditorProps {
     onGeometryChange: (shapes: Shape[]) => void;
 }
 
-type DrawTool = 'circle' | 'rectangle' | 'polygon';
+type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca';
+
+function nextShapeName(type: string, shapes: Shape[]): string {
+    if (type === 'naca') {
+        const count = shapes.filter((s) => s.name.startsWith('NACA')).length + 1;
+        return `NACA ${count}`;
+    }
+    const label = type.charAt(0).toUpperCase() + type.slice(1);
+    const count = shapes.filter((s) => s.name.startsWith(label)).length + 1;
+    return `${label} ${count}`;
+}
 
 export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,6 +45,16 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     const [drawCurrent, setDrawCurrent] = useState<Point | null>(null);
     const [polygonPoints, setPolygonPoints] = useState<Point[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    // NACA parameters
+    const [nacaM, setNacaM] = useState(0.02);
+    const [nacaP, setNacaP] = useState(0.4);
+    const [nacaT, setNacaT] = useState(0.12);
+    const [nacaRotation, setNacaRotation] = useState(0);
+    const [nacaChord, setNacaChord] = useState(80);
+
+    // Collision warning
+    const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
 
     // Convert grid coordinates to canvas pixel coordinates
     const gridToCanvas = useCallback((gx: number, gy: number, canvasW: number, canvasH: number) => {
@@ -62,6 +84,20 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
             gy: (py - offsetY) / scale,
         };
     }, [nx, ny]);
+
+    // Check for collisions when adding a shape
+    const checkCollision = useCallback(
+        (newShape: Shape) => {
+            for (const existing of shapes) {
+                if (existing.id === newShape.id) continue;
+                if (shapesOverlap(newShape, existing)) {
+                    return `Warning: "${newShape.name}" overlaps "${existing.name}"`;
+                }
+            }
+            return null;
+        },
+        [shapes]
+    );
 
     // Draw the editor
     const draw = useCallback(() => {
@@ -134,6 +170,27 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
+            }
+
+            // Draw shape name label
+            if (shape.type === 'polygon' && shape.points && shape.points.length > 0) {
+                let cx = 0, cy = 0;
+                for (const pt of shape.points) { cx += pt.x; cy += pt.y; }
+                cx /= shape.points.length;
+                cy /= shape.points.length;
+                const { px: labelX, py: labelY } = gridToCanvas(cx, cy, w, h);
+                ctx.fillStyle = '#58a6ff';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(shape.name, labelX, labelY);
+            } else {
+                const { px: labelX, py: labelY } = gridToCanvas(shape.x, shape.y, w, h);
+                ctx.fillStyle = '#58a6ff';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(shape.name, labelX, labelY);
             }
         }
 
@@ -236,6 +293,27 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const pt = getMouseGrid(e);
 
+        if (activeTool === 'naca') {
+            // Place NACA airfoil at click position
+            const rawPoints = naca4Airfoil(nacaM, nacaP, nacaT, 80);
+            const scaledPoints = transformPoints(rawPoints, pt.x, pt.y, nacaChord, nacaRotation);
+            const name = nextShapeName('naca', shapes);
+            const newShape: Shape = {
+                id: Date.now().toString(),
+                type: 'polygon',
+                name,
+                x: pt.x,
+                y: pt.y,
+                points: scaledPoints,
+            };
+            const warning = checkCollision(newShape);
+            setCollisionWarning(warning);
+            const updated = [...shapes, newShape];
+            setShapes(updated);
+            onGeometryChange(updated);
+            return;
+        }
+
         if (activeTool === 'polygon') {
             // Check if clicking near first point to close polygon
             if (polygonPoints.length >= 3) {
@@ -244,13 +322,17 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 const dy = pt.y - first.y;
                 if (dx * dx + dy * dy < 100) {
                     // Close polygon
+                    const name = nextShapeName('polygon', shapes);
                     const newShape: Shape = {
                         id: Date.now().toString(),
                         type: 'polygon',
+                        name,
                         x: 0,
                         y: 0,
                         points: [...polygonPoints],
                     };
+                    const warning = checkCollision(newShape);
+                    setCollisionWarning(warning);
                     const updated = [...shapes, newShape];
                     setShapes(updated);
                     setPolygonPoints([]);
@@ -282,13 +364,17 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
             const dy = pt.y - drawStart.y;
             const radius = Math.sqrt(dx * dx + dy * dy);
             if (radius > 2) {
+                const name = nextShapeName('circle', shapes);
                 const newShape: Shape = {
                     id: Date.now().toString(),
                     type: 'circle',
+                    name,
                     x: drawStart.x,
                     y: drawStart.y,
                     radius,
                 };
+                const warning = checkCollision(newShape);
+                setCollisionWarning(warning);
                 const updated = [...shapes, newShape];
                 setShapes(updated);
                 onGeometryChange(updated);
@@ -299,14 +385,18 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
             const w = Math.abs(pt.x - drawStart.x);
             const h = Math.abs(pt.y - drawStart.y);
             if (w > 2 && h > 2) {
+                const name = nextShapeName('rectangle', shapes);
                 const newShape: Shape = {
                     id: Date.now().toString(),
                     type: 'rectangle',
+                    name,
                     x: x0,
                     y: y0,
                     width: w,
                     height: h,
                 };
+                const warning = checkCollision(newShape);
+                setCollisionWarning(warning);
                 const updated = [...shapes, newShape];
                 setShapes(updated);
                 onGeometryChange(updated);
@@ -322,6 +412,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         const updated = shapes.filter((s) => s.id !== id);
         setShapes(updated);
         setSelectedId(null);
+        setCollisionWarning(null);
         onGeometryChange(updated);
     };
 
@@ -329,22 +420,69 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         setShapes([]);
         setPolygonPoints([]);
         setSelectedId(null);
+        setCollisionWarning(null);
         onGeometryChange([]);
     };
 
     const loadPreset = (preset: string) => {
         let newShapes: Shape[] = [];
         if (preset === 'cylinder') {
-            newShapes = [{ id: '1', type: 'circle', x: Math.round(nx / 4), y: Math.round(ny / 2), radius: 30 }];
+            newShapes = [{
+                id: '1',
+                type: 'circle',
+                name: 'Cylinder',
+                x: Math.round(nx / 4),
+                y: Math.round(ny / 2),
+                radius: 30,
+            }];
         } else if (preset === 'cavity') {
             // Cavity is handled by case type, not geometry
             return;
         } else if (preset === 'step') {
-            newShapes = [{ id: '1', type: 'rectangle', x: 0, y: 0, width: Math.round(nx / 4), height: Math.round(ny / 2) }];
+            newShapes = [{
+                id: '1',
+                type: 'rectangle',
+                name: 'Step',
+                x: 0,
+                y: 0,
+                width: Math.round(nx / 4),
+                height: Math.round(ny / 2),
+            }];
+        } else if (preset === 'naca2412') {
+            const rawPoints = naca4Airfoil(0.02, 0.4, 0.12, 80);
+            const scaledPoints = transformPoints(rawPoints, Math.round(nx / 4), Math.round(ny / 2), 120, 0);
+            newShapes = [{
+                id: '1',
+                type: 'polygon',
+                name: 'NACA 2412',
+                x: Math.round(nx / 4),
+                y: Math.round(ny / 2),
+                points: scaledPoints,
+            }];
+        } else if (preset === 'naca0012') {
+            const rawPoints = naca4Airfoil(0, 0, 0.12, 80);
+            const scaledPoints = transformPoints(rawPoints, Math.round(nx / 4), Math.round(ny / 2), 120, 0);
+            newShapes = [{
+                id: '1',
+                type: 'polygon',
+                name: 'NACA 0012',
+                x: Math.round(nx / 4),
+                y: Math.round(ny / 2),
+                points: scaledPoints,
+            }];
         }
         setShapes(newShapes);
+        setCollisionWarning(null);
         onGeometryChange(newShapes);
     };
+
+    // Generate NACA code string for display
+    const nacaCode = (() => {
+        const mDigit = Math.round(nacaM * 100);
+        const pDigit = Math.round(nacaP * 10);
+        const tDigit = Math.round(nacaT * 100);
+        return `${mDigit}${pDigit}${tDigit.toString().padStart(2, '0')}`;
+    })();
 
     return (
         <div className="geometry-editor">
@@ -371,6 +509,13 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                     >
                         /_/
                     </button>
+                    <button
+                        className={`tool-btn ${activeTool === 'naca' ? 'active' : ''}`}
+                        onClick={() => { setActiveTool('naca'); setPolygonPoints([]); }}
+                        title="Place NACA Airfoil (click to place)"
+                    >
+                        NACA
+                    </button>
                 </div>
                 <div className="tool-group">
                     <button className="tool-btn danger" onClick={clearAll} title="Clear All">
@@ -379,10 +524,75 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 </div>
             </div>
 
+            {activeTool === 'naca' && (
+                <div className="naca-params">
+                    <div className="naca-header">
+                        <span className="naca-code">NACA {nacaCode}</span>
+                    </div>
+                    <div className="form-group">
+                        <label>Max Camber (m): {nacaM.toFixed(2)}</label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="0.09"
+                            step="0.01"
+                            value={nacaM}
+                            onChange={(e) => setNacaM(+e.target.value)}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Camber Position (p): {nacaP.toFixed(1)}</label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="0.9"
+                            step="0.1"
+                            value={nacaP}
+                            onChange={(e) => setNacaP(+e.target.value)}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Max Thickness (t): {(nacaT * 100).toFixed(0)}%</label>
+                        <input
+                            type="range"
+                            min="0.01"
+                            max="0.40"
+                            step="0.01"
+                            value={nacaT}
+                            onChange={(e) => setNacaT(+e.target.value)}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Chord Length: {nacaChord}</label>
+                        <input
+                            type="range"
+                            min="20"
+                            max="200"
+                            step="5"
+                            value={nacaChord}
+                            onChange={(e) => setNacaChord(+e.target.value)}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Rotation: {nacaRotation}deg</label>
+                        <input
+                            type="range"
+                            min="-90"
+                            max="90"
+                            step="5"
+                            value={nacaRotation}
+                            onChange={(e) => setNacaRotation(+e.target.value)}
+                        />
+                    </div>
+                </div>
+            )}
+
             <div className="editor-presets">
                 <span className="preset-label">Presets:</span>
                 <button className="preset-btn" onClick={() => loadPreset('cylinder')}>Cylinder</button>
                 <button className="preset-btn" onClick={() => loadPreset('step')}>Step</button>
+                <button className="preset-btn" onClick={() => loadPreset('naca2412')}>NACA 2412</button>
+                <button className="preset-btn" onClick={() => loadPreset('naca0012')}>NACA 0012</button>
             </div>
 
             <div className="editor-canvas-container">
@@ -394,6 +604,12 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 />
             </div>
 
+            {collisionWarning && (
+                <div className="collision-warning">
+                    {collisionWarning}
+                </div>
+            )}
+
             {activeTool === 'polygon' && polygonPoints.length > 0 && (
                 <div className="editor-hint">
                     Click to add points. Click near first point to close polygon.
@@ -401,9 +617,15 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                 </div>
             )}
 
+            {activeTool === 'naca' && (
+                <div className="editor-hint">
+                    Click on canvas to place airfoil. Adjust parameters above.
+                </div>
+            )}
+
             {shapes.length > 0 && (
                 <div className="shape-list">
-                    <h3>Shapes ({shapes.length})</h3>
+                    <h3>Obstacles ({shapes.length})</h3>
                     {shapes.map((shape) => (
                         <div
                             key={shape.id}
@@ -411,9 +633,9 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                             onClick={() => setSelectedId(shape.id)}
                         >
                             <span className="shape-info">
-                                {shape.type}
-                                {shape.type === 'circle' && ` (${shape.x},${shape.y} r=${shape.radius})`}
-                                {shape.type === 'rectangle' && ` (${shape.x},${shape.y} ${shape.width}x${shape.height})`}
+                                {shape.name}
+                                {shape.type === 'circle' && ` (r=${shape.radius?.toFixed(0)})`}
+                                {shape.type === 'rectangle' && ` (${shape.width?.toFixed(0)}x${shape.height?.toFixed(0)})`}
                                 {shape.type === 'polygon' && ` (${shape.points?.length} pts)`}
                             </span>
                             <button className="shape-delete" onClick={() => deleteShape(shape.id)}>
