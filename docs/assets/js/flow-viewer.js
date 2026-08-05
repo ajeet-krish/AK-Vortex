@@ -330,6 +330,43 @@
         pause() { this.playing = false; }
         togglePlay() { this.playing = !this.playing; if (this.playing) this._last = 0; return this.playing; }
 
+        // Create a field selector button group (velocity / pressure / vorticity).
+        // Appends buttons to `container` (DOM element or CSS selector string).
+        // Buttons auto-update the viewer when clicked and highlight the active field.
+        createFieldSelector(container) {
+            const el = typeof container === 'string' ? document.querySelector(container) : container;
+            if (!el) return;
+            const fields = [
+                { key: 'velocity', label: 'Velocity' },
+                { key: 'pressure', label: 'Pressure' },
+                { key: 'vorticity', label: 'Vorticity' }
+            ];
+            const group = document.createElement('div');
+            group.className = 'fv-field-group';
+            group.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+            const btns = [];
+            for (const f of fields) {
+                const btn = document.createElement('button');
+                btn.textContent = f.label;
+                btn.dataset.field = f.key;
+                btn.className = 'fv-field-btn' + (f.key === this.currentField ? ' active' : '');
+                btn.style.cssText = 'padding:4px 10px;border:1px solid #555;background:#1a1e24;color:#ccc;'
+                    + 'border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;'
+                    + 'transition:background .15s,border-color .15s;';
+                btn.addEventListener('click', () => {
+                    this.setField(f.key);
+                    for (const b of btns) b.classList.toggle('active', b.dataset.field === f.key);
+                });
+                group.appendChild(btn);
+                btns.push(btn);
+            }
+            el.appendChild(group);
+            // Style the active button
+            const style = document.createElement('style');
+            style.textContent = '.fv-field-btn.active{background:#2ea043 !important;border-color:#2ea043 !important;color:#fff !important;}';
+            document.head.appendChild(style);
+        }
+
         renderStatic(canvasId, channel, cmap, min, max, frame) {
             const entry = this.cache[this.re];
             if (!entry) return;

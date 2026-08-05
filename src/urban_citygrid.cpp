@@ -79,11 +79,19 @@ CityGridParams compute_citygrid_params(double Re, int inlet_dir) {
 }
 
 void place_citygrid_obstacles(LBMCapabilities& system, const CityGridParams& params) {
-    // Walls
+    // Domain walls: skip the inlet and outlet boundaries (open flow)
+    // East inlet  (0): x=0 open (inflow), x=NX-1 open (outflow), y walls
+    // South inlet (1): y=0 open (inflow), y=NY-1 open (outflow), x walls
+    // West inlet  (2): x=NX-1 open (inflow), x=0 open (outflow), y walls
+    int inlet = params.inlet_dir;
     for (int y = 0; y < NY; ++y) {
         for (int x = 0; x < NX; ++x) {
-            if (y == 0) system.obstacle[node_index(x, y)] = true;
-            if (y == NY - 1) system.obstacle[node_index(x, y)] = true;
+            bool is_wall = false;
+            if (y == 0 && inlet != 1) is_wall = true;       // bottom (not south inlet)
+            if (y == NY - 1 && inlet != 1) is_wall = true;  // top (not south inlet)
+            if (x == 0 && inlet == 1) is_wall = true;       // left wall (south inlet only)
+            if (x == NX - 1 && inlet == 1) is_wall = true;  // right wall (south inlet only)
+            if (is_wall) system.obstacle[node_index(x, y)] = true;
         }
     }
 

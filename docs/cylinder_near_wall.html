@@ -23,6 +23,7 @@
       <div class="nav-section">
         <div class="nav-heading">Project</div>
         <a href="index.html" class="nav-item">Home</a>
+        <a href="desktop.html" class="nav-item">Desktop App</a>
       </div>
       <div class="nav-section">
         <div class="nav-heading">Simulations</div>
@@ -258,6 +259,7 @@
     <script src="assets/js/colormaps.js"></script>
     <script src="assets/js/flow-viewer.js"></script>
     <script src="assets/js/viewer-common-v2.js"></script>
+    <div id="fieldTabs" style="margin:8px 0"></div>
     <script>
       initVFSplitSections({
         dataDir: 'assets/data/cylinder_near_wall',
@@ -266,7 +268,7 @@
         imageBasePath: function(config) { return 'cylinder_near_wall/simulation/' + config.file; },
         imageSuffix: function(config) { return 're100_' + config.file; },
         lbmConfigs: [
-          { label: 'Gap=15', file: 'gap15' },
+          { label: 'Gap=10', file: 'gap10' },
           { label: 'Gap=20', file: 'gap20' },
           { label: 'Gap=40', file: 'gap40' }
         ]

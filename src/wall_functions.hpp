@@ -13,13 +13,7 @@
 // with wall functions."
 // ==========================================================================
 
-struct WallFunctionParams {
-    double kappa = 0.41;       // von Karman constant
-    double B = 5.0;            // log-law additive constant (smooth wall)
-    double A_plus = 26.0;      // Van Driest constant
-    double y_plus_min = 30.0;  // minimum y+ for wall function applicability
-    bool enabled = false;
-};
+// WallFunctionParams is defined in lbm_types.hpp (included before this file)
 
 // Compute wall shear stress (tau_wall) from the velocity gradient at the wall
 // Using finite difference of velocity at the first two fluid nodes near the wall.

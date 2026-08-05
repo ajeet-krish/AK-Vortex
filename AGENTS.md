@@ -14,23 +14,27 @@ Build and deploy a cache-optimized D2Q9 Lattice Boltzmann Method CFD solver in C
 ## Target Audience
 Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Origin, and similar. The site must communicate: HPC competency (C++, OpenMP, cache optimization), CFD fundamentals (MRT, Bouzidi, Smagorinsky LES, AMR), and engineering communication skills (interactive web presentation, per-case analysis narratives).
 
-## Current Status (2026-07-26)
+## Current Status (2026-08-04)
 
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 0 | Solver Improvement Plan (correctness + perf + cleanup) | Completed |
 | 1 | Smagorinsky LES turbulence model | Completed |
-| 2 | Block-structured AMR (adaptive mesh refinement) | In progress (restriction operator needs fix) |
+| 2 | Block-structured AMR (adaptive mesh refinement) | **Completed** (restriction operator fixed: 2x2 averaging) |
 | 3 | Vorticity output + postprocessor | Completed |
 | 4 | Full simulation re-runs + new cases | **Completed** (23/23 sims passed all tiers) |
-| 4.1 | Fix plot aspect ratios (postprocess.py) | **Deferred** (set_box_aspect(1) still in place) |
-| 4.2 | Fix OpenMP perf (cached wall distance) | **Deferred** |
+| 4.1 | Fix plot aspect ratios (postprocess.py) | **Completed** (set_box_aspect(ny/nx), was already patched) |
+| 4.2 | Fix OpenMP perf (cached wall distance) | **Completed** (queue-based BFS, O(N) instead of O(N^2)) |
+| 4.3 | Fix urban citygrid zero-velocity bug | **Completed** (Zou-He BCs for south/west, streaming branch, conditional obstacles) |
+| 4.4 | Wall function integration into streaming | **Completed** (log-law slip bounce-back for high-Re flows) |
+| 4.5 | Thermal g_i initialization + isothermal BC | **Completed** (g_i = w_i*T, isothermal BC enforcement after streaming) |
+| 4.6 | FlowViewer field selector UI | **Completed** (createFieldSelector: velocity/pressure/vorticity buttons) |
 | 5 | Website updates for new features | Completed (2x2 grid layout on all case pages) |
 | 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
 | 5.7 | Grid resolution upgrade + full re-run | Completed (tiered: 1600x600/1200x450/keep) |
 | 6 | PINN surrogate suite (cavity steady + temporal) | Completed |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
-| **7** | **Website reorganization + image paths + obstacle viz + city grid** | **Completed** (with caveats below) |
+| **7** | **Website reorganization + image paths + obstacle viz + city grid** | **Completed** |
 
 ### Phase 7: Website Reorganization + Obstacle Visualization + Urban City Grid
 
@@ -166,13 +170,18 @@ NOT thermal LBM. Second D2Q9 distribution `g_i` for scalar phi:
 
 | Fix | Problem | Solution | Files | Priority |
 |-----|---------|----------|-------|----------|
-| Plot aspect ratios | All PNGs square due to `set_box_aspect(1)` in postprocess.py | Remove `set_box_aspect(1)`, use data aspect ratio via `set_box_aspect(ny/nx)` | `scripts/postprocess.py` | **Pending** |
-| OpenMP perf | `compute_wall_distance()` serial BFS runs every step with LES (~70-85% of timestep) | Cache wall distance (geometry is static, compute once at init) | `src/lbm_types.hpp` | **Pending** |
-| f_next zeroing | `std::fill` is serial, zeros 17MB per step | Parallelize with `#pragma omp parallel for` | `src/lbm.hpp` | **Pending** |
-| Variable shadowing | `double y` at lbm.hpp:319 shadows outer loop var | Rename to `wall_d` | `src/lbm.hpp` | **Pending** |
+| Plot aspect ratios | All PNGs square due to `set_box_aspect(1)` in postprocess.py | Remove `set_box_aspect(1)`, use data aspect ratio via `set_box_aspect(ny/nx)` | `scripts/postprocess.py` | **Completed** (was already patched) |
+| OpenMP perf | `compute_wall_distance()` serial BFS runs every step with LES (~70-85% of timestep) | Cache wall distance (geometry is static, compute once at init) | `src/lbm_types.hpp` | **Completed** (queue-based BFS, O(N)) |
+| f_next zeroing | `std::fill` is serial, zeros 17MB per step | Parallelize with `#pragma omp parallel for` | `src/lbm.hpp` | **Completed** (already parallel) |
+| Variable shadowing | `double y` at lbm.hpp:319 shadows outer loop var | Rename to `wall_d` | `src/lbm.hpp` | **Completed** (renamed in earlier fix) |
 | Ladd moving boundary | Rotating cylinder tangential velocity | Implement Ladd (1994) bounce-back | `lbm_types.hpp`, `lbm.hpp`, `rotating_cylinder.cpp` | **Completed** |
 | Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | `cylinder_near_wall.cpp`, `lbm.hpp` | **Completed** |
 | Cylinder Re=1000 | Diverged at tau=0.518 | Documented as known limitation; website surfaces Re=20/40/100/200 only | `main.cpp` | **Deferred** |
+| Urban citygrid zero velocity | All 3 inlet configs produce zero velocity | Add Zou-He BCs for south/west, streaming branch, conditional obstacles | `lbm.hpp`, `urban_citygrid.cpp` | **Completed** |
+| AMR restriction operator | Point injection instead of 2x2 averaging | Replace with volume averaging, remove margin skip | `src/amr.hpp` | **Completed** |
+| Wall function integration | `apply_wall_function_bb()` never called from streaming | Add wall function branch in default streaming loop | `src/lbm.hpp` | **Completed** |
+| Thermal g_i initialization | g_i all ones (T=9) instead of w_i (T=1) | Initialize g_i = w_i * T_init | `src/lbm_types.hpp` | **Completed** |
+| Thermal isothermal BC | No isothermal BC applied in streaming | Add isothermal BC enforcement after thermal streaming swap | `src/lbm.hpp` | **Completed** |
 
 ## Roadmap
 
@@ -824,17 +833,20 @@ Three tiers, easiest first:
 ## Implementation Sequence
 
 1. **Phase 1: Smagorinsky LES**, Completed
-2. **Phase 2: Block-Structured AMR**, In progress (restriction operator needs fix)
+2. **Phase 2: Block-Structured AMR**, Completed (restriction operator fixed)
 3. **Phase 3: Vorticity + Postprocessor**, Completed
 4. **Phase 4: Full Re-Runs + New Cases**, Completed (23/23 sims passed)
-5. **Phase 4.1: Fix plot aspect ratios**, Deferred
-6. **Phase 4.2: Fix OpenMP perf**, Deferred
-7. **Phase 4.3: Fix periodic hills geometry**, Deferred
-8. **Phase 5: Website Updates**, Completed (2x2 grid, Cp/vorticity panels)
-9. **Phase 6.8: Time-Parametric PINN**, Completed (Re=100/400/1000 trained, ONNX + binary export done)
-10. **Phase 6.9: Model improvement roadmap**, Pending (pressure-Poisson, Re range, curriculum)
-11. **Phase 5.5: Cavity deep dive + PINN narrative**, Completed
-12. **Phase 7: Website reorg + image paths + city grid**, Completed (with caveats: urban_citygrid solver produces zero velocity output, scalar postprocessing deferred)
+5. **Phase 4.1: Fix plot aspect ratios**, Completed (was already patched)
+6. **Phase 4.2: Fix OpenMP perf**, Completed (queue-based BFS)
+7. **Phase 4.3: Fix urban citygrid zero-velocity bug**, Completed
+8. **Phase 4.4: Wall function integration**, Completed
+9. **Phase 4.5: Thermal g_i init + isothermal BC**, Completed
+10. **Phase 4.6: FlowViewer field selector UI**, Completed
+11. **Phase 5: Website Updates**, Completed (2x2 grid, Cp/vorticity panels)
+12. **Phase 6.8: Time-Parametric PINN**, Completed (Re=100/400/1000 trained, ONNX + binary export done)
+13. **Phase 6.9: Model improvement roadmap**, Pending (pressure-Poisson, Re range, curriculum)
+14. **Phase 5.5: Cavity deep dive + PINN narrative**, Completed
+15. **Phase 7: Website reorg + image paths + city grid**, Completed
 
 #### Phase 5.5: Cavity Page Deep Dive + PINN Surrogate Narrative
 

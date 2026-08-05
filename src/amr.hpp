@@ -182,51 +182,72 @@ struct AMRGrid {
     }
 
     // ------------------------------------------------------------------
-    // Restriction: inject the fine node value centered on each coarse
-    // node back onto the parent level.  For coarse node at parent
-    // coordinates (pcx, pcy), the corresponding fine node is at
-    // fine-local position flx = (pcx - fine.x0) / fine.dx.
+    // Restriction: average the 2x2 fine node values centered on each
+    // coarse node back onto the parent level.  For refinement factor 2,
+    // each coarse cell spans a 2x2 region of fine cells.  The correct
+    // restriction averages all four fine children:
+    //   f_coarse[d] = (f_fine(2x,2y) + f_fine(2x+1,2y)
+    //                + f_fine(2x,2y+1) + f_fine(2x+1,2y+1)) / 4
     //
-    // To avoid boundary mismatch, we restrict only coarse nodes that
-    // are not touching the fine block boundary.
+    // This preserves mass/momentum conservation and eliminates the
+    // spurious interface reflections caused by point injection.
     // ------------------------------------------------------------------
     void apply_restriction() {
         if (n_levels() < 2) return;
 
         for (int lev = 1; lev < n_levels(); ++lev) {
             for (const AMRBlock& fine : levels[lev]) {
-                AMRBlock& parent = levels[lev - 1][0]; // single parent block
+                // Iterate over ALL parent blocks (supports N-level AMR)
+                for (AMRBlock& parent : levels[lev - 1]) {
+                    // Compute range of coarse nodes covered by the fine block.
+                    // Coarse node (pcx, pcy) in parent coords maps to fine
+                    // block local coords via:
+                    //   flx0 = 2*pcx - (fine.x0 - parent.x0)
+                    //   fly0 = 2*pcy - (fine.y0 - parent.y0)
+                    int offset_x = fine.x0 - parent.x0;
+                    int offset_y = fine.y0 - parent.y0;
 
-                // Interior coarse nodes covered by fine block (skip 1-cell margin)
-                int margin = 1; // skip boundary to avoid interface mismatch
-                int c0 = static_cast<int>(std::ceil(
-                    (fine.x0 + margin * fine.dx - parent.x0) / 1.0));
-                int r0 = static_cast<int>(std::ceil(
-                    (fine.y0 + margin * fine.dx - parent.y0) / 1.0));
-                int c1 = static_cast<int>(std::floor(
-                    (fine.x0 + (fine.nx - margin) * fine.dx - parent.x0) / 1.0));
-                int r1 = static_cast<int>(std::floor(
-                    (fine.y0 + (fine.ny - margin) * fine.dx - parent.y0) / 1.0));
+                    int c0x = std::max(0, (offset_x + 1) / 2);
+                    int c0y = std::max(0, (offset_y + 1) / 2);
+                    int c1x = std::min(parent.nx - 1,
+                                       (offset_x + fine.nx) / 2);
+                    int c1y = std::min(parent.ny - 1,
+                                       (offset_y + fine.ny) / 2);
 
-                for (int pcy = r0; pcy <= r1; ++pcy) {
-                    for (int pcx = c0; pcx <= c1; ++pcx) {
-                        if (pcx < 0 || pcx >= parent.nx) continue;
-                        if (pcy < 0 || pcy >= parent.ny) continue;
+                    for (int pcy = c0y; pcy <= c1y; ++pcy) {
+                        for (int pcx = c0x; pcx <= c1x; ++pcx) {
+                            // Fine block local coordinates for the 2x2 stencil
+                            int flx0 = 2 * pcx - offset_x;
+                            int fly0 = 2 * pcy - offset_y;
 
-                        double px = static_cast<double>(parent.x0 + pcx);
-                        double py = static_cast<double>(parent.y0 + pcy);
+                            // Validate all 4 fine children are within bounds
+                            if (flx0 < 0 || flx0 + 1 >= fine.nx) continue;
+                            if (fly0 < 0 || fly0 + 1 >= fine.ny) continue;
 
-                        int flx = static_cast<int>((px - fine.x0) / fine.dx + 0.5);
-                        int fly = static_cast<int>((py - fine.y0) / fine.dx + 0.5);
-                        if (flx < 0 || flx >= fine.nx) continue;
-                        if (fly < 0 || fly >= fine.ny) continue;
+                            // Skip if any fine child is an obstacle
+                            bool any_obstacle = false;
+                            for (int dy = 0; dy < 2 && !any_obstacle; ++dy) {
+                                for (int dx = 0; dx < 2; ++dx) {
+                                    if (fine.obstacle[fine.idx(flx0 + dx, fly0 + dy)]) {
+                                        any_obstacle = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (any_obstacle) continue;
 
-                        int ci = fine.idx(flx, fly);
-                        if (fine.obstacle[ci]) continue;
-
-                        double* pf = &parent.f[parent.idx(pcx, pcy) * 9];
-                        const double* ff = &fine.f[ci * 9];
-                        for (int d = 0; d < 9; ++d) pf[d] = ff[d];
+                            // Average the 4 fine children onto the coarse parent
+                            double* pf = &parent.f[parent.idx(pcx, pcy) * 9];
+                            for (int d = 0; d < 9; ++d) {
+                                double sum = 0.0;
+                                for (int dy = 0; dy < 2; ++dy) {
+                                    for (int dx = 0; dx < 2; ++dx) {
+                                        sum += fine.f[fine.idx(flx0 + dx, fly0 + dy) * 9 + d];
+                                    }
+                                }
+                                pf[d] = sum / 4.0;
+                            }
+                        }
                     }
                 }
             }

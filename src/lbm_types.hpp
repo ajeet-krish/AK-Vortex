@@ -31,6 +31,15 @@ inline CaseType g_case = CaseType::CYLINDER;
 inline bool g_use_les = false;          // toggle LES on/off (default off)
 inline double g_cs = 0.12;              // Smagorinsky constant (typical 0.1-0.2)
 
+// Wall function parameters (Phase 2: wall-bounded turbulence)
+struct WallFunctionParams {
+    double kappa = 0.41;       // von Karman constant
+    double B = 5.0;            // log-law additive constant (smooth wall)
+    double y_plus_min = 30.0;  // minimum y+ for wall function applicability
+    bool enabled = false;
+};
+inline WallFunctionParams g_wf;
+
 // Step geometry (set by step.cpp main(), used by BC enforcement)
 inline int g_step_h_step = -1;          // step height in cells
 inline int g_step_h_inlet = -1;         // inlet height in cells
@@ -223,6 +232,7 @@ struct LBMCapabilities {
     std::vector<double> g_thermal_next;  // temperature buffer
     bool use_thermal = false;            // enable thermal solver
     double T_ref = 1.0;                  // reference temperature (lattice units)
+    double T_wall = 1.0;                 // wall temperature for isothermal BC
     double alpha = 0.1666666667;         // thermal diffusivity (Pr = nu/alpha)
     double omega_k = 1.0;                // thermal relaxation rate = 1/(0.5 + 3*alpha)
     double beta = 0.0;                   // thermal expansion coefficient (Boussinesq)
@@ -240,8 +250,15 @@ struct LBMCapabilities {
         f_next.resize(n_nodes * NUM_DIRECTIONS, 0.0);
         obstacle.resize(n_nodes, false);
         wall_dist.resize(n_nodes, 0.0);
-        g_thermal.resize(n_nodes * NUM_DIRECTIONS, 1.0);  // T=1.0 initial
-        g_thermal_next.resize(n_nodes * NUM_DIRECTIONS, 1.0);
+        // Initialize g_i to thermal equilibrium at T=1.0, u=0, v=0
+        // g_i^eq = w_i * T, so T = sum(g_i) = sum(w_i) = 1.0
+        g_thermal.resize(n_nodes * NUM_DIRECTIONS, 0.0);
+        g_thermal_next.resize(n_nodes * NUM_DIRECTIONS, 0.0);
+        for (int n = 0; n < n_nodes; ++n) {
+            for (int i = 0; i < NUM_DIRECTIONS; ++i) {
+                g_thermal[n * NUM_DIRECTIONS + i] = weights[i];
+            }
+        }
         reset_forces();
     }
 
@@ -255,6 +272,8 @@ struct LBMCapabilities {
 // Wall distance computation via multi-source BFS from obstacle nodes.
 // Returns distance in lattice units (grid spacing = 1.0).
 // Used for Van Driest LES damping and wall function BCs.
+// Uses a proper queue-based BFS for O(N) performance instead of
+// the previous O(N^2) Bellman-Ford relaxation.
 // ------------------------------------------------------------------
 inline void compute_wall_distance(LBMCapabilities& sys) {
     static bool cached = false;
@@ -267,29 +286,49 @@ inline void compute_wall_distance(LBMCapabilities& sys) {
         dist[i] = sys.obstacle[i] ? 0.0 : 1e9;
     }
 
-    // 4-neighbour BFS (chebyshev distance on lattice grid)
-    bool changed = true;
-    while (changed) {
-        changed = false;
-        for (int y = 0; y < NY; ++y) {
-            for (int x = 0; x < NX; ++x) {
-                int idx = node_index(x, y);
-                if (sys.obstacle[idx]) continue;
-                double d = dist[idx];
-                // Check 4-connected neighbours
-                int nx[4] = {x-1, x+1, x, x};
-                int ny[4] = {y, y, y-1, y+1};
-                for (int k = 0; k < 4; ++k) {
-                    int nxx = nx[k], nyy = ny[k];
-                    if (nxx < 0 || nxx >= NX || nyy < 0 || nyy >= NY) continue;
-                    int nidx = node_index(nxx, nyy);
-                    double nd = dist[nidx] + 1.0;
-                    if (nd < d) {
-                        d = nd;
-                        changed = true;
-                    }
+    // Multi-source BFS: seed queue with all obstacle neighbor nodes
+    std::vector<int> queue;
+    queue.reserve(n_nodes);
+    for (int y = 0; y < NY; ++y) {
+        for (int x = 0; x < NX; ++x) {
+            int idx = node_index(x, y);
+            if (!sys.obstacle[idx]) continue;
+            // Enqueue fluid neighbors of obstacle nodes at distance 1.0
+            int dx4[4] = {-1, 1, 0, 0};
+            int dy4[4] = {0, 0, -1, 1};
+            for (int k = 0; k < 4; ++k) {
+                int nx = x + dx4[k];
+                int ny = y + dy4[k];
+                if (nx < 0 || nx >= NX || ny < 0 || ny >= NY) continue;
+                int nidx = node_index(nx, ny);
+                if (sys.obstacle[nidx]) continue;
+                if (dist[nidx] > 1.0) {
+                    dist[nidx] = 1.0;
+                    queue.push_back(nidx);
                 }
-                dist[idx] = d;
+            }
+        }
+    }
+
+    // BFS propagation
+    int head = 0;
+    int dx4[4] = {-1, 1, 0, 0};
+    int dy4[4] = {0, 0, -1, 1};
+    while (head < static_cast<int>(queue.size())) {
+        int idx = queue[head++];
+        int x = idx % NX;
+        int y = idx / NX;
+        double d = dist[idx];
+        for (int k = 0; k < 4; ++k) {
+            int nx = x + dx4[k];
+            int ny = y + dy4[k];
+            if (nx < 0 || nx >= NX || ny < 0 || ny >= NY) continue;
+            int nidx = node_index(nx, ny);
+            if (sys.obstacle[nidx]) continue;
+            double nd = d + 1.0;
+            if (nd < dist[nidx]) {
+                dist[nidx] = nd;
+                queue.push_back(nidx);
             }
         }
     }
