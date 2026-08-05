@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { sampleColormap } from '../utils/colormap';
 import { sampleField, buildStreamlines } from '../utils/streamline';
+import { drawQuiver, type QuiverConfig, DEFAULT_QUIVER_CONFIG } from '../utils/quiver';
 
 export interface FrameData {
     nx: number;
@@ -30,6 +31,8 @@ interface FlowCanvasProps {
     frameData: FrameData;
     field: 'velocity' | 'pressure' | 'vorticity';
     showStreamlines: boolean;
+    showQuiver: boolean;
+    quiverConfig?: QuiverConfig;
     canvasSize: { width: number; height: number };
     colorRange?: { min: number; max: number } | null;
     onProbe?: (info: ProbeInfo | null) => void;
@@ -39,6 +42,8 @@ export default function FlowCanvas({
     frameData,
     field,
     showStreamlines,
+    showQuiver,
+    quiverConfig,
     canvasSize,
     colorRange,
     onProbe,
@@ -170,7 +175,17 @@ export default function FlowCanvas({
         if (field === 'velocity' && showStreamlines && streamlines.length > 0) {
             drawStreamlines(ctx, streamlines, u, v, nx, ny, range.max, sx, sy);
         }
-    }, [frameData, field, showStreamlines, canvasSize, range, cmap, values, obstacle, u, v, nx, ny, streamlines]);
+
+        // Draw quiver arrows (velocity field only)
+        if (field === 'velocity' && showQuiver && u && v && obstacle) {
+            const scaleX = canvas.width / nx;
+            const scaleY = canvas.height / ny;
+            const scale = Math.min(scaleX, scaleY);
+            const offX = (canvas.width - nx * scale) / 2;
+            const offY = (canvas.height - ny * scale) / 2;
+            drawQuiver(ctx, u, v, nx, ny, obstacle, range.max, scale, scale, offX, offY, cmap, quiverConfig ?? DEFAULT_QUIVER_CONFIG);
+        }
+    }, [frameData, field, showStreamlines, showQuiver, quiverConfig, canvasSize, range, cmap, values, obstacle, u, v, nx, ny, streamlines]);
 
     useEffect(() => {
         renderContour();

@@ -7,6 +7,7 @@ import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
 import StaticPlots from './components/StaticPlots';
 import FeatureTree from './components/FeatureTree';
+import { type QuiverConfig, DEFAULT_QUIVER_CONFIG } from './utils/quiver';
 
 interface SimConfig {
     nx: number;
@@ -65,6 +66,10 @@ function App() {
     const [manualMin, setManualMin] = useState('0');
     const [manualMax, setManualMax] = useState('0.1');
     const [probe, setProbe] = useState<ProbeInfo | null>(null);
+
+    // Quiver overlay state
+    const [showQuiver, setShowQuiver] = useState(false);
+    const [quiverConfig, setQuiverConfig] = useState<QuiverConfig>(DEFAULT_QUIVER_CONFIG);
 
     // Geometry editor state
     const [shapes, setShapes] = useState<Shape[]>([]);
@@ -305,6 +310,25 @@ function App() {
         }
     };
 
+    const handleExportVtk = async () => {
+        if (!outputDir) {
+            alert('No simulation data to export. Run a simulation first.');
+            return;
+        }
+        const path = await save({
+            defaultPath: `lbm_${config.caseType}_re${config.re}_step${currentStep}.vtk`,
+            filters: [{ name: 'VTK', extensions: ['vtk'] }],
+        });
+        if (path) {
+            try {
+                await invoke('export_vtk', { srcDir: outputDir, step: currentStep, destPath: path });
+            } catch (e) {
+                console.error('VTK export failed:', e);
+                alert(`VTK export failed: ${e}`);
+            }
+        }
+    };
+
     return (
         <div className="app">
             <header className="app-header">
@@ -341,10 +365,15 @@ function App() {
                         runSimulation={runSimulation}
                         resetSimulation={resetSimulation}
                         handleExportPng={handleExportPng}
+                        handleExportVtk={handleExportVtk}
                         probe={probe}
                         shapes={shapes}
                         solverLog={solverLog}
                         setSolverLog={setSolverLog}
+                        showQuiver={showQuiver}
+                        setShowQuiver={setShowQuiver}
+                        quiverConfig={quiverConfig}
+                        setQuiverConfig={setQuiverConfig}
                     />
                 </aside>
 
@@ -357,6 +386,8 @@ function App() {
                                     frameData={frameData}
                                     field={field}
                                     showStreamlines={showStreamlines}
+                                    showQuiver={showQuiver}
+                                    quiverConfig={quiverConfig}
                                     canvasSize={canvasSize}
                                     colorRange={useManualRange ? colorRange : null}
                                     onProbe={setProbe}

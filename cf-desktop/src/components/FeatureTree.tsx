@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Shape } from './GeometryEditor';
 import type { ProbeInfo } from './FlowCanvas';
+import type { QuiverConfig } from '../utils/quiver';
 
 interface SimConfig {
     nx: number;
@@ -45,10 +46,15 @@ interface FeatureTreeProps {
     runSimulation: () => void;
     resetSimulation: () => void;
     handleExportPng: () => void;
+    handleExportVtk: () => void;
     probe: ProbeInfo | null;
     shapes: Shape[];
     solverLog: string[];
     setSolverLog: (log: string[]) => void;
+    showQuiver: boolean;
+    setShowQuiver: (v: boolean) => void;
+    quiverConfig: QuiverConfig;
+    setQuiverConfig: (cfg: QuiverConfig) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -257,10 +263,15 @@ export default function FeatureTree({
     runSimulation,
     resetSimulation,
     handleExportPng,
+    handleExportVtk,
     probe,
     shapes,
     solverLog,
     setSolverLog,
+    showQuiver,
+    setShowQuiver,
+    quiverConfig,
+    setQuiverConfig,
 }: FeatureTreeProps) {
     const hasResults = frames.length > 0;
     const hasFrame = !!frameData;
@@ -481,7 +492,13 @@ export default function FeatureTree({
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
                                 <path d="M6 1v7M3 5l3 3 3-3M1 9v1.5a.5.5 0 00.5.5h7a.5.5 0 00.5-.5V9" />
                             </svg>
-                            Export
+                            PNG
+                        </button>
+                        <button className="tree-action-btn" onClick={handleExportVtk} title="Export VTK">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                <path d="M2 2h8v8H2zM2 6h8M5 2v8" />
+                            </svg>
+                            VTK
                         </button>
                         <button className="tree-action-btn tree-action-reset" onClick={resetSimulation} title="New Simulation">
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -510,6 +527,47 @@ export default function FeatureTree({
                             <span>Streamlines</span>
                         </label>
                     </div>
+
+                    <div className="tree-item">
+                        <label className="tree-checkbox">
+                            <input
+                                type="checkbox"
+                                checked={showQuiver}
+                                onChange={(e) => setShowQuiver(e.target.checked)}
+                                disabled={field !== 'velocity'}
+                            />
+                            <span>Quiver (Vectors)</span>
+                        </label>
+                    </div>
+
+                    {showQuiver && (
+                        <div className="tree-range-row">
+                            <div className="tree-range-field">
+                                <span className="tree-range-label">Grid</span>
+                                <input
+                                    type="number"
+                                    step="1"
+                                    min="4"
+                                    max="80"
+                                    className="tree-num-input"
+                                    value={quiverConfig.gridSpacing}
+                                    onChange={(e) => setQuiverConfig({ ...quiverConfig, gridSpacing: Math.max(4, +e.target.value || 20) })}
+                                />
+                            </div>
+                            <div className="tree-range-field">
+                                <span className="tree-range-label">Scale</span>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="5"
+                                    className="tree-num-input"
+                                    value={quiverConfig.arrowScale}
+                                    onChange={(e) => setQuiverConfig({ ...quiverConfig, arrowScale: Math.max(0.1, +e.target.value || 1.0) })}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="tree-item">
                         <label className="tree-checkbox">
