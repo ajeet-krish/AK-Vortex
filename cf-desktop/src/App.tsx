@@ -75,6 +75,9 @@ function App() {
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
+    // View mode state (Domain / Simulation / Results)
+    const [viewMode, setViewMode] = useState<'domain' | 'simulation' | 'results'>('domain');
+
     // Comparison mode state
     const [compareMode, setCompareMode] = useState(false);
     const [compareData, setCompareData] = useState<FrameData | null>(null);
@@ -122,6 +125,49 @@ function App() {
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 400 });
 
     const currentStep = frames.length > 0 ? frames[frameIndex] : 0;
+
+    // Derived LBM quantities for status bar
+    const tau = useMemo(() => {
+        const nu = config.uInflow * config.ny / config.re;
+        return 0.5 + 3 * nu;
+    }, [config.uInflow, config.ny, config.re]);
+
+    // Result metrics from frame data
+    const resultMetrics = useMemo(() => {
+        if (!frameData) return null;
+        let maxVel = 0;
+        let maxOmega = 0;
+        let minP = Infinity;
+        let maxP = -Infinity;
+        for (let i = 0; i < frameData.velocity.length; i++) {
+            const v = frameData.velocity[i];
+            if (Number.isFinite(v) && v > maxVel) maxVel = v;
+            const o = frameData.omega[i];
+            if (Number.isFinite(o)) {
+                const abs = Math.abs(o);
+                if (abs > maxOmega) maxOmega = abs;
+            }
+            const p = frameData.p[i];
+            if (Number.isFinite(p)) {
+                if (p < minP) minP = p;
+                if (p > maxP) maxP = p;
+            }
+        }
+        return {
+            maxVel,
+            maxOmega,
+            pressureRange: Number.isFinite(minP) && Number.isFinite(maxP)
+                ? `${minP.toFixed(4)} / ${maxP.toFixed(4)}`
+                : '--',
+        };
+    }, [frameData]);
+
+    // Status text for status bar
+    const statusText = useMemo(() => {
+        if (running) return simProgress.status || 'Running...';
+        if (frameData) return 'Ready';
+        return 'Idle';
+    }, [running, frameData, simProgress.status]);
 
     // Responsive canvas: measure container and compute display size
     useEffect(() => {
@@ -299,6 +345,7 @@ function App() {
             if (frameList.length > 0) {
                 setFrameIndex(frameList.length - 1);
             }
+            setViewMode('simulation');
         } catch (e) {
             console.error(e);
             setSimProgress({ step: 0, total: 0, status: 'Failed!' });
@@ -314,6 +361,9 @@ function App() {
         setFrameIndex(0);
         setPlaying(false);
         setShapes([]);
+        setViewMode('domain');
+        setCompareMode(false);
+        setCompareData(null);
     };
 
     const handleCaseTypeChange = (caseType: string) => {
@@ -451,6 +501,40 @@ function App() {
             <header className="app-header">
                 <h1>LBM-2D Desktop CFD</h1>
                 <span className="subtitle">Lattice Boltzmann Method Solver</span>
+                <div className="header-toolbar">
+                    <button className="header-btn" onClick={resetSimulation} title="New Simulation">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+                            <path d="M7 3v4M5 5h4" />
+                            <rect x="2" y="2" width="10" height="10" rx="2" />
+                        </svg>
+                        New
+                    </button>
+                    <button
+                        className="header-btn header-btn-accent"
+                        onClick={runSimulation}
+                        disabled={running}
+                        title="Run Simulation"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <polygon points="4,2 12,7 4,12" />
+                        </svg>
+                        Run
+                    </button>
+                    <div className="header-separator" />
+                    <button className="header-btn" onClick={handleExportPng} disabled={!frameData} title="Export PNG">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+                            <path d="M7 2v7M4 6l3 3 3-3M2 10v1.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V10" />
+                        </svg>
+                        PNG
+                    </button>
+                    <button className="header-btn" onClick={handleExportVtk} disabled={!outputDir} title="Export VTK">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+                            <rect x="2" y="2" width="10" height="10" rx="1" />
+                            <path d="M2 7h10M7 2v10" />
+                        </svg>
+                        VTK
+                    </button>
+                </div>
             </header>
 
             <div className="main-layout">
@@ -503,7 +587,50 @@ function App() {
                 </aside>
 
                 <main className="content">
-                    {frameData ? (
+                    {/* View Mode Tabs */}
+                    <div className="view-mode-tabs">
+                        <button
+                            className={`view-mode-tab ${viewMode === 'domain' ? 'active' : ''}`}
+                            onClick={() => setViewMode('domain')}
+                        >
+                            Domain
+                        </button>
+                        <button
+                            className={`view-mode-tab ${viewMode === 'simulation' ? 'active' : ''}`}
+                            onClick={() => setViewMode('simulation')}
+                            disabled={!frameData}
+                        >
+                            Simulation
+                        </button>
+                        <button
+                            className={`view-mode-tab ${viewMode === 'results' ? 'active' : ''}`}
+                            onClick={() => setViewMode('results')}
+                            disabled={!frameData}
+                        >
+                            Results
+                        </button>
+                    </div>
+
+                    {/* Content by view mode */}
+                    {viewMode === 'domain' && (
+                        config.caseType === 'custom' && !running ? (
+                            <div className="geometry-container">
+                                <h2>Draw Geometry</h2>
+                                <GeometryEditor
+                                    nx={config.nx}
+                                    ny={config.ny}
+                                    onGeometryChange={setShapes}
+                                    onSelectionChange={setSelectedShapeId}
+                                />
+                            </div>
+                        ) : (
+                            <div className="placeholder">
+                                <p>{running ? 'Running simulation...' : 'Configure and run a simulation to see results'}</p>
+                            </div>
+                        )
+                    )}
+
+                    {viewMode === 'simulation' && frameData && (
                         compareMode && compareData ? (
                             <div className="comparison-container">
                                 <div className="comparison-panel">
@@ -553,28 +680,52 @@ function App() {
                                         cmap={field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet'}
                                     />
                                 </div>
-                                <StaticPlots
-                                    frameData={frameData}
-                                    width={Math.min(canvasSize.width, 400)}
-                                />
                             </div>
                         )
-                    ) : config.caseType === 'custom' && !running ? (
-                        <div className="geometry-container">
-                            <h2>Draw Geometry</h2>
-                            <GeometryEditor
-                                nx={config.nx}
-                                ny={config.ny}
-                                onGeometryChange={setShapes}
-                                onSelectionChange={setSelectedShapeId}
+                    )}
+
+                    {viewMode === 'results' && frameData && resultMetrics && (
+                        <div className="results-view">
+                            <div className="results-summary">
+                                <div className="result-card">
+                                    <div className="label">Max Velocity</div>
+                                    <div className="value cyan">{resultMetrics.maxVel.toFixed(4)}</div>
+                                </div>
+                                <div className="result-card">
+                                    <div className="label">Pressure Range</div>
+                                    <div className="value magenta">{resultMetrics.pressureRange}</div>
+                                </div>
+                                <div className="result-card">
+                                    <div className="label">Vorticity Max</div>
+                                    <div className="value green">{resultMetrics.maxOmega.toFixed(4)}</div>
+                                </div>
+                                <div className="result-card">
+                                    <div className="label">Grid Points</div>
+                                    <div className="value">{(config.nx * config.ny).toLocaleString()}</div>
+                                </div>
+                            </div>
+                            <StaticPlots
+                                frameData={frameData}
+                                width={Math.min(canvasSize.width, 400)}
                             />
-                        </div>
-                    ) : (
-                        <div className="placeholder">
-                            <p>{running ? 'Running simulation...' : 'Configure and run a simulation to see results'}</p>
                         </div>
                     )}
                 </main>
+            </div>
+
+            {/* Status Bar */}
+            <div className="status-bar">
+                <div className="status-item">
+                    <div className={`status-dot ${running ? 'running' : frameData ? '' : 'idle'}`} />
+                    <span>{statusText}</span>
+                </div>
+                <div className="status-separator" />
+                <div className="status-item"><span>Grid: {config.nx}x{config.ny}</span></div>
+                <div className="status-item"><span>Re: {config.re}</span></div>
+                <div className="status-item"><span>Tau: {tau.toFixed(3)}</span></div>
+                <div className="status-separator" />
+                <div className="status-item"><span>Frame: {currentStep}</span></div>
+                <div className="status-item"><span>Shapes: {shapes.length}</span></div>
             </div>
 
         </div>

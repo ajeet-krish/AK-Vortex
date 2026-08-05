@@ -48,26 +48,77 @@ body {
 
 /* Header / Menu Bar */
 .app-header {
+  min-height: 36px;
   background: var(--header-bg);
-  padding: 6px 12px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   border-bottom: 1px solid var(--border);
-  min-height: 32px;
 }
 
 .app-header h1 {
   font-size: 13px;
-  color: var(--text-primary);
-  font-weight: 500;
+  color: var(--accent);
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .subtitle {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 11px;
   margin-left: auto;
+}
+
+/* Header Toolbar Buttons */
+.header-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.header-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.header-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.header-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.header-btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.header-btn-accent:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.header-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 4px;
 }
 
 /* Main Layout */
@@ -321,11 +372,47 @@ body {
 .content {
   flex: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
   background: var(--bg-canvas);
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* View Mode Tabs */
+.view-mode-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.view-mode-tab {
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.view-mode-tab:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.view-mode-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.view-mode-tab:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .visualization {
@@ -1487,3 +1574,98 @@ canvas {
   font-size: 11px;
   color: var(--text-primary);
 }
+
+/* ==========================================================================
+   Status Bar
+   ========================================================================== */
+
+.status-bar {
+  min-height: 24px;
+  background: var(--header-bg);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot.running {
+  background: var(--accent);
+  animation: pulse 1.2s infinite;
+}
+
+.status-dot:not(.running):not(.idle) {
+  background: var(--success);
+}
+
+.status-separator {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ==========================================================================
+   Result Cards (2x2 Grid)
+   ========================================================================== */
+
+.results-view {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.results-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px 0;
+  width: 100%;
+  max-width: 500px;
+}
+
+.result-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+}
+
+.result-card .label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.result-card .value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.result-card .value.cyan { color: #00d4ff; }
+.result-card .value.magenta { color: #ff0066; }
+.result-card .value.green { color: #3fb950; }
