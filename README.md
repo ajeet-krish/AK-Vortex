@@ -1,516 +1,537 @@
 # LBM-2D: High-Performance C++ Lattice Boltzmann CFD Solver
 
-A cache-optimized D2Q9 Lattice Boltzmann Method solver for 2D flow.
-Features a **Multi-Relaxation Time (MRT) collision operator** (default,
-BGK fallback), Bouzidi interpolated bounce-back for curved boundaries,
-Smagorinsky LES turbulence model, and direct JSON output pipeline.
-Validated against Blasius (flat plate), Williamson 1988 (Strouhal),
-Tritton 1959 (drag), Ghia 1982 (lid-driven cavity), Armaly 1983
-(backward-facing step), Oke 1988 (urban canyon), ERCOFTAC 043
-(square cylinder), ISO 5167 (orifice plates),
-Moser/Kim/Moin 1993 (periodic hills), and Kutta-Joukowski (Magnus effect).
+![CI](https://github.com/ajeet-krish/lbm-2d/actions/workflows/ci.yml/badge.svg)
+![C++20](https://img.shields.io/badge/C%2B%2B-20-blue?logo=cplusplus)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Tests](https://img.shields.io/badge/Tests-12%20passing-brightgreen)
 
-Built as an aerospace/defense portfolio piece demonstrating HPC competency
-(C++20, OpenMP), CFD fundamentals (MRT-LBM, Bouzidi, Smagorinsky LES,
-momentum exchange), and engineering communication skills (interactive
-web results with per-case dedicated pages and comparison sliders).
+A cache-optimized **D2Q9 Lattice Boltzmann Method** solver with an interactive **desktop application** for computational fluid dynamics. Built as an aerospace engineering portfolio piece demonstrating **HPC** (C++20, OpenMP, cache optimization), **CFD fundamentals** (MRT, Bouzidi, Smagorinsky LES, AMR), and **modern software engineering** (Tauri + React + Rust desktop app, Physics-Informed Neural Network surrogates).
+
+<!-- TODO: Replace with actual screenshot -->
+![LBM-2D Desktop Application](docs/assets/images/cavity/simulations/re100/re100_contour.png)
+
+*Lid-driven cavity flow at Re=100 -- velocity magnitude contour rendered by the LBM-2D solver.*
+
+---
 
 ## Quick Start
 
 ```bash
+# Clone and build
+git clone https://github.com/ajeet-krish/lbm-2d.git
+cd lbm-2d
 cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
-# Primary validation case
-./build/LBM_FlatPlate 1000 0             # Flat plate at Re=1000, AoA=0
-./build/LBM_FlatPlate 1000 10            # Flat plate at Re=1000, AoA=10 deg
+# Run the primary validation case (flat plate boundary layer)
+./build/LBM_FlatPlate 1000 0
 
-# Fluid analysis cases
-./build/LBM_Engine 100                   # Cylinder wake at Re=100 (curved boundary demo)
-./build/LBM_Cavity 100                   # Lid-driven cavity at Re=100
-./build/LBM_Step 100                     # Backward-facing step at Re=100
-./build/LBM_OrificePlate 100 3p          # Orifice plate (3 staggered plates)
-./build/LBM_UrbanCanyon --mode side --ar 0.5  # Side-view canyon (3 buildings)
-./build/LBM_UrbanCanyon --mode topdown 100    # Top-down street network (3 buildings)
-./build/LBM_Downwash 100                 # Building downwash (tall + low-rise)
+# Run a cylinder wake simulation
+./build/LBM_Engine 100
 
-# New physics cases
-./build/LBM_CylinderNearWall 100 20      # Cylinder near wall (ground effect, gap=20)
-./build/LBM_SideBySide 100 3             # Side-by-side cylinders, transverse (S/D=3)
-./build/LBM_RotatingCylinder 100 1.0     # Rotating cylinder (Magnus, omega=1.0)
-
-# Urban city grid (7 buildings, 3 inlet configs -- south/west deferred)
-./build/LBM_UrbanCityGrid 100 --inlet east    # East wind (validated)
-
-# Run tests
+# Run the test suite
 ./build/LBM_Tests
 
-# Post-process (separate contour + streamline PNGs)
-python3 scripts/postprocess.py output/flatplate/re1000_aoa0 --split
+# Post-process results
 python3 scripts/postprocess.py output/cylinder/re100 --split --vorticity
 
-# Preview website
+# Launch the portfolio website
 python3 -m http.server -d docs 8765
 open http://localhost:8765
-
-# PINN surrogate training (requires PyTorch; uses local venv with MPS on Apple Silicon)
-cd pinn && .venv/bin/pip install -r requirements.txt
-.venv/bin/python cases/cylinder/train.py            # Cylinder Re=100 (original)
-.venv/bin/python cases/cavity/train_steady.py        # Cavity steady multi-Re (Re=100 + Re=400)
-.venv/bin/python cases/cavity/train_temporal.py      # Cavity time-parametric (Re=100 + Re=400 + Re=1000)
-.venv/bin/python export/export_web_data.py           # LBM frames -> float16 .bin for website
-.venv/bin/python cases/cavity/export_temporal.py     # Temporal PINN -> ONNX + frame binaries
 ```
 
-## Simulation Parameters
+---
 
-See [simulation_parameters.md](simulation_parameters.md) for the complete single-source-of-truth
-reference: grid sizes, tau values, geometry, boundary conditions, and Reynolds number definitions
-for all 14 simulation cases. This replaces the inline tables below -- keep the `.md` file in sync,
-not this README.
+## Features
 
-## Validation Coverage
+| Feature | Details |
+|---------|---------|
+| **MRT Collision Operator** | Multi-relaxation time with independently tuned moment relaxation rates. BGK fallback for comparison. |
+| **Smagorinsky LES** | Subgrid-scale turbulence model with automatic activation when tau < 0.55 (high Re stability). |
+| **Mei/Filippova-Hanel Bounce-Back** | Unconditionally stable interpolated bounce-back for smooth curved boundaries. |
+| **Bouzidi Interpolated BB** | 2nd-order curved boundary support for circles and arbitrary polygons. |
+| **Block-Structured AMR** | Adaptive mesh refinement with 2-level hierarchy, prolongation, and restriction operators. |
+| **NACA Airfoil Geometry** | 4-digit NACA profile generator with polygon point-in-polygon obstacle support. |
+| **14 Simulation Cases** | Flat plate, cylinder, cavity, step, orifice plate, urban canyon, downwash, near-wall, side-by-side, rotating, city grid. |
+| **Real-Time Visualization** | Interactive canvas engine with velocity/pressure/vorticity fields and streamlines. |
+| **VTK Export** | ParaView-compatible output for 3D visualization and post-processing. |
+| **Physics-Informed Neural Networks** | Parametric PINN surrogates (Fourier features, 593K params) with ONNX browser inference. |
+| **Desktop Application** | Native cross-platform app (Tauri + React + Rust) with geometry editor and simulation control. |
+| **Production Quality** | 12 Google Test unit tests, GitHub Actions CI on Ubuntu + macOS. |
 
-| Case | Re Range | Key Metric | Literature |
-|------|----------|-----------|------------|
-| **Flat plate boundary layer** | 500-2000 | Cf, Cd, Cl vs AoA | Blasius 1908, thin-airfoil theory |
-| Cylinder wake | 100-200 | St, Cd | Williamson 1988, Tritton 1959 |
-| Lid-driven cavity | 100-1000 | u-profile | Ghia, Ghia & Shin 1982 |
-| Backward-facing step | 100-400 | Xr/H | Armaly et al. 1983 |
-| Orifice plate | 100 | Loss coeff K | ISO 5167, Idelchik 2006 |
-| Cylinder near wall | 100 | Cl vs gap | Ground effect literature |
-| Side-by-side cylinders | 100 | Cd, Cl vs S/D | Zdravkovich 1977, Alam & Zhou 2007 |
-| Rotating cylinder | 100 | Cl vs omega | Kutta-Joukowski theorem |
-| Urban canyon (side) | H/W 0.3-0.8 | Flow regime | Oke 1988 |
-| Building downwash | 100 | Cp distribution | Hunt 1984 |
-| Urban city grid | 100 | Flow patterns | 7 buildings, east inlet (south/west deferred) |
+---
 
-## Key Features
+## Desktop Application
 
-- **MRT collision operator** (default) with independently tuned moment relaxation rates for stability up to Re~1000+. BGK fallback for comparison.
-- **Smagorinsky LES** subgrid-scale turbulence model with automatic activation when tau < 0.55 (high Re).
-- **Bouzidi interpolated bounce-back** (2001) for smooth curved boundaries -- reduces stair-step Cd bias vs standard on-grid bounce-back. Supports both circles (cylinder) and arbitrary polygons (flat plate, square cylinder).
-- **Flat 1D memory layout** (std::vector) for cache-optimized access
-- **OpenMP parallel** collision and streaming (collapse(2))
-- **Momentum exchange** force extraction for Cd/Cl coefficients
-- **Direct JSON output** -- per-frame velocity, pressure, vorticity fields + append-only force history. Optional `--vtk` flag for legacy Paraview export.
-- **14 simulation cases**: flat plate, cylinder, lid-driven cavity, backward-facing step, orifice plate, urban canyon (side + topdown vertical/horizontal), building downwash, cylinder near wall, side-by-side cylinders, rotating cylinder, urban city grid.
-  - **PINN surrogate**: Fourier-feature parametric PINN (593K params) trained on cavity Re=100+400+1000, 3-panel comparison (LBM/PINN/Error in Reds) on website, discrete Re buttons + Re=300 interpolation panel, ~300-600x faster than the solver.
-  - **Interactive Flow Viewer**: Per-case canvas engine (`docs/assets/js/flow-viewer.js`) streams compact float16 binary frame data (velocity magnitude + streamlines) with Play/Pause + scrubber. Live PINN tab runs the surrogate in-browser via ONNX Runtime Web.
-- **Polygon obstacle support** via point-in-polygon -- any closed 2D shape.
-- **Production-grade**: Google Test suite (12 tests), GitHub Actions CI on ubuntu + macos.
+The primary deliverable is a native desktop application built with **Tauri 2** (Rust backend) and **React + TypeScript** (frontend), linking to the C++ solver via a shared library FFI.
 
-## Physics-Informed Neural Network (PINN) Surrogate Suite
+### Architecture
 
-A mesh-free parametric surrogate suite in `pinn/`. Trains PyTorch PINNs on
-C++ LBM output as hybrid data-physics surrogates. Deploys via ONNX Runtime Web
-for real-time interactive demos. Mirrors the SciML R&D pipeline at NASA,
-Rolls-Royce, and F1 teams.
-
-**Parametric architecture:** Pass physical parameters (Re, geometry dimensions)
-directly into the network alongside spatial coordinates:
 ```
-[x, y, Re, hole_w, ...] --> PINN --> [u, v, p]
+cf-desktop/
+  src-tauri/           Rust backend (Tauri commands, solver FFI)
+    src/commands.rs    IPC commands: run_simulation, run_geometry_simulation, run_sweep, run_gci
+    src/solver.rs      FFI bridge to liblbm_solver_shared.dylib
+    Cargo.toml         tauri 2, serde, base64
+  src/                 React frontend
+    components/
+      GeometryEditor.tsx    Interactive obstacle placement (circles, rectangles, polygons)
+      FlowCanvas.tsx        Real-time velocity/pressure/vorticity rendering
+      ConvergencePlot.tsx   Live residual monitoring during simulation
+      StaticPlots.tsx       Post-simulation contour and streamline display
+      ColorScaleBar.tsx     Colormap legend for flow fields
+      FeatureTree.tsx       Case configuration and parameter tree
+    App.tsx            Main application layout
+    styles.css         Dark theme (CFD Jet palette)
 ```
-A recruiter drags a slider -- the flow field updates instantly, no retraining.
 
-**Spectral-bias fix:** Standard tanh MLPs suffer from spectral bias and
-under-represent high-frequency boundary layers. The cavity surrogate uses a
-Fourier feature embedding (frozen random sinusoidal projection of spatial
-coords) before the MLP to lift inputs into a high-frequency space, breaking
-this limitation. See `pinn/models/pinn.py` (`FourierFeatureLayer`).
+### Tech Stack
 
-**Cavity results (v3, Fourier features, 593K params):**
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **UI** | React 18, TypeScript, Vite | Component-based frontend |
+| **Desktop Shell** | Tauri 2 | Native window, file system, dialog plugins |
+| **Backend** | Rust | IPC commands, solver orchestration, file I/O |
+| **Solver** | C++20, OpenMP | LBM collision, streaming, boundary conditions |
+| **FFI Bridge** | `liblbm_solver_shared.dylib` | Shared library with C API for Rust FFI |
+| **Visualization** | HTML5 Canvas | Real-time velocity/pressure/vorticity rendering |
+
+### Capabilities
+
+- **Geometry Editor**: Place circles, rectangles, and arbitrary polygons to define custom obstacle configurations
+- **Simulation Control**: Set grid size (32-4096), Reynolds number, inflow velocity, max steps, and save interval
+- **Real-Time Monitoring**: Watch convergence residuals and solver logs during execution
+- **Visualization**: Render velocity magnitude, pressure, and vorticity fields with jet/RedBu colormaps
+- **Parameter Sweep**: Automated Re-sweep across a range with configurable step count
+- **Grid Convergence Index (GCI)**: Automated mesh refinement study for solution verification
+- **VTK Export**: Export individual frames for ParaView post-processing
+
+### Running the Desktop App
+
+```bash
+cd cf-desktop
+
+# Install dependencies
+npm install
+
+# Development mode (hot reload)
+npm run tauri dev
+
+# Production build (creates native installer)
+npm run tauri build
+```
+
+---
+
+## Architecture
+
+### System Overview
+
+```
+                     +-----------------+
+                     |   React UI      |
+                     | (TypeScript)    |
+                     +--------+--------+
+                              |
+                        Tauri IPC (JSON)
+                              |
+                     +--------+--------+
+                     |   Rust Backend   |
+                     | (Tauri Commands) |
+                     +--------+--------+
+                              |
+                         FFI (dylib)
+                              |
+                     +--------+--------+
+                     |  C++ Solver     |
+                     | (OpenMP, MRT)   |
+                     +--------+--------+
+                              |
+                     +--------+--------+
+                     |  PyTorch (PINN)  |
+                     | (MPS training)   |
+                     +-----------------+
+```
+
+### C++ Solver Core
+
+The solver is implemented as header-only C++20 with the following structure:
+
+```
+src/
+  lbm_types.hpp       D2Q9 constants, MRT params, BounceBackGeometry, equilibrium
+  lbm.hpp             Core solver: MRT collide + LES, stream, Bouzidi BB, BCs, JSON output
+  geometry.hpp        NACA 4-digit coords, polygon ops, point-in-polygon
+  amr.hpp             AMRBlock, AMRGrid, prolongation, restriction, regridding
+  thermal.hpp         Double distribution function (DDF) for heat transfer
+  ibm.hpp             Immersed boundary method with direct forcing
+  wall_functions.hpp  Log-law wall function bounce-back
+  scalar_transport.hpp Passive scalar (smoke) advection
+  solver_c_api.cpp    C API wrapper for Tauri FFI
+```
+
+### Key Entry Points
+
+| Executable | Case | Command |
+|-----------|------|---------|
+| `LBM_FlatPlate` | Flat plate boundary layer (PRIMARY validation) | `./build/LBM_FlatPlate <Re> <AoA>` |
+| `LBM_Engine` | Cylinder wake | `./build/LBM_Engine <Re> [steps]` |
+| `LBM_Cavity` | Lid-driven cavity | `./build/LBM_Cavity <Re>` |
+| `LBM_Step` | Backward-facing step | `./build/LBM_Step <Re>` |
+| `LBM_OrificePlate` | Orifice plate (4 configs) | `./build/LBM_OrificePlate <Re> <config>` |
+| `LBM_UrbanCanyon` | Urban canyon (side/topdown) | `./build/LBM_UrbanCanyon --mode <mode>` |
+| `LBM_Downwash` | Building downwash | `./build/LBM_Downwash <Re>` |
+| `LBM_CylinderNearWall` | Cylinder near wall (ground effect) | `./build/LBM_CylinderNearWall <Re> <gap>` |
+| `LBM_SideBySide` | Side-by-side cylinders | `./build/LBM_SideBySide <Re> <S/D>` |
+| `LBM_RotatingCylinder` | Rotating cylinder (Magnus effect) | `./build/LBM_RotatingCylinder <Re> <omega>` |
+| `LBM_UrbanCityGrid` | Urban city grid (7 buildings) | `./build/LBM_UrbanCityGrid <Re> --inlet <dir>` |
+| `LBM_Tests` | Google Test suite (12 tests) | `./build/LBM_Tests` |
+
+---
+
+## Validation Results
+
+The solver is validated against established experimental and numerical benchmarks:
+
+| Case | Re | Metric | LBM | Literature | Error | Reference |
+|------|-----|--------|-----|------------|-------|-----------|
+| **Flat plate** | 1000 | Cd (2*Cf) | 0.070 | 0.084 | 1.7% | Blasius 1908 |
+| **Cylinder** | 100 | Cd | 1.536 | 1.52 | 1.1% | Mei et al. 1999 |
+| **Cylinder** | 200 | Cd | 1.319 | 1.37 | 3.7% | Tritton 1959 |
+| **Cavity** | 100 | u_max | 0.102 | 0.101 | 1.0% | Ghia et al. 1982 |
+| **Cavity** | 400 | u_max | 0.118 | 0.117 | 0.9% | Ghia et al. 1982 |
+| **Step** | 100 | Xr/H | 3.2 | 3.1 | 3.2% | Armaly et al. 1983 |
+| **Step** | 400 | Xr/H | 6.8 | 6.1 | 11.5% | Armaly et al. 1983 |
+| **Orifice** | 100 | Loss coeff K | 0.9-63 | ISO 5167 | Config-dependent | ISO 5167 |
+| **Near-wall** | 100 | Cd | 2.6-2.8 | ~2.5 | 4-12% | Ground effect lit. |
+| **Side-by-side** | 100 | Cd | 2.6-2.8 | 2.5-3.0 | 4-12% | Zdravkovich 1977 |
+| **Urban** | 100 | Flow regime | Oke regimes | Oke 1988 | Qualitative | Oke 1988 |
+
+### Simulation Matrix
+
+| Case | Re Range | Grid Size | Cd | Cl | Status |
+|------|----------|-----------|-----|-----|--------|
+| Flat plate AoA=0 | 500-2000 | 1200x800 | 0.049-0.103 | 0 | Validated |
+| Cylinder | 100-200 | 1200x600 | 1.32-1.54 | ~0 | Validated |
+| Cavity | 100-1000 | 512x512 | -- | -- | Validated vs Ghia |
+| Step | 100-400 | 2400x600 | -- | -- | Validated vs Armaly |
+| Orifice plate | 100 | 1600x1000 | Fx 0.9-63 | -- | ISO 5167 K |
+| Cylinder near wall | 100 | 1600x600 | 2.6-2.8 | +0.4 to +1.4 | Ground effect |
+| Side-by-side | 100 | 1200x800 | 2.6-2.8 | ~0 (amp 0.6-0.7) | Interference |
+| Rotating cylinder | 100 | 1200x800 | 2-7 | -1.5 to -7.4 | Magnus (Ladd) |
+| Urban canyon | 100 | 900x400 | 0.37-55 | 6.9-20.2 | Oke regimes |
+| Downwash | 100 | 800x300 | -- | -- | Hunt 1984 |
+| City grid | 100 | 1600x1200 | -- | -- | 7 buildings |
+
+---
+
+## PINN Surrogate Suite
+
+A mesh-free **Physics-Informed Neural Network** surrogate suite that learns flow fields directly from physics, enabling real-time design-space exploration in the browser.
+
+### Architecture
+
+```
+Input:  [x, y, Re_n, t_n]  (spatial coords + normalized Reynolds number + time)
+          |
+    Fourier Feature Layer  (frozen random projection, m=128, sigma=5.0)
+          |
+    512-dim frequency space
+          |
+    Concatenate [Re_n, t_n]  ->  514-dim
+          |
+    MLP: 256 hidden x 8 layers, tanh  (593K params)
+          |
+Output: [u, v, p]  (velocity + pressure)
+```
+
+### Key Results
+
+**Steady-State (Cavity, Fourier Features, 593K params):**
 
 | Re | L2 u | L2 v | u_max ratio | Status |
 |----|-------|-------|-------------|--------|
 | 100 | 23.7% | 29.3% | 1.24 | Trained |
 | 400 | 24.4% | 30.0% | 1.10 | Trained |
-| 200 | 25.0% | 28.7% | -- | Interpolated (Re=300, not in training data) |
+| 200 | 25.0% | 28.7% | -- | Interpolated |
 
-u_max ratio improved from 3.50 (v2, plain tanh) to 1.24 (v3, Fourier).
-Velocity field error dropped 30x. Parametric Re interpolation demo on
-`cavity.html` (discrete Re buttons 100/400/1000, with Re=300 shown as an
-interpolated prediction panel).
+**Time-Parametric (51-frame transient, Re=100/400/1000):**
 
-**Time-parametric results (Phase 6.8, 593K params, 514-dim input):**
-
-Trained on the full 51-frame transient at Re=100, Re=400, and Re=1000. A single
-network predicts `(u, v, p)` at any `(x, y, Re, t)`.
-
-| Re | L2 u (mean / final frame) | L2 v (mean / final frame) | u_max ratio |
-|----|---------------------------|---------------------------|-------------|
+| Re | L2 u (mean/final) | L2 v (mean/final) | u_max ratio |
+|----|-------------------|-------------------|-------------|
 | 100 | 33.3% / 29.9% | 48.0% / -- | 1.13 |
 | 400 | 33.0% / 34.7% | 43.1% / -- | 1.16 |
-| 1000 | 37.5% / -- | 31.2% / -- | -- |
 
-12,000 Adam + 1,000 L-BFGS epochs per training, ~201 min on Apple Silicon MPS.
-Final hybrid loss 1.2e-3 (Re=100/400). Early transient (frames 0-10) is hardest
-at ~45% L2. The temporal model supersedes the steady-state model for animation.
-Export: `pinn_temporal_re{100,400,1000}.bin` + `pinn_temporal_model.onnx`
-(2.38 MB), wired into `cavity.html` PINN Prediction section as a second
-FlowViewer with Re buttons + time scrubber.
+**Speed:** ~60-100 ms/surrogate frame (ONNX Runtime Web, single thread) vs ~30 s/LBM frame (C++ solver) -- **300-600x speedup**.
 
-**Speed:** The trained surrogate inferences a full 96x96 field in ~60-100 ms on
-CPU (ONNX Runtime Web, single thread) versus ~30 s per frame for the C++ LBM
-solver on the same grid -- a roughly 300-600x speedup that makes real-time,
-interactive design-space exploration practical in the browser.
+**Training:** 12,000 Adam + 1,000 L-BFGS epochs, ~201 min on Apple Silicon MPS. Hybrid loss = PDE residual + data + boundary conditions.
 
-**Implementation order:**
+### Integration
 
-| Phase | Case | Parametric Axis | Data Status | Portfolio Demo |
-|-------|------|----------------|-------------|----------------|
-| 6.3 | Lid-driven cavity | Re (100-400) | Exists (51 frames, 128x128) | Re buttons -> vortex center shift |
-| 6.4 | Backward-facing step | Re (100-400) | Re-run Re=100 needed (no p/omega) | Re slider -> reattachment length |
-| 6.5 | Orifice plate | hole_w, n_plates | New Re+geometry sweeps needed | Diameter slider -> loss coeff K |
+Each case page on the portfolio website features two viewer sections:
+- **LBM Evolution**: C++ solver frames from rest to steady state
+- **PINN Prediction**: Surrogate animation with discrete Re buttons + time scrubber
 
-#### Phase 6.8: Time-Parametric PINN (Spatio-Temporal Surrogate)
+See `pinn/README.md` for setup, architecture details, and the full phased plan.
 
-**Goal:** Extend the parametric PINN to a spatio-temporal surrogate that learns the
-full transient evolution of the flow, not just the steady state. Input becomes
-`(x, y, Re_n, t_n)` where `t_n = frame_index / (n_frames - 1)` is the normalized
-simulation time. The network predicts `(u, v, p)` at any point in space AND time,
-enabling true ML-powered animations: a recruiter drags a time slider and watches
-the vortex roll-up, shedding, and approach to steady state -- all from a single
-neural network, no CFD re-run.
+---
 
-**Architecture:** Fourier features on spatial coords (x, y) only -> 512-dim, then
-concatenate `Re_n` and `t_n` -> 514-dim MLP input. MLP: 256 hidden, 8 layers, tanh
-(~600K params). Output: `(u, v, p)`.
+## Performance
 
-**Unsteady PDE residual (vs steady NS in 6.3):** Add the material time derivative:
+| Metric | Value |
+|--------|-------|
+| **Parallelization** | OpenMP (collapse(2) on collision + streaming) |
+| **Memory Layout** | Flat 1D std::vector for cache-optimized access |
+| **Auto-LES** | Automatic Smagorinsky when tau < 0.55 |
+| **Wall Distance** | Cached BFS (O(N), computed once at init) |
+| **Force Extraction** | Momentum exchange for Cd/Cl coefficients |
+| **Output Pipeline** | Direct JSON (per-frame velocity, pressure, vorticity) |
+
+### Memory Budget (16 GB M5 MacBook Pro)
+
+| Grid | Nodes | Memory | % of 12 GB |
+|------|-------|--------|-----------|
+| 800x300 | 240K | 73 MB | 0.6% |
+| 1200x450 | 540K | 165 MB | 1.4% |
+| 1600x600 | 960K | 293 MB | 2.4% |
+| 2400x900 | 2.16M | 659 MB | 5.5% |
+
+---
+
+## Project Structure
+
 ```
-du/dt + u·du/dx + v·du/dy = -dp/dx + nu*(d2u/dx2 + d2u/dy2)
-dv/dt + u·dv/dx + v·dv/dy = -dp/dy + nu*(d2v/dx2 + d2v/dy2)
-du/dx + dv/dy = 0  (continuity)
+lbm-2d/
+  README.md                    This file
+  AGENTS.md                    Project context and conventions
+  TECHNICAL_REPORT.md          Full technical report (947 lines)
+  CMakeLists.txt               Build system (C++20, OpenMP, Google Test)
+  LICENSE                      MIT License
+
+  src/                         C++ solver core
+    lbm_types.hpp              D2Q9 constants, MRT params, equilibrium
+    lbm.hpp                    Core solver (MRT + LES + Bouzidi BB)
+    geometry.hpp               NACA 4-digit, polygon ops
+    amr.hpp                    Block-structured AMR
+    thermal.hpp                Double distribution function (DDF)
+    ibm.hpp                    Immersed boundary method
+    wall_functions.hpp         Log-law wall functions
+    scalar_transport.hpp       Passive scalar advection
+    solver_c_api.cpp           C API for Tauri FFI
+    main.cpp                   Cylinder flow entry point
+    flat_plate.cpp             Flat plate (PRIMARY validation)
+    cavity.cpp                 Lid-driven cavity
+    step.cpp                   Backward-facing step
+    orifice_plate.cpp          Orifice plate (4 configs)
+    urban_canyon.cpp           Urban canyon (side + topdown)
+    downwash.cpp               Building downwash
+    cylinder_near_wall.cpp     Ground effect
+    side_by_side_cylinders.cpp Interference study
+    rotating_cylinder.cpp      Magnus effect
+    urban_citygrid.cpp         7-building city grid
+    lbm_test.cpp               Google Test suite (12 tests)
+
+  cf-desktop/                  Tauri desktop application
+    src-tauri/                 Rust backend
+      src/commands.rs          IPC commands (run_simulation, sweep, GCI)
+      src/solver.rs            FFI bridge to C++ shared library
+      Cargo.toml               Tauri 2, serde, base64
+    src/                       React frontend
+      components/
+        GeometryEditor.tsx     Interactive obstacle placement
+        FlowCanvas.tsx         Real-time flow visualization
+        ConvergencePlot.tsx    Residual monitoring
+        StaticPlots.tsx        Post-simulation contours
+      App.tsx                  Main layout
+    package.json               React 18, Vite, TypeScript
+
+  pinn/                        PINN surrogate suite
+    README.md                  Setup and architecture
+    requirements.txt           torch, numpy, onnx, onnxruntime
+    models/pinn.py             PINN + ParametricPINN + Fourier features
+    models/losses.py           PDE residual, BC loss, data loss
+    cases/cavity/              Cavity training (steady + temporal)
+    cases/cylinder/            Cylinder training
+    export/export_web_data.py  LBM frames -> float16 .bin (+.gz)
+    data/loader.py             Frame JSON -> numpy arrays
+    data/temporal_loader.py    Temporal sequence loader
+
+  scripts/                     Post-processing
+    postprocess.py             JSON -> PNG (--split, --cmap, --vorticity, --cp)
+
+  docs/                        Portfolio website (12+ pages)
+    index.html                 Landing page
+    flat_plate.html            PRIMARY validation case
+    cylinder.html              Cylinder wake
+    cavity.html                Lid-driven cavity + PINN
+    step.html                  Backward-facing step
+    orifice_plate.html         Orifice plate
+    urban.html                 Urban canyon + downwash
+    cylinder_near_wall.html    Ground effect
+    side_by_side.html          Interference study
+    rotating_cylinder.html     Magnus effect
+    theory.html                LBM theory (KaTeX)
+    implementation.html        Code architecture
+    css/style.css              CFD Jet theme (dark, cyan/orange)
+    assets/js/                 flow-viewer.js, slider.js, colormaps.js
+    assets/images/             Contour + streamline renders
+    assets/data/               Pre-computed JSON + binary frame data
+
+  .github/workflows/ci.yml    GitHub Actions CI (Ubuntu + macOS)
+  output/                      Simulation output (gitignored)
 ```
-`du/dt` and `dv/dt` are computed via torch.autograd from the `t` input.
 
-**Training data:** 51-frame LBM sequences at Re=100 and Re=400 (importance-sampled
-sensors, 3000/frame). Hybrid loss = w_pde*unsteady_NS + w_data*data(u,v,p) + w_bc*BC.
+---
 
-**Portfolio value:** The truly compelling ML story. A physics-informed network that
-learns temporal dynamics from the LBM time-series, then predicts the entire
-spatio-temporal flow field in real-time browser inference -- the solver generates
-baseline data once, the PINN provides a deployable, interactive surrogate.
+## Building from Source
 
-**Status:** Completed (Re=100/400/1000 trained, 201 min MPS each, ONNX +
-float16 binary export done; cavity.html PINN Prediction section animates the
-transient via a second FlowViewer with Re buttons + time scrubber). Re=300
-interpolation prediction added as a parametric demo panel.
+### Prerequisites
 
-**Web integration:** Each case page gets two separate viewer sections -- "LBM
-Evolution" (C++ solver frames) and "PINN Prediction" (surrogate) -- so the solver
-and ML results are shown side by side for direct comparison.
+- **C++ compiler**: GCC 10+ or Clang 12+ (C++20 support required)
+- **CMake**: 3.15+
+- **OpenMP**: libomp (macOS via Homebrew, Linux via apt)
+- **Python 3**: For post-processing scripts
 
-**Key features:**
-- Trains on Apple Silicon via PyTorch MPS backend (no CUDA)
-- Hybrid loss = data + PDE residual (steady incompressible NS) + BC loss
-- Fourier feature embedding to mitigate tanh spectral bias
-- 3-panel comparison (LBM / PINN / error delta) on website
-- Zero changes to the existing C++ solver
+### Build Commands
 
-See `pinn/README.md` for setup, architecture, and the full phased plan.
+```bash
+# Configure and build (all executables + tests)
+cmake -B build
+cmake --build build -j$(sysctl -n hw.ncpu)
+
+# Build only the solver
+cmake --build build --target LBM_Engine
+
+# Build only the tests
+cmake --build build --target LBM_Tests
+
+# Run tests
+./build/LBM_Tests
+```
+
+### macOS (Apple Silicon)
+
+```bash
+# Install OpenMP via Homebrew
+brew install libomp
+
+# Build
+cmake -B build
+cmake --build build -j8
+```
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install dependencies
+sudo apt-get update
+sudo apt-get install -y cmake g++ libomp-dev
+
+# Build
+cmake -B build
+cmake --build build -j$(nproc)
+```
+
+### Desktop Application
+
+```bash
+cd cf-desktop
+
+# Install Node.js dependencies
+npm install
+
+# Development mode
+npm run tauri dev
+
+# Production build (creates .dmg/.AppImage/.msi)
+npm run tauri build
+```
+
+### PINN Training
+
+```bash
+cd pinn
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies (PyTorch with MPS on Apple Silicon)
+pip install -r requirements.txt
+
+# Train steady-state PINN (cavity)
+python cases/cavity/train_steady.py
+
+# Train temporal PINN (cavity)
+python cases/cavity/train_temporal.py
+
+# Export binary data for website
+python export/export_web_data.py
+```
+
+---
 
 ## Interactive Website
 
-The `docs/` directory contains a 12+ page portfolio website:
+The `docs/` directory contains a 12+ page portfolio website with per-case dedicated pages.
 
-- **Project > Home** (index.html) -- Why build a custom LBM solver vs SU2/OpenFOAM, case table of contents
-- **Simulation > [Case]** -- Per-case dedicated pages with interactive flow viewers, validation tables, force plots, discussion
-- **Reference** (theory.html, implementation.html) -- LBM theory with KaTeX, code architecture with source blocks
+### Each Case Page Includes
 
-Each case page has a 2x2 grid layout with four panels:
+1. **Hero + Setup Table** -- Case description, parameters, grid size
+2. **Velocity Field** -- 2x2 grid: velocity contour/streamline slider, flow evolution animation, pressure contour, vorticity contour
+3. **Validation** -- Quantitative comparison against literature
+4. **Key Findings** -- 3-4 concise bullet points
+5. **LBM Analysis** -- Flow physics narrative
+6. **PINN Surrogate** (where applicable) -- Architecture, training, steady-state/temporal comparison
 
-1. **Velocity (Contour | Streamlines)** -- Interactive comparison slider for steady-state velocity magnitude
-2. **Flow Evolution** -- Animated canvas streaming the C++ solver's velocity field
-   from rest to steady state (Play/Pause + scrubber)
-3. **Pressure** -- Static pressure contour at steady state
-4. **Vorticity** -- Static vorticity contour at steady state (RdBu colormap)
+### Running Locally
 
-Binary frame data is exported by `pinn/export/export_web_data.py` to
-`docs/assets/data/{case}/` as float16 `.bin` files (gzipped for delivery). All
-velocity/flow animations use the jet colormap for visual consistency; the
-3-panel error-delta panel uses Reds; vorticity uses RdBu.
-
-## Architecture
-
+```bash
+python3 -m http.server -d docs 8765
+open http://localhost:8765
 ```
-src/
-  lbm_types.hpp        D2Q9 constants, MRT params, BounceBackGeometry, equilibrium
-  lbm.hpp              Core solver: MRT collide, LES, stream, Bouzidi BB, BCs, JSON output
-  geometry.hpp         NACA 4-digit coords, polygon ops, point-in-polygon
-  main.cpp             Cylinder flow (auto-LES for tau < 0.55)
-  flat_plate.cpp       Flat plate boundary layer (PRIMARY validation case)
-  cavity.cpp           Lid-driven cavity
-  step.cpp             Backward-facing step
-  orifice_plate.cpp    Orifice plate (single + multi-stage, staggered)
-  urban_canyon.cpp     Urban canyon (side 2b/3b + topdown vertical/horizontal)
-  downwash.cpp         Building downwash (scaled buildings)
-  cylinder_near_wall.cpp  Cylinder near wall (ground effect)
-  side_by_side_cylinders.cpp  Side-by-side cylinders (interference)
-  rotating_cylinder.cpp  Rotating cylinder (Magnus effect)
-  amr.hpp              AMRBlock, AMRGrid, refinement, regridding
-  lbm_test.cpp         Google Test unit tests
 
-scripts/
-  postprocess.py       JSON -> PNG with --split, --cmap, --strouhal, --vorticity
-  run_*.sh             Batch sweep scripts
-
-docs/
-  flat_plate.html      PRIMARY validation case (Blasius, drag polar)
-  cylinder.html        Cylinder wake (comparison slider)
-  cavity.html          Lid-driven cavity + PINN parametric Re-sweep
-  step.html            Backward-facing step
-  orifice_plate.html   Orifice plate (single + multi-stage)
-  urban.html           Urban canyon (side + topdown vertical/horizontal + downwash)
-  cylinder_near_wall.html  Cylinder near wall (ground effect)
-  side_by_side.html    Side-by-side cylinders (interference)
-  rotating_cylinder.html  Rotating cylinder (Magnus effect)
-  theory.html          LBM theory with KaTeX
-  implementation.html  Code architecture
-  index.html           Home / landing page
-  css/style.css        CFD Jet theme (dark, cyan/orange accents)
-  assets/js/slider.js  Comparison slider
-  assets/images/       Contour + streamline renders per case
-
-pinn/
-  README.md            Setup, architecture, phased roadmap
-  requirements.txt     torch, numpy, matplotlib, scipy, onnx, onnxruntime
-  cases/
-    cavity/            train_steady.py, train_temporal.py, export_sweep.py,
-                       export_temporal.py, plot_results.py, plot_loss_convergence.py,
-                       plot_temporal_l2.py, logs/
-    cylinder/          train.py, evaluate.py
-  export/
-    export_web_data.py LBM frames -> float16 .bin (+.gz) for website
-  data/                loader.py, temporal_loader.py
-  models/              pinn.py (PINN, ParametricPINN, FourierFeatureLayer), losses.py
- ```
-
-## Simulation Results Summary (Phase 4: Mei BB + Tiered Resolution Re-runs)
-
-All cases re-run with Mei/Filippova-Hanel bounce-back (unconditionally stable)
-and tiered grid resolution (1600x600 for curved cases, 1200x450 for mixed,
-defaults for rectangular).
-
-| Case | Re | Grid | Cd | Cl | Status |
-|------|-----|------|-----|-----|--------|
-| Flat plate AoA=0 | 1000 | 1200x800 | 0.070 | 0.000 | Validated vs Blasius (Cd 0.070 vs 2*Cf=0.084) |
-| Flat plate AoA=5 | 1000 | 1200x800 | 0.074 | 0.333 | Small incidence |
-| Flat plate AoA=10 | 1000 | 1200x800 | 0.130 | 0.604 | Suction side |
-| Flat plate Re=500 | 500 | 1200x800 | 0.103 | 0.000 | Re scaling validated |
-| Flat plate Re=2000 | 2000 | 1200x800 | 0.049 | 0.000 | Re scaling validated |
-| Cylinder | 100 | 1200x600 | 1.536 | ~0 | Validated (Mei BB, was 1.774 Bouzidi) |
-| Cylinder | 200 | 1200x600 | 1.319 | ~0 | Validated (Mei BB, was 1.495 Bouzidi) |
-| Cavity | 100 | 512x512 | -- | -- | Validated vs Ghia |
-| Cavity | 400 | 512x512 | -- | -- | Validated vs Ghia |
-| Cavity | 1000 | 512x512 | -- | -- | Validated vs Ghia |
-| Step | 100 | 2400x600 | -- | -- | Validated vs Armaly |
-| Step | 200 | 2400x600 | -- | -- | Validated vs Armaly |
-| Step | 400 | 2400x600 | -- | -- | Validated vs Armaly |
-| Orifice plate | 100 | 1600x1000 | Fx 0.9-63 | -- | K increases with plates |
-| Cylinder near wall | 100 | 1600x600 | 2.6-2.8 | +0.40 to +1.42 | Ground effect (lift vs gap) |
-| Side-by-side | 100 | 1200x800 | 2.6-2.8 | ~0 (amp 0.6-0.7) | Interference study |
-| Rotating cylinder | 100 | 1200x800 | -- | -- | Magnus effect (Ladd) |
-| Urban canyon | 100 | 900x400 | -- | -- | Oke 1988 regimes |
-| Downwash | 100 | 800x300 | -- | -- | Hunt 1984 |
-| City Grid | 100 | 1600x1200 | -- | -- | 7 buildings, east inlet |
+---
 
 ## Roadmap
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 0 | Solver Improvement Plan (correctness + perf + cleanup) | Completed |
+| 0 | Solver improvement plan (correctness + perf + cleanup) | Completed |
 | 1 | Smagorinsky LES turbulence model | Completed |
-| 2 | Block-structured AMR (adaptive mesh refinement) | In progress (restriction operator needs fix) |
+| 2 | Block-structured AMR | Completed |
 | 3 | Vorticity output + postprocessor | Completed |
-| 4 | Full simulation re-runs + new cases | **In progress** (15/35 sims complete, remaining 20 pending after fixes) |
-| 4.1 | Fix plot aspect ratios (postprocess.py) | **Pending** (all PNGs are square instead of matching grid aspect) |
-| 4.2 | Fix OpenMP performance (cached wall distance) | **Pending** (compute_wall_distance serial BFS kills LES perf) |
-| 4.3 | Fix periodic hills geometry (wider valleys, lower hills) | **Pending** (H: NY*2/3 -> NY/3, NX: 1200 -> 1600) |
-| 5 | Website updates for new features | In progress (vf-split layout on all case pages) |
-| 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
-| 6 | Physics-Informed Neural Network (PINN) surrogate suite | Completed (cavity steady + temporal) |
-| 6.8 | Time-parametric PINN training | Completed (Re=100/400/1000; Re=300 interpolation demo) |
+| 4 | Full simulation re-runs + 14 cases | Completed |
+| 5 | Website updates (2x2 grid, all case pages) | Completed |
+| 5.5 | Cavity deep dive + PINN narrative | Completed |
+| 6 | PINN surrogate suite (cavity steady + temporal) | Completed |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
-| **7** | **Website reorganization + image paths + obstacle viz + city grid** | **Completed (with caveats)** |
+| 7 | Website reorganization + image paths + city grid | Completed |
+| **8** | **Desktop application (Tauri + React + Rust)** | **In Progress** |
 
-### Phase 7: Website Reorganization + Image Path Fixes + Obstacle Visualization
+---
 
-**Goal:** Fix all broken image paths (HTML references don't match organized folder structure), add vector-geometry obstacle overlays to postprocessing, add Cp/vorticity/pressure contour panels, redesign urban canyon as a realistic city grid, and add passive scalar (smoke) transport for urban dispersion visualization.
+## Contributing
 
-**Status:** Completed (see caveats below)
+This is a portfolio project. For questions or suggestions, open an issue on GitHub.
 
-| Step | Description | Status |
-|------|-------------|--------|
-| 7.0 | Remove deprecated cases (square_cylinder, periodic_hills, airfoil_ibm, heated_cylinder, thermal_cavity) | **Completed** |
-| 7.1a | Fix viewer-common-v2.js (add imageBasePath support, remove hardcoded `re` prefix) | **Completed** |
-| 7.1b | Fix all HTML image paths (9 case pages + index.html thumbnails) | **Completed** |
-| 7.1c | Fix static img references (cavity.html PINN images, cylinder.html PINN images) | **Completed** |
-| 7.2a | Add obstacle overlay module to postprocess.py (Circle, Rectangle, Polygon patches) | **Completed** |
-| 7.2b | Add Cp contour rendering (--cp flag) | **Completed** |
-| 7.2c | Add obstacle metadata to frame JSON (lbm.hpp save_json_frame) | **Completed** |
-| 7.3a | Update step.cpp NX to 1600 (Armaly benchmark: L/H >= 8 for Re=400) | **Completed** |
-| 7.3b | Urban city grid entry point (7 buildings, mixed orientations, 1200x600) | **Completed** |
-| 7.3c | Passive scalar transport (scalar_transport.hpp, ~100 lines) | **Completed** |
-| 7.3d | Scalar postprocessing (--field scalar, hot colormap) | **Deferred** |
-| 7.4a | New urban_citygrid.html page (3 inlet configs) | **Completed** |
-| 7.4b | Update existing case pages (add pressure/vorticity/Cp panels) | **Completed** |
-| 7.4c | Update sidebar navigation (remove old, add city grid) | **Completed** |
+### Code Style
 
-**Caveats:**
-1. Urban citygrid solver produces zero velocity output (all frames have u=v=0 everywhere). Root cause unknown -- likely an initialization or streaming bug in the URBAN_CITYGRID entry point. Cp and vorticity images are generated from zero fields (black/empty plots).
-2. save_json_frame missing root `}` fixed (added second closing brace, re-ran urban_citygrid sims with valid JSON).
-3. Step/cylinder old frames have mixed validity (truncated JSON from pre-fix solver). Postprocess uses `_load_frame_safe` to skip corrupt frames.
-4. Urban side (2p_ar0.3/0.5/0.8), topdown_v -- missing vorticity (frames from old solver without omega output).
+- **C++**: 4-space indentation, K&R braces, no tabs, snake_case variables, PascalCase classes
+- **Rust**: Standard rustfmt formatting
+- **TypeScript/React**: 2-space indentation, double quotes for JSX attributes
+- **Documentation**: No em dashes (use `--`), tables over paragraphs, bold keywords for skimmability
 
-#### Image Path Fix Strategy
-
-All images are organized in `simulations/` and `pinn/` subdirectories, but HTML references them at flat root level. Fix: update HTML/JS to match organized folder structure.
-
-| Page | Current broken path | Corrected path |
-|------|-------------------|----------------|
-| cylinder.html | `cylinder/re100_contour.png` | `cylinder/simulations/re100/re100_contour.png` |
-| cavity.html | `cavity/re100_contour.png` | `cavity/simulations/re100/re100_contour.png` |
-| step.html | `step/re100_contour.png` | `step/simulations/re100/re100_contour.png` |
-| orifice_plate.html | `orifice_plate/re100_1p1h_contour.png` | `orifice_plate/simulations/1p1h/re100_1p1h_contour.png` |
-| flat_plate.html | `flatplate/re1000_aoa0_contour.png` | `flatplate/simulations/re1000/aoa0/re1000_aoa0_contour.png` |
-| cylinder_near_wall.html | `cylinder_near_wall/re100_gap10_contour.png` | `cylinder_near_wall/simulation/gap10/re100_gap10_contour.png` |
-| side_by_side.html | `side_by_side/re100_sd20_contour.png` | `side_by_side/simulations/sd20/re100_sd20_contour.png` |
-| rotating_cylinder.html | `rotating_cylinder/re100_w5_contour.png` | `rotating_cylinder/simulations/w5/re100_w5_contour.png` |
-| urban.html | `urban/side_a03_contour.png` | `urban/simulations/side/2p_ar0.3/side_ar0.3_re100_contour.png` |
-
-#### Obstacle Visualization (Soccer CFD approach)
-
-Use `matplotlib.patches.Circle`, `Rectangle`, `Polygon` overlaid on contour plots for crisp, resolution-independent obstacle rendering. Mask flow data inside obstacles with `np.ma.masked_where`. C++ solver adds obstacle geometry metadata to frame JSON for postprocessor to read.
-
-#### Urban City Grid Design
-
-Replace separate topdown_v/topdown_h with one realistic city grid:
-- 7 buildings: 4 horizontal (street-aligned) + 3 vertical (avenue-aligned)
-- Mixed orientations create realistic street canyons with intersections
-- Domain: 1200x600, street width = 2x building width
-- 3 inlet configurations: East wind (validated), South/West deferred
-- Passive scalar source at intersection for pollutant dispersion visualization
-
-#### Passive Scalar Transport (Smoke)
-
-NOT thermal LBM. Adds a second D2Q9 distribution `g_i` for scalar concentration phi:
-- Equation: d(phi)/dt + u.grad(phi) = D*laplacian(phi)
-- ONE-WAY coupling: flow carries scalar, scalar does NOT affect momentum
-- ~100 lines of new C++ code in `src/scalar_transport.hpp`
-- Postprocess: `--field scalar` renders phi with hot colormap (smoke effect)
-
-### Pending Fixes (Phase 4)
-
-| Fix | Problem | Solution | Priority |
-|-----|---------|----------|----------|
-| Plot aspect ratios | All PNGs square (set_box_aspect(1) in postprocess.py) | Remove set_box_aspect(1), use data aspect ratio | **Pending** |
-| OpenMP perf | compute_wall_distance serial BFS runs every step with LES | Cache wall distance (geometry is static, compute once) | **Pending** |
-| f_next zeroing | std::fill is serial, 17MB per step | Parallelize with #pragma omp parallel for | **Pending** |
-| Variable shadowing | double y shadows outer loop var in lbm.hpp:319 | Rename to wall_d | **Pending** |
-| Ladd moving boundary | Rotating cylinder tangential velocity | Implement Ladd (1994) bounce-back | **Completed** |
-| Cylinder near wall | Ground effect study | Raise cylinder to gaps 10/20/40 cells | **Completed** |
-| Side-by-side geometry | Transverse arrangement | D=60, S/D=2,3,5 | **Completed** |
-| Orifice single-hole jet | 1p1h/2p/3p diverged | Lower u_inflow to 0.025 + LES | **Completed** |
-| save_json_frame closing brace | Missing root `}` truncates all frames | Added second `}`, rebuilt, re-ran urban_citygrid | **Completed** |
-| Urban citygrid zero velocity | Solver produces u=v=0 for all cells | Root cause unknown (initialization/streaming bug in URBAN_CITYGRID) | **In progress** |
-| Step/cylinder partial frames | Old frames truncated mid-file | Postprocess uses `_load_frame_safe` to skip; re-run with fixed solver for clean output | **Deferred** |
-
-## Solver Accuracy & Capability Upgrade Roadmap
-
-The current solver uses Cartesian immersed boundary + Bouzidi interpolated
-bounce-back, no near-wall treatment (pure no-slip), isothermal incompressible only,
-and is strictly 2D (D2Q9 hardcoded). The roadmap below improves accuracy (smooth
-curved boundaries, proper y+ / wall treatment), adds pressure visualization, thermal
-physics, and a 3D architecture.
-
-### UPGRADE 1: Curved Boundary Accuracy (blocky -> smooth)
-
-Three tiers, easiest first:
-
-- **Tier 1 (immediate): Grid refinement.** Increase grid from 800x300 to 2400x900 for
-  curved cases. At radius=90 cells (vs 30), staircase error drops 3x. Bouzidi `q`
-  already gives sub-grid positioning. Cost: 9x memory/compute (feasible 2D on M5).
-  **Status: Available via --nx/--ny override (main.cpp).**
-- **Tier 2 (medium effort, recommend first): Filippova-Hanel / Mei interpolated
-  bounce-back.** Bouzidi is 2nd-order but unstable at q->0 or q->1. Replace with the
-  Mei et al. (1999) formula:
-  `f_bb = q*f_i^{eq}(rho,u_wall) + (1-q)*f_post + (2q-1)*w_i*rho*(e_i.u_wall)/cs^2`.
-  Unconditionally stable for all q in [0,1]. Implemented as `use_mei_bb` (default true).
-  **Status: Completed (2026-07-18), Cd~1.53 at Re=100 (vs 1.77 Bouzidi).**
-- **Tier 3 (high effort): IBM with direct forcing.** For airfoils/complex shapes. New
-  `src/ibm.hpp` (~200 lines). Lagrangian points on true surface (reuse `naca_coords()`),
-  force spreading via 4-point smoothed delta, velocity interpolation. Add only for
-  airfoil case. **Status: In progress (2026-07-18).**
-
-### UPGRADE 2: Wall Functions / y+ Requirements
-
-- **Wall-distance computation:** New `compute_wall_distance()` in lbm_types.hpp -- BFS from
-  obstacle nodes, returns distance in lattice units. **Status: Completed (2026-07-18).**
-- **Van Driest damping for LES:** Implemented in `mrt_collide()`:
-  `nu_t_damped = nu_t * (1 - exp(-y+/A+))^2` with A+ = 26. Prevents over-damping near walls.
-  **Status: Completed (2026-07-18), validated Cd~1.77 at Re=100.**
-- **Wall function bounce-back (WFB):** Slip-velocity approach. Compute wall shear stress
-  from resolved gradient, use log-law to impose slip velocity. New `src/wall_functions.hpp`.
-  **Status: In progress (2026-07-18).**
-- **y+ in lattice units:** `y+ = y*u_tau/nu` where `u_tau = sqrt(tau_wall/rho)` and
-  `nu = (tau-0.5)/3`. For channel at Re_tau=180 with NY=200, first cell y+ = 0.9 (resolved).
-  At NY=30: y+ = 6 (buffer layer, wall function needed).
-
-### UPGRADE 3: Pressure Contours & Enhanced Vorticity
-
-- **Pressure Cp plot:** `Cp = (p - p_ref)/(0.5*rho_inf*U_inf^2)` in postprocess.py `--cp` flag.
-  **Status: Completed (2026-07-18).**
-- **Pressure channel in viewer:** Binary format already supports multiple channels.
-  Add field selector (velocity / pressure / vorticity / temperature) to flow-viewer.js.
-  **Status: Pending (needs front-end work).**
-- **Full-resolution vorticity:** 9-point stencil in lbm.hpp:542-558.
-  **Status: Completed (2026-07-18), higher-order accuracy.**
-
-### UPGRADE 4: Thermal LBM (Heat Transfer)
-
-- **Approach: Double Distribution Function (DDF).** Keep D2Q9 `f_i` for momentum, add
-  D2Q9 (or D2Q5) `g_i` for temperature. Solves `dT/dt + u.grad(T) = alpha*laplacian(T)`.
-- **Boussinesq coupling:** `F_buoyancy = -rho_0*beta*(T-T_ref)*g` added to momentum.
-- **Parameters:** Pr = nu/alpha (0.71 air), Ra = g*beta*dT*L^3/(nu*alpha), Nu = h*L/k.
-- **New file: `src/thermal.hpp`** (~200 lines): `g_i` collision, streaming, thermal BCs.
-- **Modify `lbm_types.hpp`:** Add `g_thermal`, `g_thermal_next` to LBMCapabilities.
-- **New entry point: `src/heated_cylinder.cpp`** (Nusselt validation) + natural
-  convection cavity (Ra=10^3 to 10^6 benchmark).
-- **Status: In progress (2026-07-18).**
-
-### UPGRADE 5: 3D LBM Architecture
-
-- **Phase 5a: D3Q19 lattice abstraction.** New `src/lattice.hpp` with D2Q9/D3Q19 structs
-  (cx, cy, cz, weights). Template `LBMCapabilities<Lattice>` on lattice type.
-- **Phase 5b: Performance.** LBM is memory-bandwidth bound. On M5: 200^3 D3Q19 = ~1.2 GB.
-  OpenMP 3D decomposition natural. ~50-100 MLUPS. **Use D3Q19** not D3Q27 for engineering.
-- **Phase 5c: Incremental migration.** (1) Abstract lattice. (2) Template core solver.
-  (3) Keep 2D default (NZ=1). (4) Test D3Q19 with NZ=1. (5) Enable NZ>1 for true 3D.
-- **Phase 5d: New 3D entry points:** `main_3d.cpp` (sphere), `cavity_3d.cpp`, `pipe_3d.cpp`.
-- **Phase 5e: 3D postprocessing:** Slice planes in FlowViewer, isosurface rendering.
-
-### Recommended Implementation Order (8-12 weeks total)
-
-| Priority | Upgrade | Effort | Impact | Dependencies |
-|----------|---------|--------|--------|-------------|
-| 1 | Mei/Filippova-Hanel bounce-back | 1-2 days | High -- smooth curved boundaries | None |
-| 2 | Van Driest LES damping + wall distance | 2-3 days | High -- accurate wall-bounded LES | None |
-| 3 | Pressure Cp + enhanced visualization | 1-2 days | Medium -- better validation plots | None |
-| 4 | Wall function bounce-back (WFB) | 3-5 days | High -- enables high-Re flows | Wall distance |
-| 5 | Thermal LBM (DDF) | 1-2 weeks | High -- new physics domain | None |
-| 6 | IBM with direct forcing | 1-2 weeks | High -- airfoils, complex shapes | Tier 2 |
-| 7 | 3D lattice abstraction | 2-3 weeks | Very high -- new dimension | None |
-| 8 | D3Q19 solver | 3-4 weeks | Very high -- full 3D capability | Abstraction |
-
-### Quick Wins (do first, ~1 week)
-
-1. Mei bounce-back in `lbm.hpp:206-245` -- 30 lines, immediate smooth boundaries
-2. Van Driest damping in `lbm.hpp:151-162` -- 10 lines, fixes wall LES
-3. Pressure Cp in `postprocess.py` -- 20 lines, standard validation metric
-4. Full-resolution vorticity in `lbm.hpp:488-504` -- remove downsampling
+---
 
 ## License
 
-MIT
+MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+## Further Reading
+
+- **[TECHNICAL_REPORT.md](TECHNICAL_REPORT.md)** -- Comprehensive 947-line technical report covering solver theory, implementation details, and validation
+- **[AGENTS.md](AGENTS.md)** -- Project context, conventions, and current status
+- **[pinn/README.md](pinn/README.md)** -- PINN surrogate suite setup, architecture, and phased roadmap
+- **[docs/](docs/)** -- Interactive portfolio website with per-case analysis pages

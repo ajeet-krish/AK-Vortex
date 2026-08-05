@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AK-Vortex Desktop: A cross-platform CFD desktop application built with Tauri, Rust, and C++. Geometry editing, real-time simulation, and flow visualization.">
+  <title>Desktop Application - AK-Vortex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+
+  <div class="sidebar">
+    <div class="sidebar-brand"><a href="index.html">AK-Vortex</a></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-heading">Project</div>
+        <a href="index.html" class="nav-item">Home</a>
+        <a href="desktop.html" class="nav-item active">Desktop App</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-heading">Simulations</div>
+        <a href="cylinder.html" class="nav-item">Cylinder</a>
+        <a href="cavity.html" class="nav-item">Lid-Driven Cavity</a>
+        <a href="step.html" class="nav-item">Backward Step</a>
+        <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
+        <a href="urban.html" class="nav-item">Urban Canyon</a>
+        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
+        <a href="flat_plate.html" class="nav-item">Flat Plate</a>
+        <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
+        <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
+        <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-heading">Reference</div>
+        <a href="theory.html" class="nav-item">Theory &amp; Methodology</a>
+        <a href="implementation.html" class="nav-item">C++ Implementation</a>
+        <a href="pinn.html" class="nav-item">Physics-Informed Neural Networks</a>
+        <a href="https://github.com/ajeet-krish/lbm-2d" class="nav-item" target="_blank">GitHub Repository &nearr;</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="main-content">
+
+    <!-- ================================================================ -->
+    <!-- Hero                                                             -->
+    <!-- ================================================================ -->
+    <section class="hero" id="overview">
+      <h1>AK-Vortex <span class="accent-orange">Desktop</span></h1>
+      <p class="subtitle">
+        A cross-platform CFD desktop application that puts a high-performance Lattice Boltzmann solver
+        behind a geometry editor, real-time flow visualization, and parameter study tools.
+        Built with Tauri, Rust, React, and C++.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/ajeet-krish/lbm-2d" class="hero-btn primary" target="_blank">
+          View on GitHub &nearr;
+        </a>
+        <a href="#getting-started" class="hero-btn secondary">
+          Build from Source
+        </a>
+      </div>
+      <div class="hero-badges">
+        <span class="status-badge"><span class="dot"></span> Tauri 2</span>
+        <span class="status-badge"><span class="dot"></span> Rust + C++ FFI</span>
+        <span class="status-badge"><span class="dot"></span> React + TypeScript</span>
+        <span class="status-badge"><span class="dot"></span> Cross-platform</span>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- Video Walkthrough                                                -->
+    <!-- ================================================================ -->
+    <h2>Video Walkthrough</h2>
+
+    <p class="section-intro">
+      Five recordings walk through the application from launch to results.
+      Each placeholder marks where a screen-capture video will be embedded.
+    </p>
+
+    <div class="video-grid">
+
+      <div class="video-placeholder" role="img" aria-label="Application overview video placeholder">
+        <div class="video-icon">&#9654;</div>
+        <div class="video-title">Application Overview</div>
+        <div class="video-duration">0:30</div>
+        <div class="video-description">
+          Launch the app, tour the interface layout: sidebar panels, canvas viewport, solver log.
+          See how the feature-tree sidebar organizes geometry, solver parameters, and visualization controls.
+        </div>
+      </div>
+
+      <div class="video-placeholder" role="img" aria-label="Geometry editor demo video placeholder">
+        <div class="video-icon">&#9654;</div>
+        <div class="video-title">Geometry Editor</div>
+        <div class="video-duration">1:00</div>
+        <div class="video-description">
+          Draw circles, rectangles, and polygons. Place a NACA 2412 airfoil with parametric camber,
+          thickness, and rotation controls. Drag to reposition, resize via handles, detect shape collisions.
+        </div>
+      </div>
+
+      <div class="video-placeholder" role="img" aria-label="Simulation run video placeholder">
+        <div class="video-icon">&#9654;</div>
+        <div class="video-title">Simulation Run</div>
+        <div class="video-duration">0:30</div>
+        <div class="video-description">
+          Configure grid size, Reynolds number, and inflow velocity. Press Run and watch the solver log
+          stream in real time as the C++ backend executes the LBM timestep loop via FFI.
+        </div>
+      </div>
+
+      <div class="video-placeholder" role="img" aria-label="Results visualization video placeholder">
+        <div class="video-icon">&#9654;</div>
+        <div class="video-title">Results Visualization</div>
+        <div class="video-duration">1:00</div>
+        <div class="video-description">
+          Scrub through saved frames. Toggle between velocity, pressure, and vorticity fields.
+          Overlay streamlines and quiver arrows. Export a PNG snapshot or a VTK file for ParaView.
+        </div>
+      </div>
+
+      <div class="video-placeholder" role="img" aria-label="PINN surrogate demo video placeholder">
+        <div class="video-icon">&#9654;</div>
+        <div class="video-title">PINN Surrogate</div>
+        <div class="video-duration">0:30</div>
+        <div class="video-description">
+          Run a parameter sweep across Reynolds numbers. Compare two simulation side-by-side.
+          Launch a GCI grid convergence study from the same interface.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Feature Gallery                                                  -->
+    <!-- ================================================================ -->
+    <h2>Feature Gallery</h2>
+
+    <p class="section-intro">
+      Every screenshot below is a placeholder that will be replaced with a
+      live capture of the running application. The features map directly to
+      the Tauri commands exposed by the Rust backend.
+    </p>
+
+    <div class="feature-gallery">
+
+      <figure class="feature-card">
+        <div class="feature-img-wrap">
+          <img src="assets/images/desktop/geometry-editor.png"
+               alt="Geometry Editor showing a NACA airfoil placed on a grid"
+               class="screenshot"
+               onerror="this.parentElement.classList.add('missing')">
+          <div class="feature-img-fallback">
+            <span>geometry-editor.png</span>
+          </div>
+        </div>
+        <figcaption>
+          <h3>Geometry Editor</h3>
+          <p>
+            Interactive canvas for placing obstacles: circles, rectangles, arbitrary polygons,
+            and parametric NACA 4-digit airfoils. Drag to move, handles to resize, collision
+            detection prevents overlapping geometry. Presets for cylinder, step, NACA 2412, and
+            NACA 0012.
+          </p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card">
+        <div class="feature-img-wrap">
+          <img src="assets/images/desktop/simulation-running.png"
+               alt="Solver log streaming during a simulation run"
+               class="screenshot"
+               onerror="this.parentElement.classList.add('missing')">
+          <div class="feature-img-fallback">
+            <span>simulation-running.png</span>
+          </div>
+        </div>
+        <figcaption>
+          <h3>Simulation Control</h3>
+          <p>
+            Grid size (32-4096), Reynolds number, inflow velocity, max steps, and save interval.
+            The C++ solver runs via FFI in a background thread. A progress bar and real-time log
+            stream status updates back to the UI.
+          </p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card">
+        <div class="feature-img-wrap">
+          <img src="assets/images/desktop/velocity-contour.png"
+               alt="Velocity contour with streamlines overlaid"
+               class="screenshot"
+               onerror="this.parentElement.classList.add('missing')">
+          <div class="feature-img-fallback">
+            <span>velocity-contour.png</span>
+          </div>
+        </div>
+        <figcaption>
+          <h3>Flow Visualization</h3>
+          <p>
+            Render velocity magnitude, pressure, or vorticity fields on an HTML Canvas with a
+            jet colormap. Toggle streamlines and quiver overlays. Probe any point to read
+            local u, v, rho, p, and omega values.
+          </p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card">
+        <div class="feature-img-wrap">
+          <img src="assets/images/desktop/comparison-mode.png"
+               alt="Side-by-side comparison of two simulation results"
+               class="screenshot"
+               onerror="this.parentElement.classList.add('missing')">
+          <div class="feature-img-fallback">
+            <span>comparison-mode.png</span>
+          </div>
+        </div>
+        <figcaption>
+          <h3>Comparison Mode</h3>
+          <p>
+            Load a second simulation output directory and view both fields side-by-side at the same
+            frame. Useful for validating grid refinement, comparing Reynolds numbers, or checking
+            geometry changes.
+          </p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card">
+        <div class="feature-img-wrap">
+          <img src="assets/images/desktop/export-vtk.png"
+               alt="VTK export dialog"
+               class="screenshot"
+               onerror="this.parentElement.classList.add('missing')">
+          <div class="feature-img-fallback">
+            <span>export-vtk.png</span>
+          </div>
+        </div>
+        <figcaption>
+          <h3>Export Pipeline</h3>
+          <p>
+            Export a frame as a PNG image (canvas snapshot) or as a VTK structured grid file
+            for ParaView. VTK export writes cell data for velocity, pressure, and vorticity
+            fields at any saved timestep.
+          </p>
+        </figcaption>
+      </figure>
+
+      <figure class="feature-card">
+        <div class="feature-img-wrap">
+          <img src="assets/images/desktop/gci-study.png"
+               alt="Grid Convergence Index results table"
+               class="screenshot"
+               onerror="this.parentElement.classList.add('missing')">
+          <div class="feature-img-fallback">
+            <span>gci-study.png</span>
+          </div>
+        </div>
+        <figcaption>
+          <h3>GCI Grid Convergence</h3>
+          <p>
+            Run a Richardson extrapolation-based Grid Convergence Index study directly from the
+            UI. The app runs three mesh densities, extracts a forcing metric, and reports the
+            apparent order of convergence and estimated discretization error.
+          </p>
+        </figcaption>
+      </figure>
+
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Architecture                                                     -->
+    <!-- ================================================================ -->
+    <h2>Architecture</h2>
+
+    <p class="section-intro">
+      The application is a three-layer system. A <strong>React + TypeScript</strong> frontend
+      handles all UI rendering. A <strong>Rust/Tauri</strong> middle layer exposes IPC commands,
+      manages the filesystem, and bridges to the solver. The <strong>C++ solver</strong> runs as
+      a compiled static library linked via FFI, keeping the hot loop in native code with
+      OpenMP parallelization.
+    </p>
+
+    <div class="arch-diagram">
+      <div class="arch-layer arch-frontend">
+        <div class="arch-label">Frontend</div>
+        <div class="arch-stack">
+          <span class="arch-chip">React 18</span>
+          <span class="arch-chip">TypeScript</span>
+          <span class="arch-chip">Vite</span>
+          <span class="arch-chip">HTML Canvas</span>
+        </div>
+        <div class="arch-desc">UI panels, geometry editor, flow canvas, color scale bar</div>
+      </div>
+      <div class="arch-arrow">&#8595; invoke() &#8593; IPC</div>
+      <div class="arch-layer arch-middle">
+        <div class="arch-label">Rust / Tauri 2</div>
+        <div class="arch-stack">
+          <span class="arch-chip">tauri::command</span>
+          <span class="arch-chip">serde_json</span>
+          <span class="arch-chip">plugin-fs</span>
+          <span class="arch-chip">plugin-dialog</span>
+        </div>
+        <div class="arch-desc">Commands: run_simulation, run_geometry_simulation, read_frame_json, export_vtk, run_sweep, run_gci</div>
+      </div>
+      <div class="arch-arrow">&#8595; FFI (extern "C") &#8593; return codes</div>
+      <div class="arch-layer arch-backend">
+        <div class="arch-label">C++ Solver</div>
+        <div class="arch-stack">
+          <span class="arch-chip">D2Q9 LBM</span>
+          <span class="arch-chip">MRT Collision</span>
+          <span class="arch-chip">OpenMP</span>
+          <span class="arch-chip">JSON Output</span>
+        </div>
+        <div class="arch-desc">lbm_solve_c, lbm_solve_geometry, lbm_write_vtk, lbm_run_sweep, lbm_run_gci</div>
+      </div>
+    </div>
+
+    <h3>Data Flow</h3>
+
+    <p class="section-intro">
+      The user draws geometry in the React canvas and sets solver parameters in the sidebar.
+      On "Run", the frontend serializes the shape list to JSON and calls
+      <code>run_geometry_simulation</code> via Tauri's IPC. The Rust layer converts strings
+      to C-compatible types and calls the C++ solver through <code>extern "C"</code> FFI.
+      The solver writes per-frame JSON files to the app data directory. When the simulation
+      completes, the frontend reads each frame back via <code>read_frame_json</code> and
+      renders it on the canvas.
+    </p>
+
+    <pre><code>// Rust FFI bridge (simplified)
+extern "C" {
+    fn lbm_solve_c(
+        nx: c_int, ny: c_int, re: c_double,
+        u_inflow: c_double, max_steps: c_int,
+        save_interval: c_int, output_dir: *const c_char,
+        case_type: *const c_char,
+    ) -&gt; c_int;
+}
+
+// Tauri command (called from React)
+#[tauri::command]
+pub fn run_simulation(nx: i32, ny: i32, re: f64, ...) -&gt; Result&lt;String, String&gt; {
+    let c_output = CString::new(output_dir)?;
+    let result = unsafe { lbm_solve_c(nx, ny, re, ..., c_output.as_ptr(), ...) };
+    Ok(output_dir)
+}</code></pre>
+
+    <!-- ================================================================ -->
+    <!-- Engineering Design Process                                       -->
+    <!-- ================================================================ -->
+    <h2>Engineering Design Process</h2>
+
+    <div class="process-timeline">
+
+      <div class="process-step">
+        <div class="process-number">01</div>
+        <div class="process-content">
+          <h3>Requirements</h3>
+          <p>
+            A desktop application for 2D CFD that hides no solver internals.
+            Geometry editor for custom obstacles. Real-time visualization during
+            and after simulation. Export to standard formats (PNG, VTK).
+            Parameter sweeps and grid convergence studies. Cross-platform (macOS,
+            Linux, Windows).
+          </p>
+        </div>
+      </div>
+
+      <div class="process-step">
+        <div class="process-number">02</div>
+        <div class="process-content">
+          <h3>Architecture</h3>
+          <p>
+            Tauri 2 chosen over Electron for native performance and small binary
+            size. Rust backend manages IPC, filesystem, and FFI bridging. C++ solver
+            remains untouched as a static library. React frontend renders all UI
+            with Canvas-based flow visualization. No bundling the C++ into WASM:
+            the solver runs at full native speed.
+          </p>
+        </div>
+      </div>
+
+      <div class="process-step">
+        <div class="process-number">03</div>
+        <div class="process-content">
+          <h3>Implementation</h3>
+          <p>
+            The geometry editor uses a 2D canvas with grid-coordinate mapping, hit-testing
+            for circles/polygons via ray-casting, and NACA 4-digit airfoil generation from
+            analytical equations. The solver FFI exposes six functions. Frame data is read
+            as JSON and rendered on a separate canvas with a jet-colormap shader. Streamlines
+            are computed by tracing the velocity field in JavaScript.
+          </p>
+        </div>
+      </div>
+
+      <div class="process-step">
+        <div class="process-number">04</div>
+        <div class="process-content">
+          <h3>Validation</h3>
+          <p>
+            Every geometry preset (cylinder, step, NACA 2412, NACA 0012) produces
+            physically expected flow patterns. GCI studies verify grid convergence
+            at Richardson-extrapolation order. VTK exports are verified in ParaView.
+            The same C++ solver produces validated results across 12+ simulation
+            cases documented on this site.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Technology Choices                                               -->
+    <!-- ================================================================ -->
+    <h2>Technology Choices</h2>
+
+    <div class="tech-grid">
+
+      <div class="tech-card">
+        <div class="tech-icon">T</div>
+        <h3>Why Tauri?</h3>
+        <p>
+          Tauri 2 produces a native window with a webview frontend at a fraction of
+          Electron's binary size (~15 MB vs ~200 MB). The Rust backend is memory-safe
+          and compiles to a single binary. Plugins for filesystem access and native
+          dialogs handle OS integration without custom native code.
+        </p>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">R</div>
+        <h3>Why Rust?</h3>
+        <p>
+          The Tauri backend must be safe, fast, and correct. Rust's ownership model
+          prevents the use-after-free and data-race bugs that would be easy to introduce
+          when bridging between a C++ FFI, JSON parsing, and async IPC. The solver FFI
+          calls are wrapped in <code>unsafe</code> blocks with path validation on all
+          user-provided strings.
+        </p>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">C</div>
+        <h3>Why C++ FFI?</h3>
+        <p>
+          The LBM solver is a performance-critical hot loop with OpenMP parallelization.
+          Rewriting it in Rust would duplicate effort and risk introducing regressions.
+          The existing C++ codebase is validated across 12 simulation cases. FFI lets
+          the solver run at full native speed with zero overhead from the UI layer.
+        </p>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">React</div>
+        <h3>Why React?</h3>
+        <p>
+          The UI has complex state: geometry shapes, frame playback, field selection,
+          quiver config, comparison mode, GCI results. React's component model and
+          hooks make this manageable. TypeScript adds type safety to the Tauri IPC
+          calls, catching mismatches between the Rust command signatures and the
+          frontend invocations at compile time.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Validation Results                                               -->
+    <!-- ================================================================ -->
+    <h2>Validation Results</h2>
+
+    <p class="section-intro">
+      The desktop app calls the same C++ solver that produces the validated results
+      on the simulation case pages. The table below summarizes the key benchmarks
+      that confirm the solver's accuracy.
+    </p>
+
+    <table>
+      <tr>
+        <th>Case</th>
+        <th>Re</th>
+        <th>Metric</th>
+        <th>Solver</th>
+        <th>Reference</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>Cylinder</td>
+        <td>100</td>
+        <td>C<sub>d</sub></td>
+        <td>1.536</td>
+        <td>1.33-1.47 (Mei BB)</td>
+        <td>Validated</td>
+      </tr>
+      <tr>
+        <td>Lid-Driven Cavity</td>
+        <td>100</td>
+        <td>u-profile</td>
+        <td>5-10% L2</td>
+        <td>Ghia et al. 1982</td>
+        <td>Validated</td>
+      </tr>
+      <tr>
+        <td>Backward Step</td>
+        <td>100-400</td>
+        <td>X<sub>r</sub>/H</td>
+        <td>Matches Armaly</td>
+        <td>Armaly et al. 1983</td>
+        <td>Validated</td>
+      </tr>
+      <tr>
+        <td>Flat Plate</td>
+        <td>1000</td>
+        <td>2C<sub>f</sub></td>
+        <td>0.084</td>
+        <td>0.072 (Blasius)</td>
+        <td>Validated</td>
+      </tr>
+      <tr>
+        <td>Orifice Plate</td>
+        <td>100</td>
+        <td>K (loss)</td>
+        <td>Varies by config</td>
+        <td>ISO 5167</td>
+        <td>Validated</td>
+      </tr>
+      <tr>
+        <td>Urban Canyon</td>
+        <td>100</td>
+        <td>C<sub>d</sub></td>
+        <td>0.37-55</td>
+        <td>Oke 1988 regimes</td>
+        <td>Validated</td>
+      </tr>
+    </table>
+
+    <!-- ================================================================ -->
+    <!-- Getting Started                                                  -->
+    <!-- ================================================================ -->
+    <h2 id="getting-started">Getting Started</h2>
+
+    <h3>Prerequisites</h3>
+
+    <ul>
+      <li><strong>Rust</strong> (stable, via <code>rustup</code>)</li>
+      <li><strong>Node.js</strong> 18+ and npm</li>
+      <li><strong>C++ compiler</strong> with OpenMP support (Clang, GCC, or MSVC)</li>
+      <li><strong>Tauri CLI</strong>: <code>npm install -D @tauri-apps/cli</code></li>
+    </ul>
+
+    <h3>Build</h3>
+
+    <pre><code># Clone the repository
+git clone https://github.com/ajeet-krish/lbm-2d.git
+cd lbm-2d
+
+# Build the C++ solver library (produces liblbm_solver.a)
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --parallel $(nproc)
+cd ..
+
+# Install frontend dependencies and launch the desktop app
+cd cf-desktop
+npm install
+npm run tauri dev</code></pre>
+
+    <p class="section-intro">
+      The <code>tauri dev</code> command starts the Vite dev server for the React frontend
+      and compiles the Rust backend in debug mode. The app window opens automatically.
+      For a release build, run <code>npm run tauri build</code> to produce a platform-specific
+      installer.
+    </p>
+
+    <h3>Release Build</h3>
+
+    <pre><code># Produces a native installer in cf-desktop/src-tauri/target/release/bundle/
+npm run tauri build
+
+# macOS: .dmg in target/release/bundle/dmg/
+# Linux: .deb / .AppImage in target/release/bundle/deb/ and /appimage/
+# Windows: .msi in target/release/bundle/msi/</code></pre>
+
+    <div class="callout cyan">
+      <strong>Platform notes:</strong> On macOS, the app uses the system webview (WKWebView).
+      On Linux, it requires <code>webkit2gtk-4.1</code>. On Windows, it uses the Edge WebView2
+      runtime. The C++ solver compiles with OpenMP on all three platforms.
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Source Layout                                                     -->
+    <!-- ================================================================ -->
+    <h2>Source Layout</h2>
+
+    <pre><code>cf-desktop/
+  src/                        # React frontend
+    App.tsx                   # Main application state and layout
+    main.tsx                  # Entry point
+    styles.css                # Ansys/ParaView-inspired dark theme
+    components/
+      GeometryEditor.tsx      # Interactive obstacle drawing canvas
+      FlowCanvas.tsx          # Velocity/pressure/vorticity renderer
+      ColorScaleBar.tsx       # Colormap legend
+      ConvergencePlot.tsx     # Convergence data display
+      StaticPlots.tsx         # Pressure/vorticity static images
+      FeatureTree.tsx         # Sidebar parameter panel (SolidWorks-style tree)
+    utils/
+      naca.ts                 # NACA 4-digit airfoil generator
+      quiver.ts               # Quiver arrow overlay
+  src-tauri/
+    src/
+      main.rs                 # Tauri builder + command registration
+      commands.rs             # IPC command handlers
+      solver.rs               # C++ FFI declarations and wrappers
+    Cargo.toml                # Rust dependencies
+    tauri.conf.json           # App window config, CSP, bundle settings
+  index.html                  # Vite entry HTML
+  vite.config.ts              # Vite + React plugin config
+  package.json                # npm dependencies</code></pre>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/lbm-2d"
+        target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
+        target="_blank">LinkedIn</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('sidebarToggle')?.addEventListener('click', function () {
+      document.querySelector('.sidebar').classList.toggle('open');
+      document.body.classList.toggle('sidebar-open');
+    });
+  </script>
+
+</body>
+
+</html>
