@@ -204,3 +204,41 @@ pub fn export_vtk(path: String, step: i32) -> Result<String, String> {
     solver::write_vtk(&path, step, &vtk_path)?;
     Ok(vtk_path)
 }
+
+#[command]
+pub fn run_sweep(
+    nx: i32,
+    ny: i32,
+    re_min: f64,
+    re_max: f64,
+    re_steps: i32,
+    u_inflow: f64,
+    max_steps: i32,
+    save_interval: i32,
+    geometry_json: String,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let output_dir = app.path()
+        .app_data_dir()
+        .unwrap()
+        .join("simulations")
+        .join("sweep")
+        .to_string_lossy()
+        .to_string();
+
+    log_message(&format!(
+        "[sweep] Starting parameter sweep: Re=[{}..{}] x {} steps",
+        re_min, re_max, re_steps
+    ));
+    log_message(&format!("[sweep] Output directory: {}", output_dir));
+
+    let _ = std::fs::remove_dir_all(&output_dir);
+
+    solver::run_sweep(
+        nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
+        &output_dir, &geometry_json,
+    )?;
+    log_message("[sweep] Parameter sweep complete.");
+
+    Ok(output_dir)
+}

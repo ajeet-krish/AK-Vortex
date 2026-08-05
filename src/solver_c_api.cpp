@@ -640,3 +640,53 @@ extern "C" int lbm_write_vtk(const char* source_dir, int step, const char* dest_
     vtk.close();
     return 0;
 }
+
+// ==========================================================================
+// Parameter Sweep Runner
+// ==========================================================================
+
+extern "C" int lbm_run_sweep(
+    int nx, int ny,
+    double re_min, double re_max, int re_steps,
+    double u_inflow,
+    int max_steps, int save_interval,
+    const char* output_dir,
+    const char* geometry_json
+) {
+    std::string out_dir(output_dir);
+    std::filesystem::create_directories(out_dir);
+
+    std::ofstream csv(out_dir + "/sweep_results.csv");
+    csv << "Re,tau,max_velocity\n";
+
+    for (int i = 0; i < re_steps; ++i) {
+        double re = re_min + (re_max - re_min) * i / (re_steps > 1 ? (re_steps - 1) : 1);
+        std::string re_dir = out_dir + "/re" + std::to_string(static_cast<int>(re));
+        std::filesystem::create_directories(re_dir);
+
+        double nu = u_inflow * 60.0 / re;
+        double tau = 0.5 + 3.0 * nu;
+
+        lbm_solve_geometry(nx, ny, re, u_inflow, max_steps, save_interval, re_dir.c_str(), geometry_json);
+
+        // Read last frame to get max velocity
+        double max_vel = 0.0;
+        std::string last_frame = re_dir + "/frames/frame_" + std::to_string(max_steps) + ".json";
+        std::ifstream fin(last_frame);
+        if (fin.is_open()) {
+            std::string json_str((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
+            fin.close();
+            auto vel = parse_json_array_vtk(json_str, "velocity");
+            for (double v : vel) {
+                if (v > max_vel) max_vel = v;
+            }
+        }
+
+        csv << static_cast<int>(re) << "," << tau << "," << max_vel << "\n";
+
+        reset_solver_state();
+    }
+
+    csv.close();
+    return 0;
+}

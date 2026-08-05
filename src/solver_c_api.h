@@ -28,6 +28,15 @@ int lbm_write_vtk(
     const char* dest_path
 );
 
+int lbm_run_sweep(
+    int nx, int ny,
+    double re_min, double re_max, int re_steps,
+    double u_inflow,
+    int max_steps, int save_interval,
+    const char* output_dir,
+    const char* geometry_json
+);
+
 #ifdef __cplusplus
 }
 #endif

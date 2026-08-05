@@ -31,6 +31,19 @@ extern "C" {
         step: c_int,
         dest_path: *const c_char,
     ) -> c_int;
+
+    fn lbm_run_sweep(
+        nx: c_int,
+        ny: c_int,
+        re_min: c_double,
+        re_max: c_double,
+        re_steps: c_int,
+        u_inflow: c_double,
+        max_steps: c_int,
+        save_interval: c_int,
+        output_dir: *const c_char,
+        geometry_json: *const c_char,
+    ) -> c_int;
 }
 
 pub fn reset_solver() {
@@ -101,4 +114,22 @@ pub fn write_vtk(source_dir: &str, step: i32, dest_path: &str) -> Result<(), Str
         }
     }
     Ok(())
+}
+
+pub fn run_sweep(
+    nx: i32, ny: i32,
+    re_min: f64, re_max: f64, re_steps: i32,
+    u_inflow: f64, max_steps: i32, save_interval: i32,
+    output_dir: &str, geometry_json: &str,
+) -> Result<i32, String> {
+    let c_output = CString::new(output_dir.to_string()).map_err(|e| e.to_string())?;
+    let c_geom = CString::new(geometry_json.to_string()).map_err(|e| e.to_string())?;
+
+    unsafe {
+        let result = lbm_run_sweep(
+            nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
+            c_output.as_ptr(), c_geom.as_ptr(),
+        );
+        Ok(result)
+    }
 }
