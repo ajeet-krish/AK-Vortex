@@ -22,6 +22,7 @@ interface GeometryEditorProps {
     nx: number;
     ny: number;
     onGeometryChange: (shapes: Shape[]) => void;
+    onSelectionChange?: (id: string | null) => void;
 }
 
 type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca' | 'move';
@@ -36,7 +37,7 @@ function nextShapeName(type: string, shapes: Shape[]): string {
     return `${label} ${count}`;
 }
 
-export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEditorProps) {
+export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionChange }: GeometryEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [activeTool, setActiveTool] = useState<DrawTool>('circle');
@@ -515,6 +516,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         if (hitShape) {
             // Select the shape
             setSelectedId(hitShape.id);
+            onSelectionChange?.(hitShape.id);
             // Start drag
             setDraggingId(hitShape.id);
             setDragStartGrid(pt);
@@ -524,6 +526,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         // If move tool is active but clicked empty space, deselect
         if (activeTool === 'move') {
             setSelectedId(null);
+            onSelectionChange?.(null);
             return;
         }
 
@@ -677,6 +680,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         const updated = shapes.filter((s) => s.id !== id);
         setShapes(updated);
         setSelectedId(null);
+        onSelectionChange?.(null);
         setCollisionWarning(null);
         onGeometryChange(updated);
     };
@@ -685,6 +689,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
         setShapes([]);
         setPolygonPoints([]);
         setSelectedId(null);
+        onSelectionChange?.(null);
         setCollisionWarning(null);
         onGeometryChange([]);
     };
@@ -917,7 +922,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange }: GeometryEdi
                         <div
                             key={shape.id}
                             className={`shape-item ${selectedId === shape.id ? 'selected' : ''}`}
-                            onClick={() => setSelectedId(shape.id)}
+                            onClick={() => { setSelectedId(shape.id); onSelectionChange?.(shape.id); }}
                         >
                             <span className="shape-info">
                                 {shape.name}

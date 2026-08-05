@@ -73,6 +73,33 @@ function App() {
 
     // Geometry editor state
     const [shapes, setShapes] = useState<Shape[]>([]);
+    const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+
+    const handleCreateArray = (count: number, spacing: number, angle: number) => {
+        if (!selectedShapeId || count < 2) return;
+        const sourceShape = shapes.find((s) => s.id === selectedShapeId);
+        if (!sourceShape) return;
+
+        const rad = (angle * Math.PI) / 180;
+        const dx = spacing * Math.cos(rad);
+        const dy = spacing * Math.sin(rad);
+
+        const newShapes: Shape[] = [...shapes];
+        for (let i = 1; i < count; i++) {
+            const copy: Shape = {
+                ...sourceShape,
+                id: Date.now().toString() + i,
+                name: `${sourceShape.name} (${i + 1})`,
+                x: sourceShape.x + dx * i,
+                y: sourceShape.y + dy * i,
+                points: sourceShape.points
+                    ? sourceShape.points.map((p) => ({ x: p.x + dx * i, y: p.y + dy * i }))
+                    : undefined,
+            };
+            newShapes.push(copy);
+        }
+        setShapes(newShapes);
+    };
 
     // Solver log state
     const [solverLog, setSolverLog] = useState<string[]>([]);
@@ -374,6 +401,8 @@ function App() {
                         setShowQuiver={setShowQuiver}
                         quiverConfig={quiverConfig}
                         setQuiverConfig={setQuiverConfig}
+                        selectedShapeId={selectedShapeId}
+                        onCreateArray={handleCreateArray}
                     />
                 </aside>
 
@@ -410,6 +439,7 @@ function App() {
                                 nx={config.nx}
                                 ny={config.ny}
                                 onGeometryChange={setShapes}
+                                onSelectionChange={setSelectedShapeId}
                             />
                         </div>
                     ) : (

@@ -55,6 +55,8 @@ interface FeatureTreeProps {
     setShowQuiver: (v: boolean) => void;
     quiverConfig: QuiverConfig;
     setQuiverConfig: (cfg: QuiverConfig) => void;
+    selectedShapeId: string | null;
+    onCreateArray: (count: number, spacing: number, angle: number) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -272,7 +274,12 @@ export default function FeatureTree({
     setShowQuiver,
     quiverConfig,
     setQuiverConfig,
+    selectedShapeId,
+    onCreateArray,
 }: FeatureTreeProps) {
+    const [arrayCount, setArrayCount] = useState(5);
+    const [arraySpacing, setArraySpacing] = useState(50);
+    const [arrayAngle, setArrayAngle] = useState(0);
     const hasResults = frames.length > 0;
     const hasFrame = !!frameData;
     const currentStep = frames.length > 0 ? frames[frameIndex] : 0;
@@ -342,6 +349,49 @@ export default function FeatureTree({
                                 onClick={() => {}}
                             />
                         ))}
+                        {selectedShapeId && (
+                            <div className="tree-array-tool">
+                                <div className="tree-subgroup-header">Array Tool</div>
+                                <TreeItem label="Count">
+                                    <input
+                                        type="number"
+                                        className="tree-num-input"
+                                        min="2"
+                                        max="50"
+                                        value={arrayCount}
+                                        onChange={(e) => setArrayCount(Math.max(2, Math.min(50, +e.target.value || 2)))}
+                                    />
+                                </TreeItem>
+                                <TreeItem label="Spacing">
+                                    <input
+                                        type="number"
+                                        className="tree-num-input"
+                                        min="10"
+                                        max="500"
+                                        step="10"
+                                        value={arraySpacing}
+                                        onChange={(e) => setArraySpacing(Math.max(10, +e.target.value || 50))}
+                                    />
+                                </TreeItem>
+                                <TreeItem label="Angle">
+                                    <input
+                                        type="number"
+                                        className="tree-num-input"
+                                        min="0"
+                                        max="360"
+                                        step="5"
+                                        value={arrayAngle}
+                                        onChange={(e) => setArrayAngle(+e.target.value || 0)}
+                                    />
+                                </TreeItem>
+                                <button
+                                    className="tree-action-btn"
+                                    onClick={() => onCreateArray(arrayCount, arraySpacing, arrayAngle)}
+                                >
+                                    Create Array
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </TreeSection>
