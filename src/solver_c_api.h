@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+void reset_solver_state();
+
 int lbm_solve_c(
     int nx, int ny,
     double re, double u_inflow,

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 
 // ==========================================================================
 // D2Q9 LATTICE BOLTZMANN METHOD -- Core solver
@@ -833,6 +834,11 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
             int idx = node_index(x, y);
             if (sys.obstacle[idx]) {
                 obst_arr[idx2] = 1;
+                vel_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                u_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                v_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                rho_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                omega_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
                 ++idx2;
                 continue;
             }
@@ -878,38 +884,45 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
     out << "{\"nx\":" << nx_ds << ",\"ny\":" << ny_ds << ",\"velocity\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << vel_arr[i];
+        if (std::isnan(vel_arr[i])) out << "null";
+        else out << vel_arr[i];
     }
 
     out << "],\"u\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << u_arr[i];
+        if (std::isnan(u_arr[i])) out << "null";
+        else out << u_arr[i];
     }
 
     out << "],\"v\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << v_arr[i];
+        if (std::isnan(v_arr[i])) out << "null";
+        else out << v_arr[i];
     }
 
     out << "],\"rho\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << rho_arr[i];
+        if (std::isnan(rho_arr[i])) out << "null";
+        else out << rho_arr[i];
     }
 
     out << "],\"p\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
         // Pressure perturbation: p' = (rho - 1) / 3 (relative to reference density)
-        out << ((rho_arr[i] - 1.0) / 3.0);
+        double p_val = (rho_arr[i] - 1.0) / 3.0;
+        if (std::isnan(p_val)) out << "null";
+        else out << p_val;
     }
 
     out << "],\"omega\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << omega_arr[i];
+        if (std::isnan(omega_arr[i])) out << "null";
+        else out << omega_arr[i];
     }
 
     out << "],\"obstacle\":[";
@@ -1048,6 +1061,11 @@ inline void save_json_frame_thermal(LBMCapabilities& sys, int step,
             if (sys.obstacle[idx]) {
                 obst_arr[idx2] = 1;
                 temp_arr[idx2] = T_wall;  // wall temperature
+                vel_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                u_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                v_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                rho_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
+                omega_arr[idx2] = std::numeric_limits<double>::quiet_NaN();
                 ++idx2;
                 continue;
             }
@@ -1090,33 +1108,40 @@ inline void save_json_frame_thermal(LBMCapabilities& sys, int step,
     out << "{\"nx\":" << nx_ds << ",\"ny\":" << ny_ds << ",\"velocity\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << vel_arr[i];
+        if (std::isnan(vel_arr[i])) out << "null";
+        else out << vel_arr[i];
     }
     out << "],\"u\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << u_arr[i];
+        if (std::isnan(u_arr[i])) out << "null";
+        else out << u_arr[i];
     }
     out << "],\"v\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << v_arr[i];
+        if (std::isnan(v_arr[i])) out << "null";
+        else out << v_arr[i];
     }
     out << "],\"rho\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << rho_arr[i];
+        if (std::isnan(rho_arr[i])) out << "null";
+        else out << rho_arr[i];
     }
     out << "],\"p\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
         // Pressure perturbation: p' = (rho - 1) / 3 (relative to reference density)
-        out << ((rho_arr[i] - 1.0) / 3.0);
+        double p_val = (rho_arr[i] - 1.0) / 3.0;
+        if (std::isnan(p_val)) out << "null";
+        else out << p_val;
     }
     out << "],\"omega\":[";
     for (int i = 0; i < n_ds; ++i) {
         if (i > 0) out << ",";
-        out << omega_arr[i];
+        if (std::isnan(omega_arr[i])) out << "null";
+        else out << omega_arr[i];
     }
     out << "],\"temperature\":[";
     for (int i = 0; i < n_ds; ++i) {

@@ -6,6 +6,7 @@ import GeometryEditor, { type Shape } from './components/GeometryEditor';
 import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
 import StaticPlots from './components/StaticPlots';
+import FeatureTree from './components/FeatureTree';
 
 interface SimConfig {
     nx: number;
@@ -70,8 +71,6 @@ function App() {
 
     // Solver log state
     const [solverLog, setSolverLog] = useState<string[]>([]);
-    const [showLog, setShowLog] = useState(false);
-    const logEndRef = useRef<HTMLDivElement>(null);
 
     // Responsive canvas sizing
     const containerRef = useRef<HTMLDivElement>(null);
@@ -155,10 +154,6 @@ function App() {
             try {
                 const entries = await invoke<string[]>('get_solver_log', {});
                 setSolverLog(entries);
-                // Auto-scroll to bottom
-                if (logEndRef.current) {
-                    logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                }
             } catch (e) {
                 console.error('Failed to fetch solver log:', e);
             }
@@ -216,6 +211,8 @@ function App() {
         setFrameData(null);
         setSimProgress({ step: 0, total: config.maxSteps, status: 'Initializing...' });
         try {
+            // Reset C++ globals first
+            await invoke('reset_solver');
             let dir: string;
             if (config.caseType === 'custom') {
                 const geometryJson = JSON.stringify(shapes.map(s => {
@@ -279,10 +276,6 @@ function App() {
         setConfig({ ...config, caseType, nx: defaults.nx, ny: defaults.ny });
     };
 
-    const handleSliderChange = (index: number) => {
-        setFrameIndex(index);
-    };
-
     const togglePlay = () => {
         if (playing) {
             setPlaying(false);
@@ -321,248 +314,38 @@ function App() {
 
             <div className="main-layout">
                 <aside className="sidebar">
-                    <div className="panel">
-                        <h2>Case Configuration</h2>
-
-                        <div className="form-group">
-                            <label>Case Type</label>
-                            <select
-                                value={config.caseType}
-                                onChange={(e) => handleCaseTypeChange(e.target.value)}
-                            >
-                                <option value="cylinder">Cylinder Flow</option>
-                                <option value="cavity">Lid-Driven Cavity</option>
-                                <option value="step">Backward Step</option>
-                                <option value="custom">Custom Geometry</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Grid</label>
-                            <div className="slider-with-input">
-                                <input
-                                    type="range"
-                                    min="100"
-                                    max="2000"
-                                    step="100"
-                                    value={config.nx}
-                                    onChange={(e) => setConfig({ ...config, nx: +e.target.value })}
-                                />
-                                <input
-                                    type="number"
-                                    className="slider-value"
-                                    min="100"
-                                    max="2000"
-                                    step="100"
-                                    value={config.nx}
-                                    onChange={(e) => setConfig({ ...config, nx: Math.max(100, Math.min(2000, +e.target.value || 100)) })}
-                                />
-                                <span className="slider-unit">x</span>
-                                <input
-                                    type="number"
-                                    className="slider-value"
-                                    min="100"
-                                    max="2000"
-                                    step="100"
-                                    value={config.ny}
-                                    onChange={(e) => setConfig({ ...config, ny: Math.max(100, Math.min(2000, +e.target.value || 100)) })}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Reynolds Number</label>
-                            <div className="slider-with-input">
-                                <input
-                                    type="range"
-                                    min="10"
-                                    max="2000"
-                                    step="10"
-                                    value={config.re}
-                                    onChange={(e) => setConfig({ ...config, re: +e.target.value })}
-                                />
-                                <input
-                                    type="number"
-                                    className="slider-value"
-                                    min="10"
-                                    max="2000"
-                                    step="10"
-                                    value={config.re}
-                                    onChange={(e) => setConfig({ ...config, re: Math.max(10, Math.min(2000, +e.target.value || 10)) })}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Max Steps</label>
-                            <div className="slider-with-input">
-                                <input
-                                    type="range"
-                                    min="1000"
-                                    max="100000"
-                                    step="1000"
-                                    value={config.maxSteps}
-                                    onChange={(e) => setConfig({ ...config, maxSteps: +e.target.value })}
-                                />
-                                <input
-                                    type="number"
-                                    className="slider-value"
-                                    min="1000"
-                                    max="100000"
-                                    step="1000"
-                                    value={config.maxSteps}
-                                    onChange={(e) => setConfig({ ...config, maxSteps: Math.max(1000, Math.min(100000, +e.target.value || 1000)) })}
-                                />
-                            </div>
-                        </div>
-
-                        {running ? (
-                            <div className="sim-progress">
-                                <div className="sim-progress-bar">
-                                    <div className="sim-progress-fill" style={{ width: `${simProgress.total > 0 ? (simProgress.step / simProgress.total) * 100 : 0}%` }} />
-                                </div>
-                                <span className="sim-progress-text">{simProgress.status}</span>
-                            </div>
-                        ) : (
-                            <button className="btn-primary" onClick={runSimulation}>
-                                Run Simulation
-                            </button>
-                        )}
-                    </div>
-
-                    {frames.length > 0 && (
-                        <div className="panel">
-                            <h2>Playback</h2>
-                            <div className="playback-controls">
-                                <button
-                                    className="btn-play"
-                                    onClick={togglePlay}
-                                >
-                                    {playing ? 'Pause' : 'Play'}
-                                </button>
-                                <select
-                                    className="speed-select"
-                                    value={playbackSpeed}
-                                    onChange={(e) => setPlaybackSpeed(+e.target.value)}
-                                >
-                                    <option value={500}>0.5x</option>
-                                    <option value={200}>1x</option>
-                                    <option value={100}>2x</option>
-                                    <option value={50}>4x</option>
-                                    <option value={25}>8x</option>
-                                </select>
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={frames.length - 1}
-                                value={frameIndex}
-                                onChange={(e) => handleSliderChange(+e.target.value)}
-                            />
-                            <span>Frame {currentStep} / {frames[frames.length - 1]}</span>
-                        </div>
-                    )}
-
-                    {frameData && (
-                        <div className="panel">
-                            <h2>Field Selector</h2>
-                            <div className="field-buttons">
-                                <button
-                                    className={field === 'velocity' ? 'active' : ''}
-                                    onClick={() => setField('velocity')}
-                                >
-                                    Velocity
-                                </button>
-                                <button
-                                    className={field === 'pressure' ? 'active' : ''}
-                                    onClick={() => setField('pressure')}
-                                >
-                                    Pressure
-                                </button>
-                                <button
-                                    className={field === 'vorticity' ? 'active' : ''}
-                                    onClick={() => setField('vorticity')}
-                                >
-                                    Vorticity
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {frameData && (
-                        <div className="panel">
-                            <h2>Visualization</h2>
-
-                            <div className="form-group">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={showStreamlines}
-                                        onChange={(e) => setShowStreamlines(e.target.checked)}
-                                        disabled={field !== 'velocity'}
-                                    />
-                                    Streamlines
-                                </label>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={useManualRange}
-                                        onChange={(e) => setUseManualRange(e.target.checked)}
-                                    />
-                                    Manual Color Range
-                                </label>
-                            </div>
-
-                            {useManualRange && (
-                                <div className="range-inputs">
-                                    <div className="form-group">
-                                        <label>Min</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            value={manualMin}
-                                            onChange={(e) => setManualMin(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Max</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            value={manualMax}
-                                            onChange={(e) => setManualMax(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <button className="btn-export" onClick={handleExportPng}>
-                                Export PNG
-                            </button>
-
-                            <button className="btn-reset" onClick={resetSimulation}>
-                                New Simulation
-                            </button>
-                        </div>
-                    )}
-
-                    {probe && (
-                        <div className="panel probe-panel">
-                            <h2>Probe</h2>
-                            <div className="probe-values">
-                                <span>x: {probe.x}</span>
-                                <span>y: {probe.y}</span>
-                                <span>u: {probe.u.toFixed(4)}</span>
-                                <span>v: {probe.v.toFixed(4)}</span>
-                                <span>|V|: {probe.speed.toFixed(4)}</span>
-                                <span>p: {probe.p.toFixed(4)}</span>
-                                <span>&omega;: {probe.omega.toFixed(4)}</span>
-                            </div>
-                        </div>
-                    )}
+                    <FeatureTree
+                        config={config}
+                        setConfig={setConfig}
+                        onCaseTypeChange={handleCaseTypeChange}
+                        running={running}
+                        simProgress={simProgress}
+                        frames={frames}
+                        frameIndex={frameIndex}
+                        setFrameIndex={setFrameIndex}
+                        frameData={frameData}
+                        field={field}
+                        setField={setField}
+                        playing={playing}
+                        playbackSpeed={playbackSpeed}
+                        setPlaybackSpeed={setPlaybackSpeed}
+                        togglePlay={togglePlay}
+                        showStreamlines={showStreamlines}
+                        setShowStreamlines={setShowStreamlines}
+                        useManualRange={useManualRange}
+                        setUseManualRange={setUseManualRange}
+                        manualMin={manualMin}
+                        setManualMin={setManualMin}
+                        manualMax={manualMax}
+                        setManualMax={setManualMax}
+                        runSimulation={runSimulation}
+                        resetSimulation={resetSimulation}
+                        handleExportPng={handleExportPng}
+                        probe={probe}
+                        shapes={shapes}
+                        solverLog={solverLog}
+                        setSolverLog={setSolverLog}
+                    />
                 </aside>
 
                 <main className="content">
@@ -606,36 +389,6 @@ function App() {
                 </main>
             </div>
 
-            {/* Solver Log Panel */}
-            {solverLog.length > 0 && (
-                <div className="log-panel">
-                    <div className="log-header">
-                        <button
-                            className="log-toggle"
-                            onClick={() => setShowLog(!showLog)}
-                        >
-                            {showLog ? 'Hide Log' : 'Show Log'} ({solverLog.length})
-                        </button>
-                        <button
-                            className="log-clear"
-                            onClick={() => {
-                                setSolverLog([]);
-                                invoke('clear_solver_log');
-                            }}
-                        >
-                            Clear
-                        </button>
-                    </div>
-                    {showLog && (
-                        <div className="log-content">
-                            {solverLog.map((entry, i) => (
-                                <div key={i} className="log-entry">{entry}</div>
-                            ))}
-                            <div ref={logEndRef} />
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }

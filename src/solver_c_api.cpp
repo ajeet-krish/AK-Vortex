@@ -8,6 +8,18 @@
 #include <random>
 
 // ==========================================================================
+// Reset all C++ global solver state between runs
+// ==========================================================================
+extern "C" void reset_solver_state() {
+    g_use_les = false;
+    g_case = CaseType::CYLINDER;
+    g_collision = CollisionType::MRT;
+    g_step_h_step = -1;
+    g_step_h_inlet = -1;
+    g_inlet_dir = 0;
+}
+
+// ==========================================================================
 // Simple JSON shape parser (no external dependencies)
 // Parses geometry JSON array of shape primitives:
 //   {"type":"circle",    "x":N, "y":N, "radius":N}
@@ -292,6 +304,9 @@ int lbm_solve_c(
     const char* output_dir,
     const char* case_type
 ) {
+    // Reset global state from any previous run
+    reset_solver_state();
+
     // Set global grid dimensions
     NX = nx;
     NY = ny;
@@ -414,6 +429,9 @@ int lbm_solve_geometry(
     const char* output_dir,
     const char* geometry_json
 ) {
+    // Reset global state from any previous run
+    reset_solver_state();
+
     // Set global grid dimensions
     NX = nx;
     NY = ny;
@@ -424,6 +442,20 @@ int lbm_solve_geometry(
     // Compute characteristic length from obstacle bounding box
     // Default to 60 if geometry is empty
     std::vector<Shape> shapes = parse_geometry_json(geometry_json);
+
+    // Flip y-coordinates: canvas y=0 is top, solver y=0 is bottom
+    for (auto& shape : shapes) {
+        if (shape.type == "circle") {
+            shape.y = NY - 1 - shape.y;
+        } else if (shape.type == "rectangle") {
+            shape.y = NY - 1 - shape.y - shape.height;
+        } else if (shape.type == "polygon") {
+            for (auto& pt : shape.points) {
+                pt.second = NY - 1 - pt.second;
+            }
+        }
+    }
+
     double D = 60.0;
     if (!shapes.empty()) {
         double xmin = 1e18, xmax = -1e18, ymin = 1e18, ymax = -1e18;
