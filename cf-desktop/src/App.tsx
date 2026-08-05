@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
 import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
@@ -74,6 +74,19 @@ function App() {
     // Geometry editor state
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+
+    // Comparison mode state
+    const [compareMode, setCompareMode] = useState(false);
+    const [compareData, setCompareData] = useState<FrameData | null>(null);
+
+    // GCI study state
+    const [gciRunning, setGciRunning] = useState(false);
+    const [gciResults, setGciResults] = useState<{
+        grids: Array<{ grid: string; nx: number; ny: number; maxVel: number }>;
+        apparentOrder: number;
+        gci: number;
+        ratio: number;
+    } | null>(null);
 
     const handleCreateArray = (count: number, spacing: number, angle: number) => {
         if (!selectedShapeId || count < 2) return;
@@ -356,6 +369,83 @@ function App() {
         }
     };
 
+    const loadComparison = async () => {
+        const dir = await open({ directory: true, multiple: false });
+        if (dir) {
+            const frameList = await invoke<number[]>('list_frames', { path: dir });
+            if (frameList.length > 0) {
+                const lastFrame = frameList[frameList.length - 1];
+                const data = await invoke<FrameData>('read_frame_json', { path: dir, step: lastFrame });
+                setCompareData(data);
+                setCompareMode(true);
+            }
+        }
+    };
+
+    const unloadComparison = () => {
+        setCompareMode(false);
+        setCompareData(null);
+    };
+
+    const runGci = async () => {
+        setGciRunning(true);
+        setGciResults(null);
+        try {
+            await invoke('reset_solver');
+            const geometryJson = JSON.stringify(shapes.map(s => {
+                if (s.type === 'circle') {
+                    return { type: 'circle', x: s.x, y: s.y, radius: s.radius };
+                } else if (s.type === 'rectangle') {
+                    return { type: 'rectangle', x: s.x, y: s.y, width: s.width, height: s.height };
+                } else {
+                    return { type: 'polygon', points: s.points?.map(p => [p.x, p.y]) || [] };
+                }
+            }));
+            const dir = await invoke<string>('run_gci', {
+                nxBase: config.nx,
+                nyBase: config.ny,
+                re: config.re,
+                uInflow: config.uInflow,
+                maxSteps: config.maxSteps,
+                saveInterval: config.saveInterval,
+                refinementRatio: 2.0,
+                geometryJson,
+            });
+            // Parse the CSV results
+            const csvPath = `${dir}/gci_results.csv`;
+            const csvContent = await invoke<string>('read_file_text', { path: csvPath }).catch(() => null);
+            if (csvContent) {
+                const lines = csvContent.split('\n').filter(l => l.trim());
+                const grids = [];
+                let apparentOrder = 2.0;
+                let gci = 0;
+                let ratio = 2.0;
+                for (const line of lines) {
+                    if (line.startsWith('Coarse,') || line.startsWith('Medium,') || line.startsWith('Fine,')) {
+                        const parts = line.split(',');
+                        grids.push({
+                            grid: parts[0],
+                            nx: parseInt(parts[1]),
+                            ny: parseInt(parts[2]),
+                            maxVel: parseFloat(parts[3]),
+                        });
+                    } else if (line.startsWith('Apparent Order,')) {
+                        apparentOrder = parseFloat(line.split(',')[1]);
+                    } else if (line.startsWith('GCI (Fine),')) {
+                        gci = parseFloat(line.split(',')[1]);
+                    } else if (line.startsWith('Refinement Ratio,')) {
+                        ratio = parseFloat(line.split(',')[1]);
+                    }
+                }
+                setGciResults({ grids, apparentOrder, gci, ratio });
+            }
+        } catch (e) {
+            console.error('GCI study failed:', e);
+            alert(`GCI study failed: ${e}`);
+        }
+        setGciRunning(false);
+    };
+
     return (
         <div className="app">
             <header className="app-header">
@@ -403,35 +493,72 @@ function App() {
                         setQuiverConfig={setQuiverConfig}
                         selectedShapeId={selectedShapeId}
                         onCreateArray={handleCreateArray}
+                        compareMode={compareMode}
+                        loadComparison={loadComparison}
+                        unloadComparison={unloadComparison}
+                        gciRunning={gciRunning}
+                        gciResults={gciResults}
+                        runGci={runGci}
                     />
                 </aside>
 
                 <main className="content">
                     {frameData ? (
-                        <div className="visualization" ref={containerRef}>
-                            <h2>{field.charAt(0).toUpperCase() + field.slice(1)} Field - Step {currentStep}</h2>
-                            <div className="visualization-body">
-                                <FlowCanvas
+                        compareMode && compareData ? (
+                            <div className="comparison-container">
+                                <div className="comparison-panel">
+                                    <h3 className="comparison-label">Current</h3>
+                                    <FlowCanvas
+                                        frameData={frameData}
+                                        field={field}
+                                        showStreamlines={showStreamlines}
+                                        showQuiver={showQuiver}
+                                        quiverConfig={quiverConfig}
+                                        canvasSize={{ width: Math.floor(canvasSize.width / 2) - 4, height: canvasSize.height }}
+                                        colorRange={useManualRange ? colorRange : null}
+                                        onProbe={setProbe}
+                                    />
+                                </div>
+                                <div className="comparison-divider" />
+                                <div className="comparison-panel">
+                                    <h3 className="comparison-label">Comparison</h3>
+                                    <FlowCanvas
+                                        frameData={compareData}
+                                        field={field}
+                                        showStreamlines={showStreamlines}
+                                        showQuiver={showQuiver}
+                                        quiverConfig={quiverConfig}
+                                        canvasSize={{ width: Math.floor(canvasSize.width / 2) - 4, height: canvasSize.height }}
+                                        colorRange={useManualRange ? colorRange : null}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="visualization" ref={containerRef}>
+                                <h2>{field.charAt(0).toUpperCase() + field.slice(1)} Field - Step {currentStep}</h2>
+                                <div className="visualization-body">
+                                    <FlowCanvas
+                                        frameData={frameData}
+                                        field={field}
+                                        showStreamlines={showStreamlines}
+                                        showQuiver={showQuiver}
+                                        quiverConfig={quiverConfig}
+                                        canvasSize={canvasSize}
+                                        colorRange={useManualRange ? colorRange : null}
+                                        onProbe={setProbe}
+                                    />
+                                    <ColorScaleBar
+                                        min={colorRange.min}
+                                        max={colorRange.max}
+                                        cmap={field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet'}
+                                    />
+                                </div>
+                                <StaticPlots
                                     frameData={frameData}
-                                    field={field}
-                                    showStreamlines={showStreamlines}
-                                    showQuiver={showQuiver}
-                                    quiverConfig={quiverConfig}
-                                    canvasSize={canvasSize}
-                                    colorRange={useManualRange ? colorRange : null}
-                                    onProbe={setProbe}
-                                />
-                                <ColorScaleBar
-                                    min={colorRange.min}
-                                    max={colorRange.max}
-                                    cmap={field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet'}
+                                    width={Math.min(canvasSize.width, 400)}
                                 />
                             </div>
-                            <StaticPlots
-                                frameData={frameData}
-                                width={Math.min(canvasSize.width, 400)}
-                            />
-                        </div>
+                        )
                     ) : config.caseType === 'custom' && !running ? (
                         <div className="geometry-container">
                             <h2>Draw Geometry</h2>

@@ -1379,3 +1379,111 @@ canvas {
   color: var(--danger);
   border-color: var(--danger);
 }
+
+/* ==========================================================================
+   Comparison Mode
+   ========================================================================== */
+
+.comparison-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  padding: 16px;
+}
+
+.comparison-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.comparison-label {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.comparison-divider {
+  width: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* -- Compare button active state ---------------------------------------- */
+
+.tree-action-compare-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   GCI (Grid Convergence Index) Results
+   ========================================================================== */
+
+.gci-results {
+  padding: 4px 12px 8px 28px;
+}
+
+.gci-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.gci-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+.gci-table th {
+  text-align: left;
+  padding: 3px 6px;
+  color: var(--text-muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.gci-table td {
+  padding: 3px 6px;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.gci-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+.gci-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gci-key {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.gci-val {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  color: var(--accent);
+}
+
+.tree-mono-val {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+}

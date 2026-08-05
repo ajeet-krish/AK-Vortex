@@ -690,3 +690,86 @@ extern "C" int lbm_run_sweep(
     csv.close();
     return 0;
 }
+
+// ==========================================================================
+// Grid Convergence Index (GCI) Study
+// Runs the same case at 3 grid resolutions and computes GCI.
+// ==========================================================================
+
+extern "C" int lbm_run_gci(
+    int nx_base, int ny_base,
+    double re, double u_inflow,
+    int max_steps, int save_interval,
+    double refinement_ratio,
+    const char* output_dir,
+    const char* geometry_json
+) {
+    std::string out_dir(output_dir);
+    std::filesystem::create_directories(out_dir);
+
+    // Compute 3 grid sizes: coarse, medium, fine
+    int grids[3][2];
+    for (int i = 0; i < 3; ++i) {
+        double factor = std::pow(refinement_ratio, 1.0 - i);
+        grids[i][0] = static_cast<int>(nx_base * factor);
+        grids[i][1] = static_cast<int>(ny_base * factor);
+        // Ensure minimum grid size
+        if (grids[i][0] < 100) grids[i][0] = 100;
+        if (grids[i][1] < 100) grids[i][1] = 100;
+    }
+
+    double metrics[3] = {0, 0, 0};  // max velocity for each grid
+
+    for (int i = 0; i < 3; ++i) {
+        std::string grid_dir = out_dir + "/grid_" + std::to_string(i);
+        std::filesystem::create_directories(grid_dir);
+
+        lbm_solve_geometry(
+            grids[i][0], grids[i][1],
+            re, u_inflow,
+            max_steps, save_interval,
+            grid_dir.c_str(), geometry_json
+        );
+
+        // Extract max velocity from last frame
+        std::string last_frame = grid_dir + "/frames/frame_" + std::to_string(max_steps) + ".json";
+        std::ifstream fin(last_frame);
+        if (fin.is_open()) {
+            std::string json_str((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
+            fin.close();
+            auto vel = parse_json_array_vtk(json_str, "velocity");
+            for (double v : vel) {
+                if (v > metrics[i]) metrics[i] = v;
+            }
+        }
+
+        reset_solver_state();
+    }
+
+    // Compute GCI
+    double f1 = metrics[2];  // finest
+    double f2 = metrics[1];  // medium
+    double f3 = metrics[0];  // coarsest
+    double r = refinement_ratio;
+
+    // Apparent order: p = ln(|f3-f2|/|f2-f1|) / ln(r)
+    double p = std::log(std::abs(f3 - f2) / (std::abs(f2 - f1) + 1e-15)) / std::log(r);
+    if (!std::isfinite(p) || p < 0) p = 2.0;  // default to 2nd order
+
+    // GCI: GCI = F_s * |f2-f1| / (r^p - 1)
+    double F_s = 1.25;  // safety factor
+    double gci = F_s * std::abs(f2 - f1) / (std::pow(r, p) - 1.0);
+
+    // Write results CSV
+    std::ofstream csv(out_dir + "/gci_results.csv");
+    csv << "Grid, Nx, Ny, MaxVelocity\n";
+    csv << "Coarse," << grids[0][0] << "," << grids[0][1] << "," << metrics[0] << "\n";
+    csv << "Medium," << grids[1][0] << "," << grids[1][1] << "," << metrics[1] << "\n";
+    csv << "Fine," << grids[2][0] << "," << grids[2][1] << "," << metrics[2] << "\n";
+    csv << "\nApparent Order," << p << "\n";
+    csv << "GCI (Fine)," << gci << "\n";
+    csv << "Refinement Ratio," << r << "\n";
+    csv.close();
+
+    return 0;
+}

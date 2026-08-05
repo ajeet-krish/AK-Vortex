@@ -37,6 +37,15 @@ int lbm_run_sweep(
     const char* geometry_json
 );
 
+int lbm_run_gci(
+    int nx_base, int ny_base,
+    double re, double u_inflow,
+    int max_steps, int save_interval,
+    double refinement_ratio,
+    const char* output_dir,
+    const char* geometry_json
+);
+
 #ifdef __cplusplus
 }
 #endif

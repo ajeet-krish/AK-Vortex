@@ -19,6 +19,13 @@ interface SimProgress {
     status: string;
 }
 
+interface GciResults {
+    grids: Array<{ grid: string; nx: number; ny: number; maxVel: number }>;
+    apparentOrder: number;
+    gci: number;
+    ratio: number;
+}
+
 interface FeatureTreeProps {
     config: SimConfig;
     setConfig: (cfg: SimConfig) => void;
@@ -57,6 +64,12 @@ interface FeatureTreeProps {
     setQuiverConfig: (cfg: QuiverConfig) => void;
     selectedShapeId: string | null;
     onCreateArray: (count: number, spacing: number, angle: number) => void;
+    compareMode: boolean;
+    loadComparison: () => void;
+    unloadComparison: () => void;
+    gciRunning: boolean;
+    gciResults: GciResults | null;
+    runGci: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -276,6 +289,12 @@ export default function FeatureTree({
     setQuiverConfig,
     selectedShapeId,
     onCreateArray,
+    compareMode,
+    loadComparison,
+    unloadComparison,
+    gciRunning,
+    gciResults,
+    runGci,
 }: FeatureTreeProps) {
     const [arrayCount, setArrayCount] = useState(5);
     const [arraySpacing, setArraySpacing] = useState(50);
@@ -558,6 +577,112 @@ export default function FeatureTree({
                             New
                         </button>
                     </div>
+
+                    <div className="tree-action-row">
+                        {compareMode ? (
+                            <button className="tree-action-btn tree-action-compare-active" onClick={unloadComparison} title="Exit Comparison">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                    <path d="M2 2l8 8M10 2l-8 8" />
+                                </svg>
+                                Exit Compare
+                            </button>
+                        ) : (
+                            <button className="tree-action-btn" onClick={loadComparison} title="Load another simulation for side-by-side comparison">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                    <rect x="1" y="2" width="4" height="8" rx="0.5" />
+                                    <rect x="7" y="2" width="4" height="8" rx="0.5" />
+                                </svg>
+                                Compare
+                            </button>
+                        )}
+                    </div>
+                </TreeSection>
+            )}
+
+            {/* ============================================================ */}
+            {/*  MESH STUDY (GCI)                                            */}
+            {/* ============================================================ */}
+            {hasResults && (
+                <TreeSection
+                    icon={
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M2 12L7 2l5 10" stroke="#569cd6" strokeWidth="1.2" fill="none" />
+                            <path d="M4 8h6" stroke="#569cd6" strokeWidth="0.8" strokeDasharray="1.5 1" />
+                        </svg>
+                    }
+                    label="Mesh Study"
+                    defaultOpen={false}
+                >
+                    {gciRunning ? (
+                        <div className="tree-solver-progress">
+                            <div className="tree-progress-bar">
+                                <div className="tree-progress-fill" style={{ width: '60%' }} />
+                            </div>
+                            <div className="tree-progress-text">Running GCI study (3 grids)...</div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="tree-item">
+                                <span className="tree-item-label">Refinement Ratio</span>
+                                <span className="tree-item-value">
+                                    <span className="tree-inline-inputs">
+                                        <span className="tree-x">r =</span>
+                                        <span className="tree-mono-val">2.0</span>
+                                    </span>
+                                </span>
+                            </div>
+                            <button className="tree-run-btn" onClick={runGci}>
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
+                                    <path d="M1 3h10M1 6h10M1 9h10" />
+                                    <circle cx="4" cy="3" r="1" fill="currentColor" />
+                                    <circle cx="8" cy="6" r="1" fill="currentColor" />
+                                    <circle cx="5" cy="9" r="1" fill="currentColor" />
+                                </svg>
+                                Run GCI Study
+                            </button>
+                        </>
+                    )}
+
+                    {gciResults && (
+                        <div className="gci-results">
+                            <div className="gci-table-wrap">
+                                <table className="gci-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Grid</th>
+                                            <th>Nx</th>
+                                            <th>Ny</th>
+                                            <th>Max |V|</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {gciResults.grids.map((g) => (
+                                            <tr key={g.grid}>
+                                                <td>{g.grid}</td>
+                                                <td>{g.nx}</td>
+                                                <td>{g.ny}</td>
+                                                <td>{g.maxVel.toFixed(6)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="gci-summary">
+                                <div className="gci-summary-row">
+                                    <span className="gci-key">Apparent Order</span>
+                                    <span className="gci-val">{gciResults.apparentOrder.toFixed(3)}</span>
+                                </div>
+                                <div className="gci-summary-row">
+                                    <span className="gci-key">GCI (Fine)</span>
+                                    <span className="gci-val">{gciResults.gci.toExponential(3)}</span>
+                                </div>
+                                <div className="gci-summary-row">
+                                    <span className="gci-key">Ratio</span>
+                                    <span className="gci-val">{gciResults.ratio}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </TreeSection>
             )}
 
