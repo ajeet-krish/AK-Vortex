@@ -22,6 +22,12 @@ int lbm_solve_geometry(
     const char* geometry_json
 );
 
+int lbm_write_vtk(
+    const char* source_dir,
+    int step,
+    const char* dest_path
+);
+
 #ifdef __cplusplus
 }
 #endif

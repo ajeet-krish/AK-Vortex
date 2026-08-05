@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <cmath>
 #include <random>
+#include <fstream>
+#include <sstream>
 
 // ==========================================================================
 // Reset all C++ global solver state between runs
@@ -551,5 +553,90 @@ int lbm_solve_geometry(
         }
     }
 
+    return 0;
+}
+
+// ==========================================================================
+// VTK Export: Write frame data as VTK Structured Points for ParaView
+// ==========================================================================
+
+static std::vector<double> parse_json_array_vtk(const std::string& json, const std::string& key) {
+    std::vector<double> result;
+    size_t pos = json.find("\"" + key + "\"");
+    if (pos == std::string::npos) return result;
+    pos = json.find('[', pos);
+    if (pos == std::string::npos) return result;
+    pos++;
+    while (pos < json.size() && json[pos] != ']') {
+        if (json[pos] == ',' || json[pos] == ' ') { pos++; continue; }
+        if (json[pos] == 'n') { result.push_back(0.0); pos += 4; continue; }
+        size_t end = pos;
+        while (end < json.size() && json[end] != ',' && json[end] != ']') end++;
+        try { result.push_back(std::stod(json.substr(pos, end - pos))); }
+        catch (...) { result.push_back(0.0); }
+        pos = end;
+    }
+    return result;
+}
+
+static int parse_json_int_vtk(const std::string& json, const std::string& key, int def) {
+    size_t pos = json.find("\"" + key + "\"");
+    if (pos == std::string::npos) return def;
+    pos = json.find(':', pos);
+    if (pos == std::string::npos) return def;
+    pos++;
+    while (pos < json.size() && json[pos] == ' ') pos++;
+    std::string num;
+    while (pos < json.size() && json[pos] >= '0' && json[pos] <= '9') num += json[pos++];
+    return num.empty() ? def : std::stoi(num);
+}
+
+extern "C" int lbm_write_vtk(const char* source_dir, int step, const char* dest_path) {
+    std::string frame_path = std::string(source_dir) + "/frames/frame_" + std::to_string(step) + ".json";
+    std::ifstream in(frame_path);
+    if (!in.is_open()) return -1;
+    std::string json((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();
+
+    int nx = parse_json_int_vtk(json, "nx", 0);
+    int ny = parse_json_int_vtk(json, "ny", 0);
+    if (nx <= 0 || ny <= 0) return -1;
+
+    auto vel = parse_json_array_vtk(json, "velocity");
+    auto u_arr = parse_json_array_vtk(json, "u");
+    auto v_arr = parse_json_array_vtk(json, "v");
+    auto p_arr = parse_json_array_vtk(json, "p");
+    auto omega_arr = parse_json_array_vtk(json, "omega");
+    auto obst_arr = parse_json_array_vtk(json, "obstacle");
+    int n = nx * ny;
+
+    std::ofstream vtk(dest_path);
+    if (!vtk.is_open()) return -1;
+
+    vtk << "# vtk DataFile Version 3.0\nLBM-2D Frame " << step << "\nASCII\n";
+    vtk << "DATASET STRUCTURED_POINTS\n";
+    vtk << "DIMENSIONS " << nx << " " << ny << " 1\n";
+    vtk << "ORIGIN 0 0 0\nSPACING 1 1 1\n";
+    vtk << "POINT_DATA " << n << "\n";
+
+    vtk << "SCALARS velocity double 1\nLOOKUP_TABLE default\n";
+    for (int i = 0; i < n; ++i) vtk << (i < (int)vel.size() ? vel[i] : 0.0) << "\n";
+
+    vtk << "VECTORS velocity_vector double\n";
+    for (int i = 0; i < n; ++i) {
+        vtk << (i < (int)u_arr.size() ? u_arr[i] : 0.0) << " "
+            << (i < (int)v_arr.size() ? v_arr[i] : 0.0) << " 0.0\n";
+    }
+
+    vtk << "SCALARS pressure double 1\nLOOKUP_TABLE default\n";
+    for (int i = 0; i < n; ++i) vtk << (i < (int)p_arr.size() ? p_arr[i] : 0.0) << "\n";
+
+    vtk << "SCALARS vorticity double 1\nLOOKUP_TABLE default\n";
+    for (int i = 0; i < n; ++i) vtk << (i < (int)omega_arr.size() ? omega_arr[i] : 0.0) << "\n";
+
+    vtk << "SCALARS obstacle int 1\nLOOKUP_TABLE default\n";
+    for (int i = 0; i < n; ++i) vtk << (i < (int)obst_arr.size() ? (int)obst_arr[i] : 0) << "\n";
+
+    vtk.close();
     return 0;
 }

@@ -8,6 +8,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
+            commands::reset_solver,
             commands::run_simulation,
             commands::run_geometry_simulation,
             commands::read_frame_json,
@@ -16,6 +17,7 @@ fn main() {
             commands::clear_solver_log,
             commands::get_simulation_plots,
             commands::read_plot_image,
+            commands::export_vtk,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

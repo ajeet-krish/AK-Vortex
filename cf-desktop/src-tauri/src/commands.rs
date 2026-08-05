@@ -24,6 +24,12 @@ fn validate_path(path: &str) -> Result<(), String> {
 }
 
 #[command]
+pub fn reset_solver() -> Result<(), String> {
+    solver::reset_solver();
+    Ok(())
+}
+
+#[command]
 pub fn run_simulation(
     nx: i32,
     ny: i32,
@@ -53,6 +59,9 @@ pub fn run_simulation(
         case_type, nx, ny, re, u_inflow, max_steps, save_interval
     ));
     log_message(&format!("[solver] Output directory: {}", output_dir));
+
+    // Clean stale frames from previous runs
+    let _ = std::fs::remove_dir_all(&output_dir);
 
     let config = SolverConfig {
         nx, ny, re, u_inflow, max_steps, save_interval,
@@ -93,6 +102,9 @@ pub fn run_geometry_simulation(
     ));
     log_message(&format!("[solver] Geometry JSON length: {} bytes", geometry_json.len()));
     log_message(&format!("[solver] Output directory: {}", output_dir));
+
+    // Clean stale frames from previous runs
+    let _ = std::fs::remove_dir_all(&output_dir);
 
     log_message("[solver] Running LBM solver with custom geometry...");
     solver::run_geometry_solver(
@@ -183,4 +195,12 @@ pub fn read_plot_image(path: String, filename: String) -> Result<String, String>
     let data = std::fs::read(&filepath)
         .map_err(|e| format!("Failed to read image: {}", e))?;
     Ok(STANDARD.encode(&data))
+}
+
+#[command]
+pub fn export_vtk(path: String, step: i32) -> Result<String, String> {
+    validate_path(&path)?;
+    let vtk_path = format!("{}/frame_{}.vtk", path, step);
+    solver::write_vtk(&path, step, &vtk_path)?;
+    Ok(vtk_path)
 }

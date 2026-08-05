@@ -23,6 +23,20 @@ extern "C" {
         output_dir: *const c_char,
         geometry_json: *const c_char,
     ) -> c_int;
+
+    fn reset_solver_state();
+
+    fn lbm_write_vtk(
+        source_dir: *const c_char,
+        step: c_int,
+        dest_path: *const c_char,
+    ) -> c_int;
+}
+
+pub fn reset_solver() {
+    unsafe {
+        reset_solver_state();
+    }
 }
 
 pub struct SolverConfig {
@@ -74,4 +88,17 @@ pub fn run_geometry_solver(
         );
         Ok(result)
     }
+}
+
+pub fn write_vtk(source_dir: &str, step: i32, dest_path: &str) -> Result<(), String> {
+    let c_source = CString::new(source_dir).map_err(|e| e.to_string())?;
+    let c_dest = CString::new(dest_path).map_err(|e| e.to_string())?;
+
+    unsafe {
+        let result = lbm_write_vtk(c_source.as_ptr(), step, c_dest.as_ptr());
+        if result != 0 {
+            return Err("VTK write failed".to_string());
+        }
+    }
+    Ok(())
 }
