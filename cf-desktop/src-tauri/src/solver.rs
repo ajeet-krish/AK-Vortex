@@ -44,6 +44,18 @@ extern "C" {
         output_dir: *const c_char,
         geometry_json: *const c_char,
     ) -> c_int;
+
+    fn lbm_run_gci(
+        nx_base: c_int,
+        ny_base: c_int,
+        re: c_double,
+        u_inflow: c_double,
+        max_steps: c_int,
+        save_interval: c_int,
+        refinement_ratio: c_double,
+        output_dir: *const c_char,
+        geometry_json: *const c_char,
+    ) -> c_int;
 }
 
 pub fn reset_solver() {
@@ -129,6 +141,25 @@ pub fn run_sweep(
         let result = lbm_run_sweep(
             nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
             c_output.as_ptr(), c_geom.as_ptr(),
+        );
+        Ok(result)
+    }
+}
+
+pub fn run_gci(
+    nx_base: i32, ny_base: i32,
+    re: f64, u_inflow: f64,
+    max_steps: i32, save_interval: i32,
+    refinement_ratio: f64,
+    output_dir: &str, geometry_json: &str,
+) -> Result<i32, String> {
+    let c_output = CString::new(output_dir.to_string()).map_err(|e| e.to_string())?;
+    let c_geom = CString::new(geometry_json.to_string()).map_err(|e| e.to_string())?;
+
+    unsafe {
+        let result = lbm_run_gci(
+            nx_base, ny_base, re, u_inflow, max_steps, save_interval,
+            refinement_ratio, c_output.as_ptr(), c_geom.as_ptr(),
         );
         Ok(result)
     }

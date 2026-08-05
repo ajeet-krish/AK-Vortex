@@ -19,6 +19,7 @@ fn main() {
             commands::read_plot_image,
             commands::export_vtk,
             commands::run_sweep,
+            commands::run_gci,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

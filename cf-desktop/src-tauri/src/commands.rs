@@ -45,6 +45,13 @@ pub fn run_simulation(
         return Err(format!("Invalid case type: {}", case_type));
     }
 
+    if nx < 32 || nx > 4096 || ny < 32 || ny > 4096 {
+        return Err(format!("Grid size out of bounds: {}x{}. Must be 32-4096.", nx, ny));
+    }
+    if max_steps < 1 || max_steps > 1_000_000 {
+        return Err("max_steps must be 1-1,000,000".to_string());
+    }
+
     let output_dir = app.path()
         .app_data_dir()
         .unwrap()
@@ -95,6 +102,13 @@ pub fn run_geometry_simulation(
         .join(format!("re{}", re as i32))
         .to_string_lossy()
         .to_string();
+
+    if nx < 32 || nx > 4096 || ny < 32 || ny > 4096 {
+        return Err(format!("Grid size out of bounds: {}x{}. Must be 32-4096.", nx, ny));
+    }
+    if max_steps < 1 || max_steps > 1_000_000 {
+        return Err("max_steps must be 1-1,000,000".to_string());
+    }
 
     log_message(&format!(
         "[solver] Starting custom geometry simulation: {}x{}, Re={}, steps={}",
@@ -242,3 +256,43 @@ pub fn run_sweep(
 
     Ok(output_dir)
 }
+
+#[command]
+pub fn run_gci(
+    nx_base: i32,
+    ny_base: i32,
+    re: f64,
+    u_inflow: f64,
+    max_steps: i32,
+    save_interval: i32,
+    refinement_ratio: f64,
+    geometry_json: String,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let output_dir = app.path()
+        .app_data_dir()
+        .unwrap()
+        .join("simulations")
+        .join("gci")
+        .join(format!("re{}", re as i32))
+        .to_string_lossy()
+        .to_string();
+
+    log_message(&format!(
+        "[gci] Starting GCI study: {}x{}, Re={}, ratio={}, steps={}",
+        nx_base, ny_base, re, refinement_ratio, max_steps
+    ));
+    log_message(&format!("[gci] Output directory: {}", output_dir));
+
+    let _ = std::fs::remove_dir_all(&output_dir);
+
+    solver::run_gci(
+        nx_base, ny_base, re, u_inflow, max_steps, save_interval,
+        refinement_ratio, &output_dir, &geometry_json,
+    )?;
+    log_message("[gci] Grid convergence study complete.");
+
+    Ok(output_dir)
+}
+
+

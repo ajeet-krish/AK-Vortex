@@ -289,7 +289,11 @@ static void mark_obstacles_from_shapes(LBMCapabilities& sys,
                         }
                     }
                 }
-                // Store polygon vertices for interpolated bounce-back
+                // Store polygon vertices for interpolated bounce-back.
+                // NOTE: Only the first polygon gets bounce-back geometry.
+                // Additional polygons are obstacle-masked but use straight
+                // bounce-back (q=1). This limitation exists because
+                // BounceBackGeometry stores a single set of poly_vertices.
                 if (!sys.bb_geom.is_polygon) {
                     sys.bb_geom.poly_vertices = poly;
                     sys.bb_geom.is_polygon = true;
@@ -346,7 +350,7 @@ int lbm_solve_c(
     if (g_case == CaseType::CYLINDER) {
         int cx_cyl = NX / 4;
         int cy_cyl = NY / 2 + 1;
-        int radius = 30;
+        int radius = std::max(10, NY / 10);
         place_cylinder(system, cx_cyl, cy_cyl, radius);
 
         // Initialize with equilibrium

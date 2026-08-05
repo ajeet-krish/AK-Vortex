@@ -27,6 +27,10 @@ interface GeometryEditorProps {
 
 type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca' | 'move';
 
+// Counter to avoid Date.now() ID collisions when multiple shapes are created
+// within the same millisecond
+let idCounter = 0;
+
 function nextShapeName(type: string, shapes: Shape[]): string {
     if (type === 'naca') {
         const count = shapes.filter((s) => s.name.startsWith('NACA')).length + 1;
@@ -536,7 +540,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
             const scaledPoints = transformPoints(rawPoints, pt.x, pt.y, nacaChord, nacaRotation);
             const name = nextShapeName('naca', shapes);
             const newShape: Shape = {
-                id: Date.now().toString(),
+                id: Date.now().toString() + '-' + (++idCounter),
                 type: 'polygon',
                 name,
                 x: pt.x,
@@ -561,7 +565,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                     // Close polygon
                     const name = nextShapeName('polygon', shapes);
                     const newShape: Shape = {
-                        id: Date.now().toString(),
+                        id: Date.now().toString() + '-' + (++idCounter),
                         type: 'polygon',
                         name,
                         x: 0,
@@ -634,7 +638,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
             if (radius > 2) {
                 const name = nextShapeName('circle', shapes);
                 const newShape: Shape = {
-                    id: Date.now().toString(),
+                    id: Date.now().toString() + '-' + (++idCounter),
                     type: 'circle',
                     name,
                     x: drawStart.x,
@@ -655,7 +659,7 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
             if (w > 2 && h > 2) {
                 const name = nextShapeName('rectangle', shapes);
                 const newShape: Shape = {
-                    id: Date.now().toString(),
+                    id: Date.now().toString() + '-' + (++idCounter),
                     type: 'rectangle',
                     name,
                     x: x0,

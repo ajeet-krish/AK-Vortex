@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
-import { writeFile } from '@tauri-apps/plugin-fs';
+import { writeFile, readTextFile } from '@tauri-apps/plugin-fs';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
 import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
@@ -413,7 +413,7 @@ function App() {
             });
             // Parse the CSV results
             const csvPath = `${dir}/gci_results.csv`;
-            const csvContent = await invoke<string>('read_file_text', { path: csvPath }).catch(() => null);
+            const csvContent = await readTextFile(csvPath).catch(() => null);
             if (csvContent) {
                 const lines = csvContent.split('\n').filter(l => l.trim());
                 const grids = [];
