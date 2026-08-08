@@ -1,17 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Shape } from './GeometryEditor';
-import type { ProbeInfo } from './FlowCanvas';
+import type { ProbeInfo, SimConfig, FrameData } from '../types';
 import type { QuiverConfig } from '../utils/quiver';
-
-interface SimConfig {
-    nx: number;
-    ny: number;
-    re: number;
-    uInflow: number;
-    maxSteps: number;
-    saveInterval: number;
-    caseType: string;
-}
 
 interface SimProgress {
     step: number;
@@ -35,7 +25,7 @@ interface FeatureTreeProps {
     frames: number[];
     frameIndex: number;
     setFrameIndex: (i: number) => void;
-    frameData: unknown;
+    frameData: FrameData | null;
     field: 'velocity' | 'pressure' | 'vorticity';
     setField: (f: 'velocity' | 'pressure' | 'vorticity') => void;
     playing: boolean;

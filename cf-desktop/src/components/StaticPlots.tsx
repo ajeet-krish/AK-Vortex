@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { sampleColormap } from '../utils/colormap';
 import { buildStreamlines, sampleField } from '../utils/streamline';
-import type { FrameData } from './FlowCanvas';
+import type { FrameData } from '../types';
 
 interface StaticPlotsProps {
   frameData: FrameData;

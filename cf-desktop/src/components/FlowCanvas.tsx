@@ -2,30 +2,9 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { sampleColormap } from '../utils/colormap';
 import { sampleField, buildStreamlines } from '../utils/streamline';
 import { drawQuiver, type QuiverConfig, DEFAULT_QUIVER_CONFIG } from '../utils/quiver';
+import type { FrameData, ProbeInfo } from '../types';
 
-export interface FrameData {
-    nx: number;
-    ny: number;
-    velocity: number[];
-    u: number[];
-    v: number[];
-    rho: number[];
-    p: number[];
-    omega: number[];
-    obstacle: number[];
-}
-
-export interface ProbeInfo {
-    x: number;
-    y: number;
-    u: number;
-    v: number;
-    speed: number;
-    p: number;
-    omega: number;
-    canvasX: number;
-    canvasY: number;
-}
+export type { ProbeInfo } from '../types';
 
 interface FlowCanvasProps {
     frameData: FrameData;

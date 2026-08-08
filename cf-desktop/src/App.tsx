@@ -3,33 +3,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeFile, readTextFile } from '@tauri-apps/plugin-fs';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
-import FlowCanvas, { type ProbeInfo } from './components/FlowCanvas';
+import FlowCanvas from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
 import StaticPlots from './components/StaticPlots';
 import FeatureTree from './components/FeatureTree';
 import { type QuiverConfig, DEFAULT_QUIVER_CONFIG } from './utils/quiver';
-
-interface SimConfig {
-    nx: number;
-    ny: number;
-    re: number;
-    uInflow: number;
-    maxSteps: number;
-    saveInterval: number;
-    caseType: string;
-}
-
-interface FrameData {
-    nx: number;
-    ny: number;
-    velocity: number[];
-    u: number[];
-    v: number[];
-    rho: number[];
-    p: number[];
-    omega: number[];
-    obstacle: number[];
-}
+import type { FrameData, SimConfig, ProbeInfo } from './types';
 
 const CASE_DEFAULTS: Record<string, { nx: number; ny: number }> = {
     cylinder: { nx: 800, ny: 300 },
