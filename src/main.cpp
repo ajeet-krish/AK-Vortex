@@ -8,7 +8,7 @@
 #include <fstream>
 
 // ==========================================================================
-// LBM-2D Solver Entry Point -- Cylinder Flow
+// AK-Vortex Solver Entry Point -- Cylinder Flow
 // ==========================================================================
 // Usage:
 //   ./build/LBM_Engine                      (default: Re=100, 30000 steps)
@@ -142,7 +142,7 @@ ForceHistory run_simulation(double Re, int steps, bool save_vtk) {
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: High-Performance Lattice Boltzmann CFD" << std::endl;
+    std::cout << " AK-Vortex: High-Performance Lattice Boltzmann CFD" << std::endl;
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

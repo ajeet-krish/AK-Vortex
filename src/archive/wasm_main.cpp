@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: WebAssembly real-time solver
+// AK-Vortex: WebAssembly real-time solver
 // D2Q9 BGK on a fixed 100x60 grid with polygon obstacle support.
 // No OpenMP, no file I/O -- compiled with Emscripten for browser use.
 // ==========================================================================

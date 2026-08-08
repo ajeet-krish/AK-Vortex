@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: Color maps for canvas flow visualization
+// AK-Vortex: Color maps for canvas flow visualization
 // Builds 256-entry LUTs for viridis, turbo, RdBu (diverging), and jet.
 // Pure JS, no dependencies.
 // ==========================================================================

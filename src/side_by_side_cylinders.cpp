@@ -7,7 +7,7 @@
 #include <random>
 
 // ==========================================================================
-// LBM-2D: Side-by-Side Cylinders (Interference)
+// AK-Vortex: Side-by-Side Cylinders (Interference)
 // ==========================================================================
 // Usage:
 //   ./build/LBM_SideBySide 100 3             (Re=100, spacing S/D=3)
@@ -67,7 +67,7 @@ SideBySideParams compute_params(double Re, double sd_ratio, int steps = -1) {
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: Side-by-Side Cylinders" << std::endl;
+    std::cout << " AK-Vortex: Side-by-Side Cylinders" << std::endl;
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

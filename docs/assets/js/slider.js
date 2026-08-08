@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: Comparison Slider (contour vs streamlines)
+// AK-Vortex: Comparison Slider (contour vs streamlines)
 // Drag handle to reveal/hide the streamline overlay
 // ==========================================================================
 

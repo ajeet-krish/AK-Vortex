@@ -6,7 +6,7 @@
 #include <filesystem>
 
 // ==========================================================================
-// LBM-2D Lid-Driven Cavity Entry Point
+// AK-Vortex Lid-Driven Cavity Entry Point
 // ==========================================================================
 // Usage:
 //   ./LBM_Cavity                       (default: Re=100, 256x256 grid)
@@ -35,7 +35,7 @@ CavityParams compute_params(double Re, int nx, int steps) {
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: Lid-Driven Cavity" << std::endl;
+    std::cout << " AK-Vortex: Lid-Driven Cavity" << std::endl;
     std::cout << " D2Q9 | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run all LBM-2D simulations with tiered grid resolution.
+Run all AK-Vortex simulations with tiered grid resolution.
 
 Usage:
     python3 scripts/run_all_sims.py [--dry-run] [--tier 1|2|3] [--case CASE]
@@ -268,7 +268,7 @@ def postprocess_sim(sim, dry_run=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run all LBM-2D simulations')
+    parser = argparse.ArgumentParser(description='Run all AK-Vortex simulations')
     parser.add_argument('--dry-run', action='store_true', help='Print commands without running')
     parser.add_argument('--tier', type=int, choices=[1, 2, 3], help='Run only this tier')
     parser.add_argument('--case', type=str, help='Run only cases matching this substring')

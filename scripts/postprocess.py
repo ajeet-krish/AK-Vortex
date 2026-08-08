@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LBM-2D Post-Processor
+AK-Vortex Post-Processor
 Reads JSON frame output and produces:
   - PNG renders (contour, streamlines, or split)
   - Strouhal number from force history (Welch FFT)
@@ -715,7 +715,7 @@ def save_cp_png(data, output_dir, frame, meta=None):
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description='LBM-2D Post-Processor')
+    parser = argparse.ArgumentParser(description='AK-Vortex Post-Processor')
     parser.add_argument('input_dir', help='Output directory (e.g. output/re100)')
     parser.add_argument('--split', action='store_true',
                         help='Render contour and streamlines as separate PNGs')

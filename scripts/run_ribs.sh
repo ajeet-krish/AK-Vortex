@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-# LBM-2D: Ribbed Channel Flow -- Reynolds Number Sweep
+# AK-Vortex: Ribbed Channel Flow -- Reynolds Number Sweep
 # ==============================================================
 # Runs ribbed channel simulations at Re_H = 50, 100, 200
 # Periodic in x/y, driven by body force.

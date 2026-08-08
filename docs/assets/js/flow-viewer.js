@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: Interactive Flow Viewer (canvas-based LBM time-series engine)
+// AK-Vortex: Interactive Flow Viewer (canvas-based LBM time-series engine)
 // Streams compact float16 binary frame data exported by pinn/export_web_data.py
 // and renders velocity-magnitude contours with overlaid streamlines directly
 // on a <canvas>. No external dependencies (uses Colormaps global from

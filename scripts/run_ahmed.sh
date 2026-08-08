@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-# LBM-2D: Ahmed Body (2D Slice) -- Slant Angle Sweep
+# AK-Vortex: Ahmed Body (2D Slice) -- Slant Angle Sweep
 # ==============================================================
 # Runs Ahmed body simulations at Re_H = 1000 with slant angles
 # 20, 25, 30, 35 degrees.

@@ -7,7 +7,7 @@
 #include <random>
 
 // ==========================================================================
-// LBM-2D: Cylinder Near a Wall (Ground Effect)
+// AK-Vortex: Cylinder Near a Wall (Ground Effect)
 // ==========================================================================
 // Usage:
 //   ./build/LBM_CylinderNearWall 100 20       (Re=100, gap=20 cells)
@@ -62,7 +62,7 @@ GapParams compute_params(double Re, int gap, int steps = -1) {
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: Cylinder Near a Wall" << std::endl;
+    std::cout << " AK-Vortex: Cylinder Near a Wall" << std::endl;
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

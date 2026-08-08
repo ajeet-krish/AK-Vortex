@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-# LBM-2D: Backward-Facing Step -- Reynolds Number Sweep
+# AK-Vortex: Backward-Facing Step -- Reynolds Number Sweep
 # ==============================================================
 # Runs step simulations at Re_H = 100, 200, 400
 # Validates Xr/H reattachment length against Armaly et al. 1983

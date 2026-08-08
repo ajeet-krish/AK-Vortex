@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-# LBM-2D: Building Downwash -- Reynolds Number Sweep
+# AK-Vortex: Building Downwash -- Reynolds Number Sweep
 # ==============================================================
 # Runs building downwash simulations at Re_H = 100, 200
 # Tall building upstream, low-rise downstream.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generic PINN trainer for any LBM-2D case.
+"""Generic PINN trainer for any AK-Vortex case.
 
 Auto-discovers LBM frame data from output/{case}/{config}/, builds a
 CaseConfig, selects the appropriate architecture and BC losses, and

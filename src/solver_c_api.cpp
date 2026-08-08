@@ -635,7 +635,7 @@ extern "C" int lbm_write_vtk(const char* source_dir, int step, const char* dest_
     std::ofstream vtk(dest_path);
     if (!vtk.is_open()) return -1;
 
-    vtk << "# vtk DataFile Version 3.0\nLBM-2D Frame " << step << "\nASCII\n";
+    vtk << "# vtk DataFile Version 3.0\nAK-Vortex Frame " << step << "\nASCII\n";
     vtk << "DATASET STRUCTURED_POINTS\n";
     vtk << "DIMENSIONS " << nx << " " << ny << " 1\n";
     vtk << "ORIGIN 0 0 0\nSPACING 1 1 1\n";

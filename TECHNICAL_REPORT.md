@@ -1,8 +1,8 @@
-# LBM-2D: A Cache-Optimized D2Q9 Lattice Boltzmann CFD Solver
+# AK-Vortex: A Cache-Optimized D2Q9 Lattice Boltzmann CFD Solver
 
 **Author:** Ajeet Krishnasamy
 
-**Repository:** https://github.com/ajeet-krish/lbm-2d
+**Repository:** https://github.com/ajeet-krish/AK-Vortex
 
 **Status:** Active development (2026-07-11)
 
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-LBM-2D is a production-grade, cache-optimized D2Q9 Lattice Boltzmann Method (LBM) CFD solver written in C++20. It implements the Multiple Relaxation Time (MRT) collision operator with a BGK fallback, Bouzidi interpolated bounce-back for curved boundaries, Zou/He velocity inlet and convective outlet boundary conditions, and a momentum-exchange force extraction pipeline. The solver targets 9 validation cases spanning external aerodynamics (cylinder, airfoil, Ahmed body), internal flows (lid-driven cavity, backward-facing step, ribbed channel), and urban microclimate (street canyon, building downwash).
+AK-Vortex is a production-grade, cache-optimized D2Q9 Lattice Boltzmann Method (LBM) CFD solver written in C++20. It implements the Multiple Relaxation Time (MRT) collision operator with a BGK fallback, Bouzidi interpolated bounce-back for curved boundaries, Zou/He velocity inlet and convective outlet boundary conditions, and a momentum-exchange force extraction pipeline. The solver targets 9 validation cases spanning external aerodynamics (cylinder, airfoil, Ahmed body), internal flows (lid-driven cavity, backward-facing step, ribbed channel), and urban microclimate (street canyon, building downwash).
 
 The project was conceived as a portfolio centrepiece for aerospace/defense engineering roles. It demonstrates: HPC competency (C++20, OpenMP parallelism, cache-optimized flat-array memory layout), CFD fundamentals (MRT vs BGK, Bouzidi interpolation, Chapman-Enskog theory), and engineering communication skills (interactive web presentation with comparison sliders, KaTeX theory rendering, per-case validation narratives).
 
@@ -34,7 +34,7 @@ Existing open-source LBM solvers fall into two categories:
 
 No mid-tier solver existed that: (a) demonstrates modern C++20 practices, (b) validates against established benchmarks across multiple flow regimes, (c) presents results through an interactive web interface, and (d) is compact enough for a single developer to own end-to-end.
 
-LBM-2D fills this gap. At ~2,500 lines of core solver code, it is small enough for a single engineer to understand completely, yet sophisticated enough to reproduce benchmark results for 8 distinct validation cases.
+AK-Vortex fills this gap. At ~2,500 lines of core solver code, it is small enough for a single engineer to understand completely, yet sophisticated enough to reproduce benchmark results for 8 distinct validation cases.
 
 ### 1.3 Target Audience
 
@@ -385,7 +385,7 @@ The pressure field (p = rho / 3) was added in D16 and is the "p" array in the fr
 
 **Validation targets (Tritton 1959, Williamson 1988):**
 
-| Re | Cd (literature) | Cd (LBM-2D) | St (literature) | St (LBM-2D) |
+| Re | Cd (literature) | Cd (AK-Vortex) | St (literature) | St (AK-Vortex) |
 |----|----------------|-------------|-----------------|-------------|
 | 20 | ~2.0 |, | Steady | Steady |
 | 40 | ~1.5 |, | Steady | Steady |
@@ -418,12 +418,12 @@ The primary vortex center location (x, y) and the centerline velocity profiles u
 
 **Validation target (Armaly et al. 1983):**
 
-| Re_H | Xr/H (Armaly) | Xr/H (LBM-2D) |
+| Re_H | Xr/H (Armaly) | Xr/H (AK-Vortex) |
 |------|---------------|----------------|
 | 100 | ~3 | 2.37 |
 | 200 | ~6 | 4.00 |
 
-**Results:** The LBM-2D reattachment lengths are systematically ~20% shorter than Armaly's measurements. This is consistent with the known behavior of 2D LBM at these Reynolds numbers: 3D effects in the physical experiment (Armaly's DNS was 2D but the experiment had finite spanwise extent) delay reattachment. Also, the Armaly simulation used a fully developed parabolic inlet profile at the step, while the LBM-2D implementation develops the profile over the inlet section.
+**Results:** The AK-Vortex reattachment lengths are systematically ~20% shorter than Armaly's measurements. This is consistent with the known behavior of 2D LBM at these Reynolds numbers: 3D effects in the physical experiment (Armaly's DNS was 2D but the experiment had finite spanwise extent) delay reattachment. Also, the Armaly simulation used a fully developed parabolic inlet profile at the step, while the AK-Vortex implementation develops the profile over the inlet section.
 
 **Struggle (Xr/H detection):** The reattachment point is detected by scanning the near-wall region (y = 1..10) downstream of the step for the first fluid node with u > 1e-6. This heuristic works for the primary recirculation zone but can be confused by weak secondary vortices at higher Re. A more robust approach would detect the zero-crossing of the wall shear stress (du/dy at y = 0).
 

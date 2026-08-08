@@ -1,4 +1,4 @@
-# Project Context, LBM-2D: High-Performance C++ Lattice Boltzmann CFD Solver
+# Project Context, AK-Vortex: High-Performance C++ Lattice Boltzmann CFD Solver
 
 ## Style Rules
 - **No em dashes** in any file. Use two regular hyphens (--) instead of ---, &mdash;, &ndash;, or literal Unicode em dash.
@@ -555,7 +555,7 @@ AMRGrid
 ## File Layout
 
 ```
-lbm-2d/
+ak-vortex/
   AGENTS.md                    # This file
   README.md                    # Project overview
   TECHNICAL_REPORT.md          # Full technical report (947 lines)

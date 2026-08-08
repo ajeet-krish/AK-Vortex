@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: Shared Flow Viewer Init v2
+// AK-Vortex: Shared Flow Viewer Init v2
 // Wires the vf-grid layout (1 column: static slider | animated canvas | CP static | CP canvas | vorticity static | vorticity canvas)
 // on each case page. Each page calls initVFSplitSections() with its own config.
 //

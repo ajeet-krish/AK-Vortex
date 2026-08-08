@@ -6,7 +6,7 @@
 #include <filesystem>
 
 // ==========================================================================
-// LBM-2D: Building Downwash Flow
+// AK-Vortex: Building Downwash Flow
 // ==========================================================================
 // Usage:
 //   ./build/LBM_Downwash                          (default: Re_H=100)
@@ -55,7 +55,7 @@ DownwashParams compute_params(double Re_H, int steps = -1) {
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: Building Downwash" << std::endl;
+    std::cout << " AK-Vortex: Building Downwash" << std::endl;
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

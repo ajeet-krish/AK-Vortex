@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-# LBM-2D: Urban Canyon Flow -- Reynolds Number Sweep
+# AK-Vortex: Urban Canyon Flow -- Reynolds Number Sweep
 # ==============================================================
 # Runs urban canyon simulations at Re_H = 100, 200
 # Two-building street canyon, 1:1 aspect ratio.

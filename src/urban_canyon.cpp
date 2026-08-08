@@ -9,7 +9,7 @@
 #include <utility>
 
 // ==========================================================================
-// LBM-2D: Urban Canyon Flow
+// AK-Vortex: Urban Canyon Flow
 // ==========================================================================
 // Side-view canyon (Re=100):
 //   ./build/LBM_UrbanCanyon --mode side --ar 0.3      (2 buildings, H/W=0.3)

@@ -6,7 +6,7 @@
 #include <filesystem>
 
 // ==========================================================================
-// LBM-2D: Flat Plate Boundary Layer (PRIMARY Validation Case)
+// AK-Vortex: Flat Plate Boundary Layer (PRIMARY Validation Case)
 // ==========================================================================
 // Usage:
 //   ./build/LBM_FlatPlate 1000 0              (Re=1000, AoA=0)
@@ -59,7 +59,7 @@ FlatPlateParams compute_params(double Re, double chord, double aoa_deg, int step
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: Flat Plate Boundary Layer" << std::endl;
+    std::cout << " AK-Vortex: Flat Plate Boundary Layer" << std::endl;
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

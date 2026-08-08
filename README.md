@@ -1,6 +1,6 @@
-# LBM-2D: High-Performance C++ Lattice Boltzmann CFD Solver
+# AK-Vortex: High-Performance Lattice Boltzmann CFD Suite
 
-![CI](https://github.com/ajeet-krish/lbm-2d/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/ajeet-krish/AK-Vortex/actions/workflows/ci.yml/badge.svg)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue?logo=cplusplus)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Tests](https://img.shields.io/badge/Tests-12%20passing-brightgreen)
@@ -8,9 +8,9 @@
 A cache-optimized **D2Q9 Lattice Boltzmann Method** solver with an interactive **desktop application** for computational fluid dynamics. Built as an aerospace engineering portfolio piece demonstrating **HPC** (C++20, OpenMP, cache optimization), **CFD fundamentals** (MRT, Bouzidi, Smagorinsky LES, AMR), and **modern software engineering** (Tauri + React + Rust desktop app, Physics-Informed Neural Network surrogates).
 
 <!-- TODO: Replace with actual screenshot -->
-![LBM-2D Desktop Application](docs/assets/images/cavity/simulations/re100/re100_contour.png)
+![AK-Vortex Desktop Application](docs/assets/images/cavity/simulations/re100/re100_contour.png)
 
-*Lid-driven cavity flow at Re=100 -- velocity magnitude contour rendered by the LBM-2D solver.*
+*Lid-driven cavity flow at Re=100 -- velocity magnitude contour rendered by the AK-Vortex solver.*
 
 ---
 
@@ -18,8 +18,8 @@ A cache-optimized **D2Q9 Lattice Boltzmann Method** solver with an interactive *
 
 ```bash
 # Clone and build
-git clone https://github.com/ajeet-krish/lbm-2d.git
-cd lbm-2d
+git clone https://github.com/ajeet-krish/AK-Vortex.git
+cd AK-Vortex
 cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
 # Run the primary validation case (flat plate boundary layer)
@@ -300,7 +300,7 @@ See `pinn/README.md` for setup, architecture details, and the full phased plan.
 ## Project Structure
 
 ```
-lbm-2d/
+ak-vortex/
   README.md                    This file
   AGENTS.md                    Project context and conventions
   TECHNICAL_REPORT.md          Full technical report (947 lines)

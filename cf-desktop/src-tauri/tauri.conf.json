@@ -1,5 +1,5 @@
 {
-  "productName": "LBM Desktop",
+  "productName": "AK-Vortex",
   "version": "0.1.0",
   "identifier": "com.lbm.desktop",
   "build": {
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "LBM-2D Desktop CFD",
+        "title": "AK-Vortex Desktop CFD",
         "width": 1200,
         "height": 800,
         "resizable": true,

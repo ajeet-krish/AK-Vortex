@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D WASM Real-Time Rendering Engine
+// AK-Vortex WASM Real-Time Rendering Engine
 // Velocity contour with dense pathline particle visualization
 // ==========================================================================
 

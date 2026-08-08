@@ -8,7 +8,7 @@
 #include <utility>
 
 // ==========================================================================
-// LBM-2D: Urban City Grid (7 buildings)
+// AK-Vortex: Urban City Grid (7 buildings)
 // ==========================================================================
 // 7 buildings: 4 horizontal + 3 vertical, mixed orientations
 // Domain: 1200x600, street width = 2x building width
@@ -109,7 +109,7 @@ void place_citygrid_obstacles(LBMCapabilities& system, const CityGridParams& par
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D: Urban City Grid (7 buildings)" << std::endl;
+    std::cout << " AK-Vortex: Urban City Grid (7 buildings)" << std::endl;
     std::cout << " D2Q9 | MRT | OpenMP | Cache-Optimized" << std::endl;
     std::cout << "==============================================" << std::endl;
 

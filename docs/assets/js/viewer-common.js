@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: Shared Flow Viewer Init
+// AK-Vortex: Shared Flow Viewer Init
 // Wires the LBM Evolution + PINN Prediction sections on each case page to the
 // FlowViewer (LBM time-series) and PinnSurrogate (parametric surrogate) classes.
 // Each page calls initFlowViewerSections() with its own case configuration.

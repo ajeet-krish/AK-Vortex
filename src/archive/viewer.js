@@ -1,5 +1,5 @@
 /**
- * LBM-2D Interactive Simulation Viewer
+ * AK-Vortex Interactive Simulation Viewer
  * Canvas-based animation player for pre-computed simulation data.
  * Loads velocity field JSON + force coefficient JSON.
  */

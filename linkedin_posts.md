@@ -1,4 +1,4 @@
-# LinkedIn Posts for LBM-2D Solver Project
+# LinkedIn Posts for AK-Vortex Solver Project
 
 ## Style Notes
 - Casual, not academic. No em dashes.
@@ -51,7 +51,7 @@ At low aspect ratios (H/W = 0.3), the street is wide relative to the buildings. 
 [Attach: docs/assets/images/urban/side/re0.3_contour.png]
 [Attach: docs/assets/images/urban/side/re0.3_streamlines.png]
 
-At high aspect ratios (H/W = 0.8), the street is narrow and deep. The flow becomes dominated by a single large recirculation cell that fills the entire canyon. Pedestrian-level winds are driven by this vortex rather than the freestream.污染物 dispersion changes completely.
+At high aspect ratios (H/W = 0.8), the street is narrow and deep. The flow becomes dominated by a single large recirculation cell that fills the entire canyon. Pedestrian-level winds are driven by this vortex rather than the freestream. Pollutant dispersion changes completely.
 
 [Attach: docs/assets/images/urban/side/re0.8_contour.png]
 [Attach: docs/assets/images/urban/side/re0.8_streamlines.png]
@@ -136,24 +136,55 @@ Suggested images: flat plate AoA sweep, square cylinder, periodic hills Re=2800,
 
 ---
 
-## Post 6 (Stub): Building the Portfolio Site
+## Post 6: Building a CFD Desktop App -- From Solver to Tool
+
+A CFD solver that runs from the command line is useful for research. A CFD desktop application that anyone can use is a different kind of project entirely. I spent the last few weeks turning my LBM solver into a Tauri-based desktop app, and the engineering challenges were nothing like what I expected.
+
+The first surprise was the architecture. A desktop CFD app is not just a solver with a GUI wrapper. It is a full-stack application with four distinct layers: a React frontend for the interface, a Rust backend for file I/O and process management, a C++ solver core for the physics, and an FFI bridge connecting them. Each layer has its own language, its own conventions, and its own failure modes.
+
+The second surprise was the geometry problem. In a command-line solver, you hardcode each case: cylinder here, cavity there, step in the corner. In a desktop app, the user draws whatever they want. I built an interactive geometry editor where you click to place circles, rectangles, and NACA airfoils. The editor converts your drawing into an obstacle mask, sends it to the C++ solver as JSON, and the solver marks those grid points as solid. Getting that pipeline working required solving three separate problems: a JSON parser in C++ with no external dependencies, a coordinate transform between canvas pixels and solver grid nodes, and a y-flip because screen coordinates have y increasing downward while solver coordinates have y increasing upward.
+
+[Attach: docs/assets/images/desktop/geometry-editor.png]
+
+The third surprise was visualization. The solver outputs JSON frames with velocity, pressure, and vorticity fields. But raw numbers are not useful. I built a canvas-based renderer that maps scalar fields to colormaps, overlays streamlines via RK4 integration, and adds quiver arrows for velocity direction. The pressure field was especially tricky: in LBM, density stays near 1.0, so pressure perturbations are tiny (order 0.003). The auto-scaling colormap showed everything as one color until I learned to output pressure as (rho - 1) / 3 instead of rho / 3, and to exclude obstacle nodes from the range calculation.
+
+[Attach: docs/assets/images/desktop/velocity-contour.png]
+
+The fourth surprise was state management. When the user runs a simulation, the C++ solver runs in the same process via FFI. If you run a cylinder case and then switch to an airfoil, the C++ globals (turbulence model flags, case type, boundary conditions) from the cylinder case persist. I had to add a reset function that zeros all globals before each run. Without it, the airfoil simulation ran with LES turbulence modeling enabled from the cylinder case, producing wrong results.
+
+[Attach: docs/assets/images/desktop/comparison-mode.png]
+
+The most valuable feature turned out to be the simplest: VTK export. One button writes the simulation frame as a VTK structured points file that ParaView can read. It took about 100 lines of C++ to implement, but it connects the desktop app to the entire ParaView ecosystem: isosurfaces, animations, volume rendering, screenshots for reports. Sometimes the highest-impact feature is the one that lets users leverage existing tools.
+
+[Attach: docs/assets/images/desktop/export-vtk.png]
+
+The mesh resolution study (GCI) feature surprised me too. I implemented a function that automatically runs the same case at three grid resolutions, extracts a metric (like max velocity or drag coefficient), and computes the Grid Convergence Index using Richardson extrapolation. It is the standard method for quantifying numerical uncertainty in CFD. Having it built into the desktop app means any user can validate their simulation without writing custom scripts.
+
+[Attach: docs/assets/images/desktop/gci-study.png]
+
+Looking back, the desktop app taught me more about software engineering than the solver did. The solver is pure physics: collision, streaming, boundary conditions. The desktop app is systems engineering: data flow across language boundaries, state management across process boundaries, UI responsiveness during long computations, and security hardening against path traversal and injection attacks.
+
+The full desktop app is on GitHub. It is open source, built with Tauri 2, React, Rust, and C++. Link in comments.
+
+#DesktopApp #CFD #Tauri #RustLang #CPlusPlus #AerospaceEngineering #SoftwareEngineering #HPC #Simulation
+
+---
+
+## Post 7 (Stub): What I Learned Building a Complete CFD Project
 
 Outline:
-- No framework, no build pipeline. Vanilla HTML/JS/CSS.
-- Interactive comparison sliders (contour vs streamline) per case
-- Canvas-based FlowViewer streaming float16 binary frame data
-- Live PINN inference in the browser via ONNX Runtime Web (vendored, single-threaded)
-- KaTeX for theory pages, validation tables with literature comparisons
-- Dark theme with jet colormap for velocity, RdBu for vorticity
-- The site itself is a demonstration of engineering communication skills
-- GitHub repo with CI, Google Test suite, batch scripts for parametric sweeps
+- From solver to desktop app to website to PINN: the full stack
+- Engineering design process: requirements -> architecture -> implementation -> validation
+- What I would do differently (start with the desktop app, not the solver)
+- Skills demonstrated: HPC, CFD, ML, full-stack development, technical communication
+- Advice for engineers building portfolio projects
 
-Suggested images: site screenshot, comparison slider in action
+Suggested images: architecture diagram, desktop app screenshot, validation table
 
 ---
 
 ## Suggested Hashtags
-`#CFD #LatticeBoltzmann #AerospaceEngineering #FluidMechanics #MachineLearning #HPC #Simulation #NeuralNetworks #OpenMP #WindEngineering`
+`#CFD #LatticeBoltzmann #AerospaceEngineering #FluidMechanics #MachineLearning #HPC #Simulation #NeuralNetworks #OpenMP #WindEngineering #DesktopApp #Tauri #RustLang #CPlusPlus #SoftwareEngineering`
 
 ## Suggested Posting Sequence
 - Post 1 (solver intro + cavity/step/orifice images)
@@ -166,7 +197,9 @@ Suggested images: site screenshot, comparison slider in action
 - Wait a few days
 - Post 5 (advanced cases, when ready)
 - Wait a few days
-- Post 6 (portfolio site philosophy, when ready)
+- Post 6 (desktop app development journey)
+- Wait a few days
+- Post 7 (full project reflection, when ready)
 
 Let each post breathe. Do not drop them all at once.
 
@@ -175,5 +208,6 @@ Let each post breathe. Do not drop them all at once.
 - For Post 1, lead with the cavity contour (most visually striking)
 - For Post 2, lead with the urban canyon side view (tells the aspect ratio story)
 - For Post 3, lead with the 3-panel comparison (LBM vs PINN vs error)
+- For Post 6, lead with the geometry editor screenshot (most interactive-looking)
 - Keep captions under 300 characters on LinkedIn
 - Link to the project site in the first comment, not in the post body (LinkedIn algorithm penalizes external links in post text)

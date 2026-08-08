@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate airfoil validation plots for the LBM-2D portfolio.
+Generate airfoil validation plots for the AK-Vortex portfolio.
 Reads forces.csv from each AoA simulation, produces Cl-vs-Alpha, Cd-vs-Alpha,
 drag polar, and NACA 0012 vs 2412 comparison.
 

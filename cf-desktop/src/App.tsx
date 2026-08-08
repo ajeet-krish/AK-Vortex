@@ -321,7 +321,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>LBM-2D Desktop CFD</h1>
+        <h1>AK-Vortex Desktop CFD</h1>
         <span className="subtitle">Lattice Boltzmann Method Solver</span>
         <div className="header-toolbar">
           <button className="header-btn" onClick={handleReset} title="New Simulation">

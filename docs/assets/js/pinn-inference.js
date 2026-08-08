@@ -1,5 +1,5 @@
 // ==========================================================================
-// LBM-2D: PINN Surrogate (live temporal ONNX inference)
+// AK-Vortex: PINN Surrogate (live temporal ONNX inference)
 // Drives the "PINN Prediction" section of each case page. Loads the trained
 // time-parametric ParametricPINN (exported to ONNX) and runs real in-browser
 // inference at ANY Reynolds number in the trained range, animating the full

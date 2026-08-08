@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[]) {
     std::cout << "==============================================" << std::endl;
-    std::cout << " LBM-2D AMR Test: Cylinder Flow" << std::endl;
+    std::cout << " AK-Vortex AMR Test: Cylinder Flow" << std::endl;
     std::cout << "==============================================" << std::endl;
 
     double Re = 100.0;

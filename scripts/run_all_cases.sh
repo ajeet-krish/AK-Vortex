@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================
-# LBM-2D: Run All Simulation Cases
+# AK-Vortex: Run All Simulation Cases
 # ==============================================================
 # Orchestrates all Reynolds number sweeps for every case.
 # Runs cylinder, cavity, and all non-cylinder cases sequentially.
@@ -16,12 +16,12 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # Build once
-echo "Building LBM-2D..."
+echo "Building AK-Vortex..."
 cmake -B build && cmake --build build
 
 echo ""
 echo "================================================"
-echo " LBM-2D: Full Simulation Suite"
+echo " AK-Vortex: Full Simulation Suite"
 echo "================================================"
 echo ""
 
