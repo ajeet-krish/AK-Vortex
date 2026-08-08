@@ -2,6 +2,7 @@
 
 mod solver;
 mod commands;
+mod plot_gen;
 
 fn main() {
     tauri::Builder::default()
@@ -22,6 +23,7 @@ fn main() {
             commands::run_gci,
             commands::cancel_simulation,
             commands::get_simulation_status,
+            plot_gen::generate_report_plots,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
