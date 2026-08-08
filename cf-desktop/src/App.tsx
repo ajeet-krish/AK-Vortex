@@ -22,7 +22,6 @@ function App() {
     const playback = usePlayback(sim.frames.length, sim.setFrameIndex);
     const viz = useVisualization(sim.frameData);
 
-    // GCI study state (local to layout)
     const [gciRunning, setGciRunning] = useState(false);
     const [gciResults, setGciResults] = useState<{
         grids: Array<{ grid: string; nx: number; ny: number; maxVel: number }>;
@@ -34,11 +33,6 @@ function App() {
     // Responsive canvas sizing
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 400 });
-
-    // When simulation completes, switch to simulation view
-    sim.setOnComplete(() => {
-        viz.setViewMode('simulation');
-    });
 
     const currentStep = sim.frames.length > 0 ? sim.frames[sim.frameIndex] : 0;
 

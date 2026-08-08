@@ -32,8 +32,6 @@ export interface SimulationState {
     handleCaseTypeChange: (caseType: string) => void;
     solverLog: string[];
     setSolverLog: React.Dispatch<React.SetStateAction<string[]>>;
-    onComplete: (() => void) | null;
-    setOnComplete: (cb: (() => void) | null) => void;
 }
 
 export function useSimulation(shapes: Shape[]): SimulationState {
@@ -54,7 +52,6 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     const [frameIndex, setFrameIndex] = useState(0);
     const [frameData, setFrameData] = useState<FrameData | null>(null);
     const [solverLog, setSolverLog] = useState<string[]>([]);
-    const [onComplete, setOnComplete] = useState<(() => void) | null>(null);
 
     const outputDirRef = useRef(outputDir);
     outputDirRef.current = outputDir;
@@ -92,7 +89,6 @@ export function useSimulation(shapes: Shape[]): SimulationState {
                     if (frameList.length > 0) {
                         setFrameIndex(frameList.length - 1);
                     }
-                    onComplete?.();
                 }
             } catch (e) {
                 console.error('Failed to poll status:', e);
@@ -102,7 +98,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         pollStatus();
         const timer = setInterval(pollStatus, 500);
         return () => clearInterval(timer);
-    }, [running, onComplete]);
+    }, [running]);
 
     const runSimulation = useCallback(async () => {
         setRunning(true);
@@ -199,7 +195,5 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         handleCaseTypeChange,
         solverLog,
         setSolverLog,
-        onComplete,
-        setOnComplete,
     };
 }
