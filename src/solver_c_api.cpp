@@ -419,7 +419,6 @@ int lbm_solve_c(
     for (int step = 0; step <= max_steps; ++step) {
         // Check cancel every 100 steps
         if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
-            log_message("[solver] Cancelled by user.");
             return step;
         }
 
@@ -557,7 +556,6 @@ int lbm_solve_geometry(
     for (int step = 0; step <= max_steps; ++step) {
         // Check cancel every 100 steps
         if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
-            log_message("[solver] Cancelled by user.");
             return step;
         }
 
@@ -686,7 +684,6 @@ extern "C" int lbm_run_sweep(
     for (int i = 0; i < re_steps; ++i) {
         // Check cancel between sweep iterations
         if (g_cancel_flag.load(std::memory_order_relaxed)) {
-            log_message("[sweep] Cancelled by user.");
             csv.close();
             return i;
         }
@@ -754,8 +751,6 @@ extern "C" int lbm_run_gci(
     for (int i = 0; i < 3; ++i) {
         // Check cancel between GCI grid iterations
         if (g_cancel_flag.load(std::memory_order_relaxed)) {
-            log_message("[gci] Cancelled by user.");
-            csv.close();
             return i;
         }
 
