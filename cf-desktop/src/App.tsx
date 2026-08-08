@@ -49,6 +49,7 @@ function App() {
         caseType: DEFAULT_CASE,
     });
     const [running, setRunning] = useState(false);
+    const [canCancel, setCanCancel] = useState(false);
     const [simProgress, setSimProgress] = useState({ step: 0, total: 0, status: '' });
     const [outputDir, setOutputDir] = useState<string | null>(null);
     const [frames, setFrames] = useState<number[]>([]);
@@ -122,6 +123,8 @@ function App() {
 
     // Responsive canvas sizing
     const containerRef = useRef<HTMLDivElement>(null);
+    const outputDirRef = useRef(outputDir);
+    outputDirRef.current = outputDir;
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 400 });
 
     const currentStep = frames.length > 0 ? frames[frameIndex] : 0;
@@ -237,22 +240,37 @@ function App() {
         return () => clearInterval(timer);
     }, [playing, playbackSpeed, frames.length]);
 
-    // Poll solver log while simulation is running
+    // Poll solver status while simulation is running
     useEffect(() => {
         if (!running) return;
 
-        const pollLog = async () => {
+        const pollStatus = async () => {
             try {
-                const entries = await invoke<string[]>('get_solver_log', {});
-                setSolverLog(entries);
+                const status = await invoke<{ running: boolean; log: string[] }>('get_simulation_status');
+                setSolverLog(status.log);
+
+                if (!status.running && outputDirRef.current) {
+                    // Simulation completed
+                    setRunning(false);
+                    setCanCancel(false);
+                    setSimProgress(prev => ({ ...prev, status: 'Complete!' }));
+
+                    // Load frames
+                    const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
+                    setFrames(frameList);
+                    if (frameList.length > 0) {
+                        setFrameIndex(frameList.length - 1);
+                    }
+                    setViewMode('simulation');
+                }
             } catch (e) {
-                console.error('Failed to fetch solver log:', e);
+                console.error('Failed to poll status:', e);
             }
         };
 
         // Initial fetch
-        pollLog();
-        const timer = setInterval(pollLog, 500);
+        pollStatus();
+        const timer = setInterval(pollStatus, 500);
         return () => clearInterval(timer);
     }, [running]);
 
@@ -300,10 +318,13 @@ function App() {
         setPlaying(false);
         setFrames([]);
         setFrameData(null);
+        setCanCancel(true);
         setSimProgress({ step: 0, total: config.maxSteps, status: 'Initializing...' });
+
         try {
             // Reset C++ globals first
             await invoke('reset_solver');
+
             let dir: string;
             if (config.caseType === 'custom') {
                 const geometryJson = JSON.stringify(shapes.map(s => {
@@ -312,7 +333,6 @@ function App() {
                     } else if (s.type === 'rectangle') {
                         return { type: 'rectangle', x: s.x, y: s.y, width: s.width, height: s.height };
                     } else {
-                        // Convert {x,y} objects to [x,y] arrays for C++ parser
                         return { type: 'polygon', points: s.points?.map(p => [p.x, p.y]) || [] };
                     }
                 }));
@@ -338,20 +358,16 @@ function App() {
                     caseType: config.caseType,
                 });
             }
-            setSimProgress({ step: config.maxSteps, total: config.maxSteps, status: 'Complete!' });
+
             setOutputDir(dir);
-            const frameList = await invoke<number[]>('list_frames', { path: dir });
-            setFrames(frameList);
-            if (frameList.length > 0) {
-                setFrameIndex(frameList.length - 1);
-            }
-            setViewMode('simulation');
+            // Don't set running=false yet -- poll for completion
         } catch (e) {
             console.error(e);
             setSimProgress({ step: 0, total: 0, status: 'Failed!' });
+            setRunning(false);
+            setCanCancel(false);
             alert(`Simulation failed: ${e}`);
         }
-        setRunning(false);
     };
 
     const resetSimulation = () => {
@@ -364,6 +380,15 @@ function App() {
         setViewMode('domain');
         setCompareMode(false);
         setCompareData(null);
+    };
+
+    const cancelSimulation = async () => {
+        try {
+            await invoke('cancel_simulation');
+            setSimProgress(prev => ({ ...prev, status: 'Cancelling...' }));
+        } catch (e) {
+            console.error('Failed to cancel:', e);
+        }
     };
 
     const handleCaseTypeChange = (caseType: string) => {
@@ -520,6 +545,18 @@ function App() {
                         </svg>
                         Run
                     </button>
+                    {canCancel && (
+                        <button
+                            className="header-btn header-btn-danger"
+                            onClick={cancelSimulation}
+                            title="Cancel Simulation"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <rect x="3" y="3" width="8" height="8" rx="1" />
+                            </svg>
+                            Cancel
+                        </button>
+                    )}
                     <div className="header-separator" />
                     <button className="header-btn" onClick={handleExportPng} disabled={!frameData} title="Export PNG">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">

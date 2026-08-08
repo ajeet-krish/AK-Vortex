@@ -114,6 +114,16 @@ body {
   background: var(--accent-hover);
 }
 
+.header-btn-danger {
+  color: #f85149;
+  border-color: #f8514944;
+}
+
+.header-btn-danger:hover {
+  background: #f8514922;
+  border-color: #f85149;
+}
+
 .header-separator {
   width: 1px;
   height: 16px;

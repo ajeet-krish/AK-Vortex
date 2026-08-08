@@ -1,5 +1,7 @@
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::thread::{self, JoinHandle};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use tauri::command;
@@ -8,6 +10,15 @@ use crate::solver::{self, SolverConfig};
 
 // Global solver log storage
 static SOLVER_LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+// Global cancel flag: set by cancel_simulation, checked by solver threads
+pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
+
+// Track whether a solver is currently running
+static SIM_RUNNING: AtomicBool = AtomicBool::new(false);
+
+// Handle to the running solver thread (drop old if a new one starts)
+static SOLVER_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
 pub fn log_message(msg: &str) {
     if let Ok(mut log) = SOLVER_LOG.lock() {
@@ -27,6 +38,24 @@ fn validate_path(path: &str) -> Result<(), String> {
 pub fn reset_solver() -> Result<(), String> {
     solver::reset_solver();
     Ok(())
+}
+
+#[command]
+pub fn cancel_simulation() -> Result<(), String> {
+    CANCEL_FLAG.store(true, Ordering::SeqCst);
+    solver::set_cancel_flag(true);
+    log_message("[solver] Cancel requested by user.");
+    Ok(())
+}
+
+#[command]
+pub fn get_simulation_status() -> Result<serde_json::Value, String> {
+    let running = SIM_RUNNING.load(Ordering::SeqCst);
+    let log = SOLVER_LOG.lock().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "running": running,
+        "log": log.clone(),
+    }))
 }
 
 #[command]
@@ -52,6 +81,10 @@ pub fn run_simulation(
         return Err("max_steps must be 1-1,000,000".to_string());
     }
 
+    if SIM_RUNNING.load(Ordering::SeqCst) {
+        return Err("A simulation is already running. Cancel it first.".to_string());
+    }
+
     let output_dir = app.path()
         .app_data_dir()
         .unwrap()
@@ -70,16 +103,38 @@ pub fn run_simulation(
     // Clean stale frames from previous runs
     let _ = std::fs::remove_dir_all(&output_dir);
 
+    // Reset cancel flag and mark running
+    CANCEL_FLAG.store(false, Ordering::SeqCst);
+    solver::set_cancel_flag(false);
+    SIM_RUNNING.store(true, Ordering::SeqCst);
+
+    log_message("[solver] Running LBM solver in background thread...");
+
     let config = SolverConfig {
         nx, ny, re, u_inflow, max_steps, save_interval,
         output_dir: output_dir.clone(),
         case_type,
     };
 
-    log_message("[solver] Running LBM solver...");
-    solver::run_solver(&config)?;
-    log_message("[solver] Simulation complete.");
+    let handle = thread::spawn(move || {
+        let result = solver::run_solver(&config);
+        SIM_RUNNING.store(false, Ordering::SeqCst);
+        match result {
+            Ok(_) => {
+                log_message("[solver] Simulation complete.");
+            }
+            Err(e) => {
+                log_message(&format!("[solver] Failed: {}", e));
+            }
+        }
+    });
 
+    // Store handle, drop old one if exists
+    if let Ok(mut h) = SOLVER_HANDLE.lock() {
+        *h = Some(handle);
+    }
+
+    // Return immediately -- client polls get_simulation_status
     Ok(output_dir)
 }
 
@@ -110,6 +165,10 @@ pub fn run_geometry_simulation(
         return Err("max_steps must be 1-1,000,000".to_string());
     }
 
+    if SIM_RUNNING.load(Ordering::SeqCst) {
+        return Err("A simulation is already running. Cancel it first.".to_string());
+    }
+
     log_message(&format!(
         "[solver] Starting custom geometry simulation: {}x{}, Re={}, steps={}",
         nx, ny, re, max_steps
@@ -120,13 +179,37 @@ pub fn run_geometry_simulation(
     // Clean stale frames from previous runs
     let _ = std::fs::remove_dir_all(&output_dir);
 
-    log_message("[solver] Running LBM solver with custom geometry...");
-    solver::run_geometry_solver(
-        nx, ny, re, u_inflow, max_steps, save_interval,
-        &output_dir, &geometry_json,
-    )?;
-    log_message("[solver] Simulation complete.");
+    // Reset cancel flag and mark running
+    CANCEL_FLAG.store(false, Ordering::SeqCst);
+    solver::set_cancel_flag(false);
+    SIM_RUNNING.store(true, Ordering::SeqCst);
 
+    log_message("[solver] Running LBM solver with custom geometry in background thread...");
+
+    let out_dir_clone = output_dir.clone();
+    let geom_clone = geometry_json.clone();
+    let handle = thread::spawn(move || {
+        let result = solver::run_geometry_solver(
+            nx, ny, re, u_inflow, max_steps, save_interval,
+            &out_dir_clone, &geom_clone,
+        );
+        SIM_RUNNING.store(false, Ordering::SeqCst);
+        match result {
+            Ok(_) => {
+                log_message("[solver] Simulation complete.");
+            }
+            Err(e) => {
+                log_message(&format!("[solver] Failed: {}", e));
+            }
+        }
+    });
+
+    // Store handle, drop old one if exists
+    if let Ok(mut h) = SOLVER_HANDLE.lock() {
+        *h = Some(handle);
+    }
+
+    // Return immediately -- client polls get_simulation_status
     Ok(output_dir)
 }
 
@@ -240,6 +323,10 @@ pub fn run_sweep(
         .to_string_lossy()
         .to_string();
 
+    if SIM_RUNNING.load(Ordering::SeqCst) {
+        return Err("A simulation is already running. Cancel it first.".to_string());
+    }
+
     log_message(&format!(
         "[sweep] Starting parameter sweep: Re=[{}..{}] x {} steps",
         re_min, re_max, re_steps
@@ -248,12 +335,37 @@ pub fn run_sweep(
 
     let _ = std::fs::remove_dir_all(&output_dir);
 
-    solver::run_sweep(
-        nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
-        &output_dir, &geometry_json,
-    )?;
-    log_message("[sweep] Parameter sweep complete.");
+    // Reset cancel flag and mark running
+    CANCEL_FLAG.store(false, Ordering::SeqCst);
+    solver::set_cancel_flag(false);
+    SIM_RUNNING.store(true, Ordering::SeqCst);
 
+    log_message("[sweep] Running parameter sweep in background thread...");
+
+    let out_dir_clone = output_dir.clone();
+    let geom_clone = geometry_json.clone();
+    let handle = thread::spawn(move || {
+        let result = solver::run_sweep(
+            nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
+            &out_dir_clone, &geom_clone,
+        );
+        SIM_RUNNING.store(false, Ordering::SeqCst);
+        match result {
+            Ok(_) => {
+                log_message("[sweep] Parameter sweep complete.");
+            }
+            Err(e) => {
+                log_message(&format!("[sweep] Failed: {}", e));
+            }
+        }
+    });
+
+    // Store handle, drop old one if exists
+    if let Ok(mut h) = SOLVER_HANDLE.lock() {
+        *h = Some(handle);
+    }
+
+    // Return immediately -- client polls get_simulation_status
     Ok(output_dir)
 }
 
@@ -278,6 +390,10 @@ pub fn run_gci(
         .to_string_lossy()
         .to_string();
 
+    if SIM_RUNNING.load(Ordering::SeqCst) {
+        return Err("A simulation is already running. Cancel it first.".to_string());
+    }
+
     log_message(&format!(
         "[gci] Starting GCI study: {}x{}, Re={}, ratio={}, steps={}",
         nx_base, ny_base, re, refinement_ratio, max_steps
@@ -286,13 +402,36 @@ pub fn run_gci(
 
     let _ = std::fs::remove_dir_all(&output_dir);
 
-    solver::run_gci(
-        nx_base, ny_base, re, u_inflow, max_steps, save_interval,
-        refinement_ratio, &output_dir, &geometry_json,
-    )?;
-    log_message("[gci] Grid convergence study complete.");
+    // Reset cancel flag and mark running
+    CANCEL_FLAG.store(false, Ordering::SeqCst);
+    solver::set_cancel_flag(false);
+    SIM_RUNNING.store(true, Ordering::SeqCst);
 
+    log_message("[gci] Running grid convergence study in background thread...");
+
+    let out_dir_clone = output_dir.clone();
+    let geom_clone = geometry_json.clone();
+    let handle = thread::spawn(move || {
+        let result = solver::run_gci(
+            nx_base, ny_base, re, u_inflow, max_steps, save_interval,
+            refinement_ratio, &out_dir_clone, &geom_clone,
+        );
+        SIM_RUNNING.store(false, Ordering::SeqCst);
+        match result {
+            Ok(_) => {
+                log_message("[gci] Grid convergence study complete.");
+            }
+            Err(e) => {
+                log_message(&format!("[gci] Failed: {}", e));
+            }
+        }
+    });
+
+    // Store handle, drop old one if exists
+    if let Ok(mut h) = SOLVER_HANDLE.lock() {
+        *h = Some(handle);
+    }
+
+    // Return immediately -- client polls get_simulation_status
     Ok(output_dir)
 }
-
-

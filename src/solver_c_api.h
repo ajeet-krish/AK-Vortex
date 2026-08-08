@@ -46,6 +46,8 @@ int lbm_run_gci(
     const char* geometry_json
 );
 
+void lbm_set_cancel_flag(bool cancel);
+
 #ifdef __cplusplus
 }
 #endif

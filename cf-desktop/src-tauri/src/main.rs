@@ -20,6 +20,8 @@ fn main() {
             commands::export_vtk,
             commands::run_sweep,
             commands::run_gci,
+            commands::cancel_simulation,
+            commands::get_simulation_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

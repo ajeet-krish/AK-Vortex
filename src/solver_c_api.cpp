@@ -8,6 +8,14 @@
 #include <random>
 #include <fstream>
 #include <sstream>
+#include <atomic>
+
+// Global cancel flag checked periodically by the solver loop
+static std::atomic<bool> g_cancel_flag{false};
+
+extern "C" void lbm_set_cancel_flag(bool cancel) {
+    g_cancel_flag.store(cancel, std::memory_order_relaxed);
+}
 
 // ==========================================================================
 // Reset all C++ global solver state between runs
@@ -409,6 +417,12 @@ int lbm_solve_c(
 
     // Run simulation
     for (int step = 0; step <= max_steps; ++step) {
+        // Check cancel every 100 steps
+        if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
+            log_message("[solver] Cancelled by user.");
+            return step;
+        }
+
         execute_time_step(system, tau, u_inflow);
 
         // Save forces
@@ -541,6 +555,12 @@ int lbm_solve_geometry(
 
     // Run simulation
     for (int step = 0; step <= max_steps; ++step) {
+        // Check cancel every 100 steps
+        if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
+            log_message("[solver] Cancelled by user.");
+            return step;
+        }
+
         execute_time_step(system, tau, u_inflow);
 
         // Save forces
@@ -664,6 +684,13 @@ extern "C" int lbm_run_sweep(
     csv << "Re,tau,max_velocity\n";
 
     for (int i = 0; i < re_steps; ++i) {
+        // Check cancel between sweep iterations
+        if (g_cancel_flag.load(std::memory_order_relaxed)) {
+            log_message("[sweep] Cancelled by user.");
+            csv.close();
+            return i;
+        }
+
         double re = re_min + (re_max - re_min) * i / (re_steps > 1 ? (re_steps - 1) : 1);
         std::string re_dir = out_dir + "/re" + std::to_string(static_cast<int>(re));
         std::filesystem::create_directories(re_dir);
@@ -725,6 +752,13 @@ extern "C" int lbm_run_gci(
     double metrics[3] = {0, 0, 0};  // max velocity for each grid
 
     for (int i = 0; i < 3; ++i) {
+        // Check cancel between GCI grid iterations
+        if (g_cancel_flag.load(std::memory_order_relaxed)) {
+            log_message("[gci] Cancelled by user.");
+            csv.close();
+            return i;
+        }
+
         std::string grid_dir = out_dir + "/grid_" + std::to_string(i);
         std::filesystem::create_directories(grid_dir);
 

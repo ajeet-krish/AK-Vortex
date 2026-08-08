@@ -56,11 +56,19 @@ extern "C" {
         output_dir: *const c_char,
         geometry_json: *const c_char,
     ) -> c_int;
+
+    fn lbm_set_cancel_flag(cancel: bool);
 }
 
 pub fn reset_solver() {
     unsafe {
         reset_solver_state();
+    }
+}
+
+pub fn set_cancel_flag(cancel: bool) {
+    unsafe {
+        lbm_set_cancel_flag(cancel);
     }
 }
 
