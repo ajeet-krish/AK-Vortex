@@ -79,16 +79,24 @@ export function useSimulation(shapes: Shape[]): SimulationState {
                 const status = await invoke<{ running: boolean; log: string[] }>('get_simulation_status');
                 setSolverLog(status.log);
 
+                // Check for new frames even while running (gives progress feedback)
+                if (outputDirRef.current) {
+                    const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
+                    if (frameList.length > 0) {
+                        setFrames(frameList);
+                        const lastFrame = frameList[frameList.length - 1];
+                        setFrameIndex(frameList.length - 1);
+                        setSimProgress({
+                            step: lastFrame,
+                            total: config.maxSteps,
+                            status: status.running ? 'Running...' : 'Complete!',
+                        });
+                    }
+                }
+
                 if (!status.running && outputDirRef.current) {
                     setRunning(false);
                     setCanCancel(false);
-                    setSimProgress((prev) => ({ ...prev, status: 'Complete!' }));
-
-                    const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
-                    setFrames(frameList);
-                    if (frameList.length > 0) {
-                        setFrameIndex(frameList.length - 1);
-                    }
                 }
             } catch (e) {
                 console.error('Failed to poll status:', e);
