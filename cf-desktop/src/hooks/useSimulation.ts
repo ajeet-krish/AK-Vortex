@@ -74,15 +74,24 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     useEffect(() => {
         if (!running) return;
 
+        let prevFrameCount = 0;
+        let prevLogLen = 0;
+
         const pollStatus = async () => {
             try {
                 const status = await invoke<{ running: boolean; log: string[] }>('get_simulation_status');
-                setSolverLog(status.log);
 
-                // Check for new frames even while running (gives progress feedback)
+                // Only update log if it grew
+                if (status.log.length !== prevLogLen) {
+                    prevLogLen = status.log.length;
+                    setSolverLog(status.log);
+                }
+
+                // Check for new frames (only update state if count changed)
                 if (outputDirRef.current) {
                     const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
-                    if (frameList.length > 0) {
+                    if (frameList.length !== prevFrameCount) {
+                        prevFrameCount = frameList.length;
                         setFrames(frameList);
                         setSimProgress({
                             step: frameList[frameList.length - 1],
@@ -95,7 +104,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
                 if (!status.running && outputDirRef.current) {
                     setRunning(false);
                     setCanCancel(false);
-                    // Load final frame on completion
+                    // Load final frame list on completion
                     const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
                     setFrames(frameList);
                     if (frameList.length > 0) {
@@ -108,7 +117,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         };
 
         pollStatus();
-        const timer = setInterval(pollStatus, 500);
+        const timer = setInterval(pollStatus, 1500);
         return () => clearInterval(timer);
     }, [running]);
 
