@@ -84,10 +84,8 @@ export function useSimulation(shapes: Shape[]): SimulationState {
                     const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
                     if (frameList.length > 0) {
                         setFrames(frameList);
-                        const lastFrame = frameList[frameList.length - 1];
-                        setFrameIndex(frameList.length - 1);
                         setSimProgress({
-                            step: lastFrame,
+                            step: frameList[frameList.length - 1],
                             total: config.maxSteps,
                             status: status.running ? 'Running...' : 'Complete!',
                         });
@@ -97,6 +95,12 @@ export function useSimulation(shapes: Shape[]): SimulationState {
                 if (!status.running && outputDirRef.current) {
                     setRunning(false);
                     setCanCancel(false);
+                    // Load final frame on completion
+                    const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
+                    setFrames(frameList);
+                    if (frameList.length > 0) {
+                        setFrameIndex(frameList.length - 1);
+                    }
                 }
             } catch (e) {
                 console.error('Failed to poll status:', e);
