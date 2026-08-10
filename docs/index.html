@@ -4,248 +4,244 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AK-Vortex: High-Performance C++ Lattice Boltzmann CFD Solver">
-  <title>AK-Vortex: High-Performance C++ Lattice Boltzmann CFD Solver</title>
+  <meta name="description"
+    content="AK-Vortex: High-Performance C++ Lattice Boltzmann CFD Solver with interactive visualization and PINN surrogates">
+  <title>AK-Vortex | High-Performance C++ Lattice Boltzmann CFD Solver</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-  <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+  <!-- Floating Particles -->
+  <canvas id="particle-canvas" aria-hidden="true"></canvas>
 
-  <div class="sidebar">
-    <div class="sidebar-brand"><a href="index.html">AK-Vortex</a></div>
-    <nav class="sidebar-nav">
-      <div class="nav-section">
-        <div class="nav-heading">Project</div>
-        <a href="index.html" class="nav-item active">Home</a>
-        <a href="desktop.html" class="nav-item">Desktop App</a>
-      </div>
-      <div class="nav-section">
-        <div class="nav-heading">Simulations</div>
-        <a href="cylinder.html" class="nav-item">Cylinder</a>
-        <a href="cavity.html" class="nav-item">Lid-Driven Cavity</a>
-        <a href="step.html" class="nav-item">Backward Step</a>
-        <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
-        <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
-        <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
-        <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
-        <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-      </div>
-      <div class="nav-section">
-        <div class="nav-heading">Reference</div>
-        <a href="theory.html" class="nav-item">Theory &amp; Methodology</a>
-        <a href="implementation.html" class="nav-item">C++ Implementation</a>
-        <a href="pinn.html" class="nav-item">Physics-Informed Neural Networks</a>
-        <a href="https://github.com/ajeet-krish/AK-Vortex" class="nav-item" target="_blank">GitHub Repository &nearr;</a>
-      </div>
-    </nav>
-  </div>
-
-  <div class="main-content">
-
-    <section class="hero" id="overview">
-      <h1>AK-Vortex: <span class="accent-orange">High-Performance</span> C++ Lattice Boltzmann CFD Solver</h1>
-    </section>
-
-    <p class="section-intro">
-      How does air flow around a plane wing, a high-rise building, or a racing car? To predict this without expensive
-      physical wind tunnels, engineers use Computational Fluid Dynamics (CFD) to simulate air as millions of
-      interacting particles.
-    </p>
-
-    <p class="section-intro">
-      Commercial solvers like ANSYS are powerful tools, but their complexity hides away the underlying physics while you
-      set the inputs and hope the result is right. To better understand CFD at the implementation level, I set out to
-      build a
-      solver from scratch.
-    </p>
-
-    <p class="section-intro">
-      AK-Vortex is a custom 2D CFD solver written in C++. Rather than solving the traditional, math-heavy fluid
-      equations directly, it uses the Lattice Boltzmann Method (LBM), a particle-based approach, to simulate
-      fluid behavior. The solver leverages OpenMP parallelization for high-performance computing and generates
-      interactive visual flow data.
-    </p>
-
-    <p class="section-intro">
-      This project is my open, ongoing lab notebook. Every simulation is an experiment and every validation table is a
-      measurement. The code is written so anyone can read it and follow how the solver works, from the core LBM method
-      all the way to training neural networks on its results.
-    </p>
-
-    <p class="section-intro">
-      On top of the solver, AK-Vortex trains a Physics-Informed Neural Network (PINN) on its own results. A PINN is a
-      neural network that learns to reproduce the flow field directly. Instead of waiting hours for a fresh
-      simulation for the smallest of changes, you get results in a fraction of a second. This mirrors the modern SciML
-      workflow used at NASA, Rolls-Royce, and Formula 1 teams, where a high-performance physics engine generates trusted
-      baseline data and a neural network compresses it into a deployable model. This shows not only that the C++ solver
-      works, but that its output can drive the
-      machine-learning-augmented analysis the industry is moving toward.
-    </p>
-
-    <h2>Simulation Cases</h2>
-
-    <p class="section-intro">
-      The solver is tested against a growing set of validation cases spanning
-      external aerodynamics, internal flows, urban microclimate, and multi-body
-      interactions. Each case is an experiment: a different geometry, boundary
-      condition, and Reynolds number designed to stress a specific capability of the
-      solver, from smooth curved boundaries to turbulent separation. Every run
-      produces velocity fields, quantitative validation against
-      experimental or benchmark data, and a physical discussion of what the results
-      mean.
-    </p>
-
-    <p class="section-intro">
-      Selected cases now pair the high-fidelity LBM solution with a trained PINN
-      surrogate, presenting side-by-side LBM / PINN / error-delta comparisons and the
-      resulting accuracy metrics directly on the case page.
-    </p>
-
-    <div class="case-grid">
-
-      <a href="cylinder.html" class="case-card">
-        <img class="case-thumb" src="assets/images/cylinder/simulations/re100/re100_contour.png" alt="Cylinder velocity contour"
-          onerror="this.style.background='#161b22';this.alt='Cylinder'">
-        <div class="case-info">
-          <h3>Cylinder Wake</h3>
-          <p>A cylinder in a steady flow, shedding the alternating von Karman vortex street.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="cavity.html" class="case-card">
-        <img class="case-thumb" src="assets/images/cavity/simulations/re1000/re1000_streamlines.png" alt="Cavity streamlines"
-          onerror="this.style.background='#161b22';this.alt='Cavity'">
-        <div class="case-info">
-          <h3>Lid-Driven Cavity</h3>
-          <p>A box with one sliding wall, spinning up a single rotating eddy; the classic benchmark of solver accuracy</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="step.html" class="case-card">
-        <img class="case-thumb" src="assets/images/step/simulations/re100/re100_streamlines.png" alt="Step streamlines"
-          onerror="this.style.background='#161b22';this.alt='Backward Step'">
-        <div class="case-info">
-          <h3>Backward-Facing Step</h3>
-          <p>Flow spilling over a sudden step, separating and reattaching downstream, like air behind a ledge or building.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="orifice_plate.html" class="case-card">
-        <img class="case-thumb" src="assets/images/orifice_plate/simulations/1p3h/re100_1p3h_contour.png" alt="Orifice plate velocity contour"
-          onerror="this.style.background='#161b22';this.alt='Orifice Plate'">
-        <div class="case-info">
-          <h3>Orifice Plate</h3>
-          <p>A plate with one or more holes blocking a pipe, squeezing flow into a jet; the basis of pipeline flow meters</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="urban.html" class="case-card">
-        <img class="case-thumb" src="assets/images/urban/simulations/side/2p_ar0.5/side_a05_contour.png" alt="Urban canyon velocity contour"
-          onerror="this.style.background='#161b22';this.alt='Urban Canyon'">
-        <div class="case-info">
-          <h3>Urban Canyon</h3>
-          <p>Rows of buildings lining a street, trapping and recirculating the wind into the stale air pockets found at city level.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-      <a href="flat_plate.html" class="case-card">
-        <img class="case-thumb" src="assets/images/flatplate/simulations/re1000/aoa0/re1000_aoa0_contour.png" alt="Flat plate velocity contour"
-          onerror="this.style.background='#161b22';this.alt='Flat Plate'">
-        <div class="case-info">
-          <h3>Flat Plate Boundary Layer</h3>
-          <p>The project's primary validation case: a thin plate angled into the flow, growing the slow boundary layer that governs wing and airfoil drag.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-      <a href="cylinder_near_wall.html" class="case-card">
-        <img class="case-thumb" src="assets/images/cylinder_near_wall/simulation/gap20/re100_gap20_contour.png"
-          alt="Cylinder near wall contour" onerror="this.style.background='#161b22';this.alt='Cylinder Near Wall'">
-        <div class="case-info">
-          <h3>Cylinder Near Wall</h3>
-          <p>A cylinder hovering just above a floor, where the wall pushes the lift upward; the ground effect that lifts race cars and planes near takeoff</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="side_by_side.html" class="case-card">
-        <img class="case-thumb" src="assets/images/side_by_side/simulations/sd30/re100_sd30_contour.png" alt="Side-by-side cylinders contour"
-          onerror="this.style.background='#161b22';this.alt='Side-by-Side Cylinders'">
-        <div class="case-info">
-          <h3>Side-by-Side Cylinders</h3>
-          <p>Two cylinders side by side, their wakes shoving each other around, like the tube bundles in a heat exchanger.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="rotating_cylinder.html" class="case-card">
-        <img class="case-thumb" src="assets/images/rotating_cylinder/simulations/w10/re100_w10_contour.png" alt="Rotating cylinder contour"
-          onerror="this.style.background='#161b22';this.alt='Rotating Cylinder'">
-        <div class="case-info">
-          <h3>Rotating Cylinder</h3>
-          <p>A spinning cylinder dragging the flow around it to make lift: the Magnus effect behind curveballs and rotor ships.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-      <a href="urban_citygrid.html" class="case-card">
-        <img class="case-thumb" src="assets/images/urban/simulations/city_grid/inlet_east/east_contour.png" alt="Urban city grid contour"
-          onerror="this.style.background='#161b22';this.alt='Urban City Grid'">
-        <div class="case-info">
-          <h3>Urban City Grid</h3>
-          <p>Seven buildings in a realistic city grid with east/west/south wind inlet configurations and street-level flow patterns.</p>
-          <span class="case-link">View case &rarr;</span>
-        </div>
-      </a>
-
-    </div>
-
-    <h2>Key Features</h2>
-
-    <ul>
-      <li><strong>MRT collision operator</strong> with independently tuned moment relaxation rates, based on d'Humieres
-        2002</li>
-      <li><strong>Smagorinsky LES</strong> subgrid-scale eddy viscosity with auto-activation at high Re</li>
-      <li><strong>Bouzidi interpolated bounce-back</strong> for smooth curved boundaries, including arbitrary polygons
-      </li>
-      <li><strong>Flat 1D memory layout</strong> for cache-friendly access patterns on modern CPUs</li>
-      <li><strong>OpenMP parallel</strong> collision and streaming with collapse(2)</li>
-      <li><strong>Momentum exchange</strong> force extraction without body-fitted meshes</li>
-      <li><strong>Direct JSON output</strong> with per-frame velocity and vorticity fields</li>
-      <li><strong>12 Google Test</strong> unit tests with GitHub Actions CI on Ubuntu and macOS</li>
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="index.html" class="nav__brand">
+      <img src="assets/images/logo.svg" alt="" class="nav__logo">
+      AK-Vortex
+    </a>
+    <button class="nav__toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links">
+      <li><a href="index.html" class="nav__link active">Home</a></li>
+      <li><a href="theory.html" class="nav__link">Theory</a></li>
+      <li><a href="validation.html" class="nav__link">Validation</a></li>
+      <li><a href="implementation.html" class="nav__link">Implementation</a></li>
     </ul>
+  </nav>
 
-    <hr class="divider">
+  <main class="main">
 
-    <section class="teaser-card">
-      <div class="teaser-text">
-        <h3>LBM Theory &amp; Methodology</h3>
-        <p>From the Boltzmann equation to the D2Q9 lattice: equilibrium distribution, BGK and MRT collision operators,
-          Chapman-Enskog expansion, and boundary condition treatment with full KaTeX equations.</p>
-        <a href="theory.html" class="teaser-link">Read Theory &rarr;</a>
+    <!-- ================================================================ -->
+    <!-- Hero                                                             -->
+    <!-- ================================================================ -->
+    <section class="hero">
+      <div class="hero__content">
+        <h1 class="hero__title">
+          AK-Vortex: <span class="accent">High-Performance</span> C++ Lattice Boltzmann CFD Solver
+        </h1>
+        <p class="hero__description">
+          How does air flow around a plane wing, a high-rise building, or a racing car? To predict this without
+          expensive physical wind tunnels, engineers use Computational Fluid Dynamics (CFD) to simulate air as
+          millions of interacting particles. Commercial solvers like ANSYS are powerful tools, but their complexity
+          hides away the underlying physics. To better understand CFD at the implementation level, I set out to
+          build a solver from scratch.
+        </p>
+        <p class="hero__description">
+          AK-Vortex is a custom 2D CFD solver built from scratch in C++ using the Lattice Boltzmann Method, packaged
+          into a desktop application with a geometry editor, real-time flow visualization, and parameter study tools.
+          Built with Rust and C++.
+        </p>
       </div>
     </section>
 
-    <section class="teaser-card">
-      <div class="teaser-text">
-        <h3>Code Architecture &amp; Implementation</h3>
-        <p>Memory model, OpenMP parallelization strategy, momentum-exchange force extraction, build system, test suite,
-          and expandable source blocks for the core solver kernel.</p>
-        <a href="implementation.html" class="teaser-link">View Architecture &rarr;</a>
+    <!-- ================================================================ -->
+    <!-- Desktop App Walkthrough                                          -->
+    <!-- ================================================================ -->
+    <section class="section" id="app-walkthrough">
+      <div class="container">
+        <h2 class="section-title">Desktop Application Walkthrough</h2>
+
+        <!-- Step 1: Application Overview -->
+        <article class="walkthrough-step">
+          <div class="walkthrough-step__content">
+            <span class="walkthrough-step__number">Step 01</span>
+            <h3>Application Overview</h3>
+            <p>
+              Launch the app and tour the interface layout: sidebar panels, canvas viewport, and solver log.
+              The feature-tree sidebar organizes geometry, solver parameters, and visualization controls
+              in a familiar CAD-style hierarchy.
+            </p>
+            <ul>
+            </ul>
+          </div>
+          <div class="walkthrough-step__media">
+            <!-- PLACEHOLDER: Add screenshot of the full application interface -->
+            <!-- Recommended: assets/images/desktop/app-overview.png (16:10 aspect) -->
+            <div class="walkthrough-step__media-placeholder">
+              <div class="placeholder-icon">&#9654;</div>
+              <span>Screenshot: Application Overview</span>
+              <span style="font-size: 0.85em; opacity: 0.7;">Full interface with sidebar, canvas, and solver log</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Step 2: Geometry Editor -->
+        <article class="walkthrough-step walkthrough-step--reverse">
+          <div class="walkthrough-step__content">
+            <span class="walkthrough-step__number">Step 02</span>
+            <h3>Geometry Editor</h3>
+            <p>
+              Draw circles, rectangles, and polygons directly on the canvas. Design a 4-digit NACA airfoil
+              with parametric camber, thickness, and rotation controls. Drag to reposition, resize via
+              handles, and detect shape collisions automatically.
+            </p>
+          </div>
+          <div class="walkthrough-step__media">
+            <!-- PLACEHOLDER: Add screenshot of the geometry editor -->
+            <!-- Recommended: assets/images/desktop/geometry-editor.png (16:10 aspect) -->
+            <div class="walkthrough-step__media-placeholder">
+              <div class="placeholder-icon">&#9998;</div>
+              <span>Screenshot: Geometry Editor</span>
+              <span style="font-size: 0.85em; opacity: 0.7;">Drawing obstacles with parametric NACA airfoil
+                controls</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Step 3: Simulation Control -->
+        <article class="walkthrough-step">
+          <div class="walkthrough-step__content">
+            <span class="walkthrough-step__number">Step 03</span>
+            <h3>Simulation Control</h3>
+            <p>
+              Configure grid size, Reynolds number, and inflow velocity. Press Run and watch the solver
+              log stream in real time as the C++ backend executes the LBM timestep loop via FFI.
+              The progress bar tracks completion while the solver runs at full native speed.
+            </p>
+          </div>
+          <div class="walkthrough-step__media">
+            <!-- PLACEHOLDER: Add screenshot of simulation running -->
+            <!-- Recommended: assets/images/desktop/simulation-running.png (16:10 aspect) -->
+            <div class="walkthrough-step__media-placeholder">
+              <div class="placeholder-icon">&#9881;</div>
+              <span>Screenshot: Simulation Running</span>
+              <span style="font-size: 0.85em; opacity: 0.7;">Solver log streaming with progress bar</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Step 4: Flow Visualization -->
+        <article class="walkthrough-step walkthrough-step--reverse">
+          <div class="walkthrough-step__content">
+            <span class="walkthrough-step__number">Step 04</span>
+            <h3>Flow Visualization</h3>
+            <p>
+              Render velocity magnitude, pressure, or vorticity fields. Toggle streamlines and quiver overlays. Probe
+              any point to read
+              local u, v, rho, p, and omega values. Watch the flow develop frame-by-frame from rest to steady-state.
+            </p>
+          </div>
+          <div class="walkthrough-step__media">
+            <!-- PLACEHOLDER: Add screenshot of flow visualization -->
+            <!-- Recommended: assets/images/desktop/velocity-contour.png (16:10 aspect) -->
+            <div class="walkthrough-step__media-placeholder">
+              <div class="placeholder-icon">&#127754;</div>
+              <span>Screenshot: Flow Visualization</span>
+              <span style="font-size: 0.85em; opacity: 0.7;">Velocity contour with streamlines and field probe</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Step 5: Parameter Studies & PINN -->
+        <article class="walkthrough-step">
+          <div class="walkthrough-step__content">
+            <span class="walkthrough-step__number">Step 05</span>
+            <h3>Parameter Studies &amp; PINN Surrogate</h3>
+            <p>
+              Run parameter sweeps across Reynolds numbers and geometry configurations.
+              Compare two simulations side-by-side. Launch a GCI grid convergence study
+              from the same interface.
+            </p>
+            <p>Coming soon: Train and deploy Physics-Informed Neural Network
+              surrogates for real-time flow prediction.
+            </p>
+          </div>
+          <div class="walkthrough-step__media">
+            <!-- PLACEHOLDER: Add screenshot of parameter study or PINN -->
+            <!-- Recommended: assets/images/desktop/pinn-sweep.png (16:10 aspect) -->
+            <div class="walkthrough-step__media-placeholder">
+              <div class="placeholder-icon">&#128200;</div>
+              <span>Screenshot: PINN Parameter Sweep</span>
+              <span style="font-size: 0.85em; opacity: 0.7;">Reynolds number sweep with side-by-side comparison</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- GitHub CTA after walkthrough -->
+        <div style="text-align: center; margin-top: var(--space-12);">
+          <a href="https://github.com/ajeet-krish/AK-Vortex" class="btn btn--secondary" target="_blank">
+            View full source on GitHub &nearr;
+          </a>
+        </div>
+
       </div>
     </section>
 
-  </div>
+    <!-- ================================================================ -->
+    <!-- Reference Pages                                                  -->
+    <!-- ================================================================ -->
+    <section class="section">
+      <div class="container">
+        <h2 class="section-title">Explore the Project</h2>
+
+        <div class="grid-3">
+
+          <a href="theory.html" class="card" style="text-decoration: none;">
+            <div class="card__header">
+              <div class="card__icon">&#8477;</div>
+              <h3 class="card__title">Theory &amp; Methodology</h3>
+            </div>
+            <div class="card__body">
+              From the Boltzmann equation to the D2Q9 lattice: equilibrium distribution, BGK and MRT
+              collision operators, Chapman-Enskog expansion, and boundary condition treatment with
+              full KaTeX equations.
+            </div>
+          </a>
+
+          <a href="validation.html" class="card" style="text-decoration: none;">
+            <div class="card__header">
+              <div class="card__icon">&#10003;</div>
+              <h3 class="card__title">Validation Cases</h3>
+            </div>
+            <div class="card__body">
+              10 simulation cases spanning external aerodynamics, internal flows, urban microclimate,
+              and multi-body interactions. Each validated against experimental or benchmark data.
+            </div>
+          </a>
+
+          <a href="implementation.html" class="card" style="text-decoration: none;">
+            <div class="card__header">
+              <div class="card__icon">&#9881;</div>
+              <h3 class="card__title">Implementation</h3>
+            </div>
+            <div class="card__body">
+              Memory model, OpenMP parallelization strategy, momentum-exchange force extraction,
+              build system, test suite, and the engineering design process behind the solver.
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
 
   <footer class="site-footer">
     <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/AK-Vortex"
@@ -253,12 +249,7 @@
         target="_blank">LinkedIn</a></p>
   </footer>
 
-  <script>
-    document.getElementById('sidebarToggle')?.addEventListener('click', function () {
-      document.querySelector('.sidebar').classList.toggle('open');
-      document.body.classList.toggle('sidebar-open');
-    });
-  </script>
+  <script src="assets/js/main.js" type="module" defer></script>
 
 </body>
 

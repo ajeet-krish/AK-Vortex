@@ -1,0 +1,208 @@
+/* ==========================================================================
+   Base -- Reset, Typography, Global Styles (matching Zenith)
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--foreground);
+  background-color: var(--background);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* --- Particles Canvas --- */
+#particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-below);
+  pointer-events: none;
+}
+
+/* --- Typography Scale --- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  color: var(--foreground);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: var(--space-8);
+}
+
+h2 {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-6);
+}
+
+h3 {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-4);
+}
+
+h4 {
+  font-size: var(--text-base);
+  margin-bottom: var(--space-4);
+}
+
+h5 {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-3);
+}
+
+h6 {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-3);
+}
+
+p {
+  margin-bottom: var(--space-4);
+  line-height: var(--leading-normal);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Links --- */
+a {
+  color: var(--cyan);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--pink);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- Images --- */
+img, svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Lists --- */
+ul, ol {
+  padding-left: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+li {
+  margin-bottom: var(--space-2);
+  line-height: var(--leading-normal);
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Code (inline) --- */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background-color: var(--surface);
+  color: var(--coral);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* --- Pre / Code Blocks --- */
+pre {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  overflow-x: auto;
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--text-sm);
+  color: var(--foreground);
+  line-height: 1.7;
+}
+
+/* --- Blockquote --- */
+blockquote {
+  border-left: 3px solid var(--cyan);
+  padding-left: var(--space-6);
+  margin: var(--space-6) 0;
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+/* --- Horizontal Rule --- */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: var(--space-12) 0;
+}
+
+/* --- Table Reset --- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* --- Selection --- */
+::selection {
+  background-color: rgba(0, 229, 255, 0.2);
+  color: var(--foreground);
+}
+
+/* --- Focus Visible --- */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-muted);
+}

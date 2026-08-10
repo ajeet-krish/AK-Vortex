@@ -14,38 +14,25 @@
 
 <body>
 
-  <button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+  <!-- Floating Particles -->
+  <canvas id="particle-canvas" aria-hidden="true"></canvas>
 
-  <div class="sidebar">
-    <div class="sidebar-brand"><a href="index.html">AK-Vortex</a></div>
-    <nav class="sidebar-nav">
-      <div class="nav-section">
-        <div class="nav-heading">Project</div>
-        <a href="index.html" class="nav-item">Home</a>
-        <a href="desktop.html" class="nav-item active">Desktop App</a>
-      </div>
-      <div class="nav-section">
-        <div class="nav-heading">Simulations</div>
-        <a href="cylinder.html" class="nav-item">Cylinder</a>
-        <a href="cavity.html" class="nav-item">Lid-Driven Cavity</a>
-        <a href="step.html" class="nav-item">Backward Step</a>
-        <a href="orifice_plate.html" class="nav-item">Orifice Plate</a>
-        <a href="urban.html" class="nav-item">Urban Canyon</a>
-        <a href="urban_citygrid.html" class="nav-item">Urban City Grid</a>
-        <a href="flat_plate.html" class="nav-item">Flat Plate</a>
-        <a href="cylinder_near_wall.html" class="nav-item">Cylinder Near Wall</a>
-        <a href="side_by_side.html" class="nav-item">Side-by-Side Cylinders</a>
-        <a href="rotating_cylinder.html" class="nav-item">Rotating Cylinder</a>
-      </div>
-      <div class="nav-section">
-        <div class="nav-heading">Reference</div>
-        <a href="theory.html" class="nav-item">Theory &amp; Methodology</a>
-        <a href="implementation.html" class="nav-item">C++ Implementation</a>
-        <a href="pinn.html" class="nav-item">Physics-Informed Neural Networks</a>
-        <a href="https://github.com/ajeet-krish/AK-Vortex" class="nav-item" target="_blank">GitHub Repository &nearr;</a>
-      </div>
-    </nav>
-  </div>
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="index.html" class="nav__brand">
+      <img src="assets/images/logo.svg" alt="" class="nav__logo">
+      AK-Vortex
+    </a>
+    <button class="nav__toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links">
+      <li><a href="index.html" class="nav__link">Home</a></li>
+      <li><a href="theory.html" class="nav__link">Theory</a></li>
+      <li><a href="validation.html" class="nav__link">Validation</a></li>
+      <li><a href="implementation.html" class="nav__link active">Implementation</a></li>
+    </ul>
+  </nav>
 
   <div class="main-content">
 
@@ -635,12 +622,7 @@ npm run tauri build
         target="_blank">LinkedIn</a></p>
   </footer>
 
-  <script>
-    document.getElementById('sidebarToggle')?.addEventListener('click', function () {
-      document.querySelector('.sidebar').classList.toggle('open');
-      document.body.classList.toggle('sidebar-open');
-    });
-  </script>
+  <script src="assets/js/main.js" type="module" defer></script>
 
 </body>
 

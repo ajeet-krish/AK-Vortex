@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AK-Vortex Validation Cases - CFD simulation results validated against experimental and benchmark data">
+  <title>Validation Cases - AK-Vortex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <!-- Floating Particles -->
+  <canvas id="particle-canvas" aria-hidden="true"></canvas>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="index.html" class="nav__brand">
+      <img src="assets/images/logo.svg" alt="" class="nav__logo">
+      AK-Vortex
+    </a>
+    <button class="nav__toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links">
+      <li><a href="index.html" class="nav__link">Home</a></li>
+      <li><a href="theory.html" class="nav__link">Theory</a></li>
+      <li><a href="validation.html" class="nav__link active">Validation</a></li>
+      <li><a href="implementation.html" class="nav__link">Implementation</a></li>
+    </ul>
+  </nav>
+
+  <main class="main">
+
+    <!-- ================================================================ -->
+    <!-- Page Hero                                                        -->
+    <!-- ================================================================ -->
+    <section class="hero" style="min-height: 40vh;">
+      <div class="hero__content">
+        <h1 class="hero__title">Validation Cases</h1>
+        <p class="hero__subtitle">
+          The solver is tested against a growing set of validation cases spanning external aerodynamics,
+          internal flows, urban microclimate, and multi-body interactions.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- Case Gallery                                                     -->
+    <!-- ================================================================ -->
+    <section class="section" style="padding-top: 0;">
+      <div class="container">
+        <p class="section-subtitle">
+          Each case is an experiment: a different geometry, boundary condition, and Reynolds number
+          designed to stress a specific capability of the solver, from smooth curved boundaries to
+          turbulent separation. Every run produces velocity fields, quantitative validation against
+          experimental or benchmark data, and a physical discussion of what the results mean.
+        </p>
+
+        <div class="case-grid">
+
+          <a href="flat_plate.html" class="case-card">
+            <img class="case-thumb" src="assets/images/flatplate/simulations/re1000/aoa0/re1000_aoa0_contour.png"
+              alt="Flat plate velocity contour"
+              onerror="this.style.background='var(--surface)';this.alt='Flat Plate'">
+            <div class="case-info">
+              <h3>Flat Plate Boundary Layer</h3>
+              <p>The primary validation case: a thin plate angled into the flow, growing the slow boundary layer that governs wing drag.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="cylinder.html" class="case-card">
+            <img class="case-thumb" src="assets/images/cylinder/simulations/re100/re100_contour.png"
+              alt="Cylinder velocity contour"
+              onerror="this.style.background='var(--surface)';this.alt='Cylinder'">
+            <div class="case-info">
+              <h3>Cylinder Wake</h3>
+              <p>A cylinder in steady flow, shedding the alternating von Karman vortex street.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="cavity.html" class="case-card">
+            <img class="case-thumb" src="assets/images/cavity/simulations/re1000/re1000_streamlines.png"
+              alt="Cavity streamlines"
+              onerror="this.style.background='var(--surface)';this.alt='Cavity'">
+            <div class="case-info">
+              <h3>Lid-Driven Cavity</h3>
+              <p>A box with one sliding wall, spinning up a rotating eddy; the classic benchmark of solver accuracy.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="step.html" class="case-card">
+            <img class="case-thumb" src="assets/images/step/simulations/re100/re100_streamlines.png"
+              alt="Step streamlines"
+              onerror="this.style.background='var(--surface)';this.alt='Backward Step'">
+            <div class="case-info">
+              <h3>Backward-Facing Step</h3>
+              <p>Flow spilling over a sudden step, separating and reattaching downstream.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="orifice_plate.html" class="case-card">
+            <img class="case-thumb" src="assets/images/orifice_plate/simulations/1p3h/re100_1p3h_contour.png"
+              alt="Orifice plate velocity contour"
+              onerror="this.style.background='var(--surface)';this.alt='Orifice Plate'">
+            <div class="case-info">
+              <h3>Orifice Plate</h3>
+              <p>A plate with holes blocking a pipe, squeezing flow into a jet; the basis of pipeline flow meters.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="urban.html" class="case-card">
+            <img class="case-thumb" src="assets/images/urban/simulations/side/2p_ar0.5/side_a05_contour.png"
+              alt="Urban canyon velocity contour"
+              onerror="this.style.background='var(--surface)';this.alt='Urban Canyon'">
+            <div class="case-info">
+              <h3>Urban Canyon</h3>
+              <p>Rows of buildings lining a street, trapping and recirculating the wind.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="urban_citygrid.html" class="case-card">
+            <img class="case-thumb" src="assets/images/urban/simulations/city_grid/inlet_east/east_contour.png"
+              alt="Urban city grid contour"
+              onerror="this.style.background='var(--surface)';this.alt='City Grid'">
+            <div class="case-info">
+              <h3>Urban City Grid</h3>
+              <p>Seven buildings in a realistic city grid with east/west/south wind configurations.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="cylinder_near_wall.html" class="case-card">
+            <img class="case-thumb" src="assets/images/cylinder_near_wall/simulation/gap20/re100_gap20_contour.png"
+              alt="Cylinder near wall contour"
+              onerror="this.style.background='var(--surface)';this.alt='Cylinder Near Wall'">
+            <div class="case-info">
+              <h3>Cylinder Near Wall</h3>
+              <p>A cylinder hovering above a floor, where the wall pushes lift upward; the ground effect.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="side_by_side.html" class="case-card">
+            <img class="case-thumb" src="assets/images/side_by_side/simulations/sd30/re100_sd30_contour.png"
+              alt="Side-by-side cylinders contour"
+              onerror="this.style.background='var(--surface)';this.alt='Side-by-Side'">
+            <div class="case-info">
+              <h3>Side-by-Side Cylinders</h3>
+              <p>Two cylinders side by side, their wakes interacting like tube bundles in a heat exchanger.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+          <a href="rotating_cylinder.html" class="case-card">
+            <img class="case-thumb" src="assets/images/rotating_cylinder/simulations/w10/re100_w10_contour.png"
+              alt="Rotating cylinder contour"
+              onerror="this.style.background='var(--surface)';this.alt='Rotating Cylinder'">
+            <div class="case-info">
+              <h3>Rotating Cylinder</h3>
+              <p>A spinning cylinder dragging flow to make lift: the Magnus effect behind curveballs.</p>
+              <span class="case-link">View case &rarr;</span>
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>AK-Vortex &middot; Built by Ajeet Krishnasamy &middot; <a href="https://github.com/ajeet-krish/AK-Vortex"
+        target="_blank">GitHub</a> &middot; <a href="https://www.linkedin.com/in/ajeetkrishnasamy/"
+        target="_blank">LinkedIn</a></p>
+  </footer>
+
+  <script src="assets/js/main.js" type="module" defer></script>
+
+</body>
+
+</html>
