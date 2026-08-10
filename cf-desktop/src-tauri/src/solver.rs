@@ -1,6 +1,8 @@
 use std::ffi::{c_double, c_int, CString};
 use std::os::raw::c_char;
 
+pub type FrameCallback = extern "C" fn(c_int);
+
 extern "C" {
     fn lbm_solve_c(
         nx: c_int,
@@ -58,6 +60,8 @@ extern "C" {
     ) -> c_int;
 
     fn lbm_set_cancel_flag(cancel: bool);
+
+    fn lbm_register_frame_callback(cb: Option<FrameCallback>);
 }
 
 pub fn reset_solver() {
@@ -69,6 +73,12 @@ pub fn reset_solver() {
 pub fn set_cancel_flag(cancel: bool) {
     unsafe {
         lbm_set_cancel_flag(cancel);
+    }
+}
+
+pub fn register_frame_callback(cb: Option<FrameCallback>) {
+    unsafe {
+        lbm_register_frame_callback(cb);
     }
 }
 

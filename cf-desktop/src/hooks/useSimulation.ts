@@ -103,29 +103,50 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         return () => { unlisten.then((fn) => fn()); };
     }, [running]);
 
-    // Poll solver status while simulation is running
+    // Event-driven frame discovery during simulation
+    useEffect(() => {
+        if (!running || !outputDir) return;
+
+        let cancelled = false;
+
+        // Listen for frame-ready events from solver
+        const unlisten = listen<number>('solver:frame-ready', async (event) => {
+            if (cancelled) return;
+            const step = event.payload;
+
+            // Refresh frame list
+            try {
+                const frameList = await invoke<number[]>('list_frames', { path: outputDir });
+                if (!cancelled) {
+                    setFrames(frameList);
+                    setSimProgress({
+                        step,
+                        total: config.maxSteps,
+                        status: 'Running...',
+                    });
+                    // Auto-advance to latest frame
+                    if (frameList.length > 0) {
+                        setFrameIndex(frameList.length - 1);
+                    }
+                }
+            } catch (e) {
+                if (!cancelled) console.error('Failed to list frames:', e);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+            unlisten.then((fn) => fn());
+        };
+    }, [running, outputDir, config.maxSteps]);
+
+    // Poll solver status to detect simulation completion
     useEffect(() => {
         if (!running) return;
-
-        let prevFrameCount = 0;
 
         const pollStatus = async () => {
             try {
                 const status = await invoke<{ running: boolean }>('get_simulation_status');
-
-                // Check for new frames (only update state if count changed)
-                if (outputDirRef.current) {
-                    const frameList = await invoke<number[]>('list_frames', { path: outputDirRef.current });
-                    if (frameList.length !== prevFrameCount) {
-                        prevFrameCount = frameList.length;
-                        setFrames(frameList);
-                        setSimProgress({
-                            step: frameList[frameList.length - 1],
-                            total: config.maxSteps,
-                            status: status.running ? 'Running...' : 'Complete!',
-                        });
-                    }
-                }
 
                 if (!status.running && outputDirRef.current) {
                     setRunning(false);

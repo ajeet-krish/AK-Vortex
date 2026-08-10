@@ -17,6 +17,13 @@ extern "C" void lbm_set_cancel_flag(bool cancel) {
     g_cancel_flag.store(cancel, std::memory_order_relaxed);
 }
 
+// Frame callback invoked after each binary frame is saved
+static lbm_frame_callback_t g_frame_callback = nullptr;
+
+extern "C" void lbm_register_frame_callback(lbm_frame_callback_t cb) {
+    g_frame_callback = cb;
+}
+
 extern "C" void lbm_save_binary_frame(void* system, int step, const char* output_dir) {
     auto* sys = static_cast<LBMCapabilities*>(system);
     save_binary_frame(*sys, step, std::string(output_dir));
@@ -441,6 +448,9 @@ int lbm_solve_c(
         if (step % save_interval == 0) {
             save_json_frame(system, step, out_dir);
             save_binary_frame(system, step, out_dir);
+            if (g_frame_callback) {
+                g_frame_callback(step);
+            }
         }
     }
 
@@ -579,6 +589,9 @@ int lbm_solve_geometry(
         if (step % save_interval == 0) {
             save_json_frame(system, step, out_dir);
             save_binary_frame(system, step, out_dir);
+            if (g_frame_callback) {
+                g_frame_callback(step);
+            }
         }
     }
 

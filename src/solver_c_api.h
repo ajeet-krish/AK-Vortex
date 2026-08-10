@@ -50,6 +50,12 @@ void lbm_set_cancel_flag(bool cancel);
 
 void lbm_save_binary_frame(void* system, int step, const char* output_dir);
 
+// Callback invoked after each binary frame is saved.
+typedef void (*lbm_frame_callback_t)(int step);
+
+// Register a callback. Pass NULL to unregister.
+void lbm_register_frame_callback(lbm_frame_callback_t cb);
+
 #ifdef __cplusplus
 }
 #endif

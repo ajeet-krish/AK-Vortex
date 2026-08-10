@@ -11,6 +11,7 @@ import FeatureTree from './components/FeatureTree';
 import { useSimulation } from './hooks/useSimulation';
 import { usePlayback } from './hooks/usePlayback';
 import { useVisualization } from './hooks/useVisualization';
+import { useStreamlines } from './hooks/useStreamlines';
 import { wrapFrameData } from './utils/binaryFrame';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   const sim = useSimulation(shapes);
   const playback = usePlayback(sim.frames.length, sim.setFrameIndex);
   const viz = useVisualization(sim.frameData);
+  const streamlines = useStreamlines(sim.frameData, viz.showStreamlines);
 
   const [gciRunning, setGciRunning] = useState(false);
   const [gciResults, setGciResults] = useState<{
@@ -498,6 +500,7 @@ function App() {
                     canvasSize={canvasSize}
                     colorRange={viz.useManualRange ? viz.colorRange : null}
                     onProbe={viz.setProbe}
+                    streamlines={streamlines}
                   />
                   <ColorScaleBar
                     min={viz.colorRange.min}

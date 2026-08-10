@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::os::raw::c_int;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -24,6 +25,18 @@ static SIM_RUNNING: AtomicBool = AtomicBool::new(false);
 
 // Handle to the running solver thread (drop old if a new one starts)
 static SOLVER_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
+
+// Global AppHandle for frame event emission from solver thread
+static FRAME_APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
+
+// C callback: called by solver after save_binary_frame()
+extern "C" fn frame_event_callback(step: c_int) {
+    if let Ok(guard) = FRAME_APP_HANDLE.lock() {
+        if let Some(app) = guard.as_ref() {
+            let _ = app.emit("solver:frame-ready", step as i32);
+        }
+    }
+}
 
 // Maximum log message length before truncation
 const MAX_MSG_LEN: usize = 4096;
@@ -145,6 +158,16 @@ pub fn run_simulation(
 
     log_message_with_emit("[solver] Running LBM solver in background thread...", &app);
 
+    // Store AppHandle for frame events
+    {
+        if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+            *handle = Some(app.clone());
+        }
+    }
+
+    // Register frame callback
+    crate::solver::register_frame_callback(Some(frame_event_callback));
+
     let config = SolverConfig {
         nx, ny, re, u_inflow, max_steps, save_interval,
         output_dir: output_dir.clone(),
@@ -162,6 +185,15 @@ pub fn run_simulation(
                 log_message_with_emit(&format!("[solver] Failed: {}", e), &app_clone);
             }
         }
+
+        // Unregister frame callback after simulation
+        crate::solver::register_frame_callback(None);
+        {
+            if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+                *handle = None;
+            }
+        }
+
         SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
@@ -232,6 +264,16 @@ pub fn run_geometry_simulation(
 
     log_message_with_emit("[solver] Running LBM solver with custom geometry in background thread...", &app);
 
+    // Store AppHandle for frame events
+    {
+        if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+            *handle = Some(app.clone());
+        }
+    }
+
+    // Register frame callback
+    crate::solver::register_frame_callback(Some(frame_event_callback));
+
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
     let app_clone = app.clone();
@@ -248,6 +290,15 @@ pub fn run_geometry_simulation(
                 log_message_with_emit(&format!("[solver] Failed: {}", e), &app_clone);
             }
         }
+
+        // Unregister frame callback after simulation
+        crate::solver::register_frame_callback(None);
+        {
+            if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+                *handle = None;
+            }
+        }
+
         SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
@@ -432,6 +483,16 @@ pub fn run_sweep(
 
     log_message_with_emit("[sweep] Running parameter sweep in background thread...", &app);
 
+    // Store AppHandle for frame events
+    {
+        if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+            *handle = Some(app.clone());
+        }
+    }
+
+    // Register frame callback
+    crate::solver::register_frame_callback(Some(frame_event_callback));
+
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
     let app_clone = app.clone();
@@ -448,6 +509,15 @@ pub fn run_sweep(
                 log_message_with_emit(&format!("[sweep] Failed: {}", e), &app_clone);
             }
         }
+
+        // Unregister frame callback after simulation
+        crate::solver::register_frame_callback(None);
+        {
+            if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+                *handle = None;
+            }
+        }
+
         SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
@@ -511,6 +581,16 @@ pub fn run_gci(
 
     log_message_with_emit("[gci] Running grid convergence study in background thread...", &app);
 
+    // Store AppHandle for frame events
+    {
+        if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+            *handle = Some(app.clone());
+        }
+    }
+
+    // Register frame callback
+    crate::solver::register_frame_callback(Some(frame_event_callback));
+
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
     let app_clone = app.clone();
@@ -527,6 +607,15 @@ pub fn run_gci(
                 log_message_with_emit(&format!("[gci] Failed: {}", e), &app_clone);
             }
         }
+
+        // Unregister frame callback after simulation
+        crate::solver::register_frame_callback(None);
+        {
+            if let Ok(mut handle) = FRAME_APP_HANDLE.lock() {
+                *handle = None;
+            }
+        }
+
         SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 

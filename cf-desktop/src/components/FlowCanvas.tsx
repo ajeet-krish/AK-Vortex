@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { sampleColormap } from '../utils/colormap';
-import { sampleField, buildStreamlines } from '../utils/streamline';
+import { sampleField, type Point } from '../utils/streamline';
 import { drawQuiver, type QuiverConfig, DEFAULT_QUIVER_CONFIG } from '../utils/quiver';
 import type { FrameData, ProbeInfo } from '../types';
 
@@ -15,6 +15,7 @@ interface FlowCanvasProps {
     canvasSize: { width: number; height: number };
     colorRange?: { min: number; max: number } | null;
     onProbe?: (info: ProbeInfo | null) => void;
+    streamlines?: Point[][];  // Precomputed streamlines from Web Worker
 }
 
 export default function FlowCanvas({
@@ -26,6 +27,7 @@ export default function FlowCanvas({
     canvasSize,
     colorRange,
     onProbe,
+    streamlines: streamlinesProp,
 }: FlowCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageDataRef = useRef<ImageData | null>(null);
@@ -77,11 +79,8 @@ export default function FlowCanvas({
     // Get the values array for the selected field
     const values = field === 'velocity' ? velocity : field === 'pressure' ? p : omega;
 
-    // Memoize streamline paths to avoid recomputation every render
-    const streamlines = useMemo(() => {
-        if (field !== 'velocity' || !showStreamlines || !frameData) return [];
-        return buildStreamlines(u, v, nx, ny, obstacle, 13);
-    }, [frameData, field, showStreamlines, u, v, nx, ny, obstacle]);
+    // Use precomputed streamlines from Web Worker (prop), fallback to empty
+    const streamlines = streamlinesProp ?? [];
 
     // Render contour + obstacles
     const renderContour = useCallback(() => {
