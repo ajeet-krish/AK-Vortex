@@ -1,5 +1,5 @@
 [package]
-name = "cf-desktop"
+name = "ak-vortex"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,11 +15,11 @@ serde_json = "1"
 base64 = "0.21"
 
 [lib]
-name = "cf_desktop_lib"
+name = "ak_vortex_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "cf-desktop"
+name = "ak-vortex"
 path = "src/main.rs"
 
 [features]

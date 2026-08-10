@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeFile, readTextFile } from '@tauri-apps/plugin-fs';
+import ErrorBoundary from './components/ErrorBoundary';
 import GeometryEditor, { type Shape } from './components/GeometryEditor';
 import FlowCanvas from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
@@ -421,6 +422,9 @@ function App() {
         </aside>
 
         <main className="content">
+          <ErrorBoundary fallbackTitle="Visualization error" onReset={() => {
+            viz.setViewMode('domain');
+          }}>
           {/* View Mode Tabs */}
           <div className="view-mode-tabs">
             <button
@@ -457,8 +461,8 @@ function App() {
           )}
 
           {/* Domain view */}
-          {viz.viewMode === 'domain' &&
-            (sim.config.caseType === 'custom' && !sim.running ? (
+          <div style={{ display: viz.viewMode === 'domain' ? 'contents' : 'none' }}>
+            {sim.config.caseType === 'custom' && !sim.running ? (
               <div className="geometry-container">
                 <h2>Draw Geometry</h2>
                 <GeometryEditor
@@ -472,34 +476,37 @@ function App() {
               <div className="placeholder">
                 <p>{sim.running ? 'Running simulation...' : 'Configure and run a simulation to see results'}</p>
               </div>
-            ))}
+            )}
+          </div>
 
           {/* Results - Interactive mode */}
-          {viz.viewMode === 'results' && viz.vizMode === 'interactive' && sim.frameData && (
-            <div className="visualization" ref={containerRef}>
-              <h2>{viz.field.charAt(0).toUpperCase() + viz.field.slice(1)} Field - Step {currentStep}</h2>
-              <div className="visualization-body">
-                <FlowCanvas
-                  frameData={sim.frameData}
-                  field={viz.field}
-                  showStreamlines={viz.showStreamlines}
-                  showQuiver={viz.showQuiver}
-                  quiverConfig={viz.quiverConfig}
-                  canvasSize={canvasSize}
-                  colorRange={viz.useManualRange ? viz.colorRange : null}
-                  onProbe={viz.setProbe}
-                />
-                <ColorScaleBar
-                  min={viz.colorRange.min}
-                  max={viz.colorRange.max}
-                  cmap={viz.field === 'vorticity' ? 'rdbu' : viz.field === 'pressure' ? 'coolwarm' : 'jet'}
-                />
+          <div style={{ display: viz.viewMode === 'results' && viz.vizMode === 'interactive' ? 'contents' : 'none' }}>
+            {sim.frameData ? (
+              <div className="visualization" ref={containerRef}>
+                <h2>{viz.field.charAt(0).toUpperCase() + viz.field.slice(1)} Field - Step {currentStep}</h2>
+                <div className="visualization-body">
+                  <FlowCanvas
+                    frameData={sim.frameData}
+                    field={viz.field}
+                    showStreamlines={viz.showStreamlines}
+                    showQuiver={viz.showQuiver}
+                    quiverConfig={viz.quiverConfig}
+                    canvasSize={canvasSize}
+                    colorRange={viz.useManualRange ? viz.colorRange : null}
+                    onProbe={viz.setProbe}
+                  />
+                  <ColorScaleBar
+                    min={viz.colorRange.min}
+                    max={viz.colorRange.max}
+                    cmap={viz.field === 'vorticity' ? 'rdbu' : viz.field === 'pressure' ? 'coolwarm' : 'jet'}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            ) : null}
+          </div>
 
           {/* Inline playback controls */}
-          {viz.viewMode === 'results' && viz.vizMode === 'interactive' && sim.frameData && (
+          <div style={{ display: viz.viewMode === 'results' && viz.vizMode === 'interactive' && sim.frameData ? 'contents' : 'none' }}>
             <div className="playback-row">
               <button className="play-btn" onClick={playback.togglePlay}>
                 {playback.playing ? '\u23F8' : '\u25B6'}
@@ -527,7 +534,7 @@ function App() {
                 <option value={25}>8x</option>
               </select>
             </div>
-          )}
+          </div>
 
           {/* Summary bar */}
           {viz.viewMode === 'results' && sim.frameData && (
@@ -561,6 +568,7 @@ function App() {
               step={currentStep}
             />
           )}
+          </ErrorBoundary>
         </main>
       </div>
 

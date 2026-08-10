@@ -1,7 +1,7 @@
 {
   "productName": "AK-Vortex",
   "version": "0.1.0",
-  "identifier": "com.lbm.desktop",
+  "identifier": "com.ak-vortex.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",

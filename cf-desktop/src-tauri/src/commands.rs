@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -5,11 +6,15 @@ use std::thread::{self, JoinHandle};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use tauri::command;
+use tauri::Emitter;
 use tauri::Manager;
 use crate::solver::{self, SolverConfig};
 
-// Global solver log storage
-static SOLVER_LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
+// Maximum number of log entries to retain (ring buffer)
+const LOG_CAPACITY: usize = 5000;
+
+// Global solver log storage (ring buffer)
+static SOLVER_LOG: Mutex<VecDeque<String>> = Mutex::new(VecDeque::new());
 
 // Global cancel flag: set by cancel_simulation, checked by solver threads
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
@@ -20,10 +25,32 @@ static SIM_RUNNING: AtomicBool = AtomicBool::new(false);
 // Handle to the running solver thread (drop old if a new one starts)
 static SOLVER_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
+// Maximum log message length before truncation
+const MAX_MSG_LEN: usize = 4096;
+
 pub fn log_message(msg: &str) {
+    let truncated = if msg.len() > MAX_MSG_LEN {
+        // Safe truncation: find a valid UTF-8 boundary at or before MAX_MSG_LEN
+        let mut end = MAX_MSG_LEN;
+        while end > 0 && !msg.is_char_boundary(end) {
+            end -= 1;
+        }
+        &msg[..end]
+    } else {
+        msg
+    };
     if let Ok(mut log) = SOLVER_LOG.lock() {
-        log.push(msg.to_string());
+        if log.len() >= LOG_CAPACITY {
+            log.pop_front();
+        }
+        log.push_back(truncated.to_string());
     }
+}
+
+/// Log a message and emit it as a Tauri event for real-time streaming.
+pub fn log_message_with_emit(msg: &str, app: &tauri::AppHandle) {
+    log_message(msg);
+    let _ = app.emit("solver-log", msg.to_string());
 }
 
 fn validate_path(path: &str) -> Result<(), String> {
@@ -41,20 +68,18 @@ pub fn reset_solver() -> Result<(), String> {
 }
 
 #[command]
-pub fn cancel_simulation() -> Result<(), String> {
+pub fn cancel_simulation(app: tauri::AppHandle) -> Result<(), String> {
     CANCEL_FLAG.store(true, Ordering::SeqCst);
     solver::set_cancel_flag(true);
-    log_message("[solver] Cancel requested by user.");
+    log_message_with_emit("[solver] Cancel requested by user.", &app);
     Ok(())
 }
 
 #[command]
 pub fn get_simulation_status() -> Result<serde_json::Value, String> {
     let running = SIM_RUNNING.load(Ordering::SeqCst);
-    let log = SOLVER_LOG.lock().map_err(|e| e.to_string())?;
     Ok(serde_json::json!({
         "running": running,
-        "log": log.clone(),
     }))
 }
 
@@ -85,30 +110,40 @@ pub fn run_simulation(
         return Err("A simulation is already running. Cancel it first.".to_string());
     }
 
-    let output_dir = app.path()
+    let app_data = app.path()
         .app_data_dir()
-        .unwrap()
+        .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+    let output_dir = app_data
         .join("simulations")
         .join(&case_type)
         .join(format!("re{}", re as i32))
         .to_string_lossy()
         .to_string();
 
-    log_message(&format!(
+    log_message_with_emit(&format!(
         "[solver] Starting {} simulation: {}x{}, Re={}, u={}, steps={}, interval={}",
         case_type, nx, ny, re, u_inflow, max_steps, save_interval
-    ));
-    log_message(&format!("[solver] Output directory: {}", output_dir));
+    ), &app);
+    log_message_with_emit(&format!("[solver] Output directory: {}", output_dir), &app);
 
-    // Clean stale frames from previous runs
-    let _ = std::fs::remove_dir_all(&output_dir);
+    // Clean stale frames from previous runs (with path safety check)
+    if std::path::Path::new(&output_dir).exists() {
+        let canonical_output = std::path::Path::new(&output_dir).canonicalize()
+            .map_err(|e| format!("Invalid output path: {}", e))?;
+        let canonical_base = app_data.canonicalize()
+            .map_err(|e| format!("Invalid base path: {}", e))?;
+        if !canonical_output.starts_with(&canonical_base) {
+            return Err("Output path escapes application directory".to_string());
+        }
+        let _ = std::fs::remove_dir_all(&output_dir);
+    }
 
     // Reset cancel flag and mark running
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     solver::set_cancel_flag(false);
     SIM_RUNNING.store(true, Ordering::SeqCst);
 
-    log_message("[solver] Running LBM solver in background thread...");
+    log_message_with_emit("[solver] Running LBM solver in background thread...", &app);
 
     let config = SolverConfig {
         nx, ny, re, u_inflow, max_steps, save_interval,
@@ -116,17 +151,18 @@ pub fn run_simulation(
         case_type,
     };
 
+    let app_clone = app.clone();
     let handle = thread::spawn(move || {
         let result = solver::run_solver(&config);
-        SIM_RUNNING.store(false, Ordering::SeqCst);
         match result {
             Ok(_) => {
-                log_message("[solver] Simulation complete.");
+                log_message_with_emit("[solver] Simulation complete.", &app_clone);
             }
             Err(e) => {
-                log_message(&format!("[solver] Failed: {}", e));
+                log_message_with_emit(&format!("[solver] Failed: {}", e), &app_clone);
             }
         }
+        SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
     // Store handle, drop old one if exists
@@ -149,9 +185,10 @@ pub fn run_geometry_simulation(
     geometry_json: String,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let output_dir = app.path()
+    let app_data = app.path()
         .app_data_dir()
-        .unwrap()
+        .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+    let output_dir = app_data
         .join("simulations")
         .join("custom")
         .join(format!("re{}", re as i32))
@@ -169,39 +206,49 @@ pub fn run_geometry_simulation(
         return Err("A simulation is already running. Cancel it first.".to_string());
     }
 
-    log_message(&format!(
+    log_message_with_emit(&format!(
         "[solver] Starting custom geometry simulation: {}x{}, Re={}, steps={}",
         nx, ny, re, max_steps
-    ));
-    log_message(&format!("[solver] Geometry JSON length: {} bytes", geometry_json.len()));
-    log_message(&format!("[solver] Output directory: {}", output_dir));
+    ), &app);
+    log_message_with_emit(&format!("[solver] Geometry JSON length: {} bytes", geometry_json.len()), &app);
+    log_message_with_emit(&format!("[solver] Output directory: {}", output_dir), &app);
 
-    // Clean stale frames from previous runs
-    let _ = std::fs::remove_dir_all(&output_dir);
+    // Clean stale frames from previous runs (with path safety check)
+    if std::path::Path::new(&output_dir).exists() {
+        let canonical_output = std::path::Path::new(&output_dir).canonicalize()
+            .map_err(|e| format!("Invalid output path: {}", e))?;
+        let canonical_base = app_data.canonicalize()
+            .map_err(|e| format!("Invalid base path: {}", e))?;
+        if !canonical_output.starts_with(&canonical_base) {
+            return Err("Output path escapes application directory".to_string());
+        }
+        let _ = std::fs::remove_dir_all(&output_dir);
+    }
 
     // Reset cancel flag and mark running
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     solver::set_cancel_flag(false);
     SIM_RUNNING.store(true, Ordering::SeqCst);
 
-    log_message("[solver] Running LBM solver with custom geometry in background thread...");
+    log_message_with_emit("[solver] Running LBM solver with custom geometry in background thread...", &app);
 
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
+    let app_clone = app.clone();
     let handle = thread::spawn(move || {
         let result = solver::run_geometry_solver(
             nx, ny, re, u_inflow, max_steps, save_interval,
             &out_dir_clone, &geom_clone,
         );
-        SIM_RUNNING.store(false, Ordering::SeqCst);
         match result {
             Ok(_) => {
-                log_message("[solver] Simulation complete.");
+                log_message_with_emit("[solver] Simulation complete.", &app_clone);
             }
             Err(e) => {
-                log_message(&format!("[solver] Failed: {}", e));
+                log_message_with_emit(&format!("[solver] Failed: {}", e), &app_clone);
             }
         }
+        SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
     // Store handle, drop old one if exists
@@ -247,10 +294,10 @@ pub fn get_solver_log(last_n: Option<usize>) -> Result<Vec<String>, String> {
         .map_err(|e| format!("Failed to lock log: {}", e))?;
     match last_n {
         Some(n) => {
-            let start = log.len().saturating_sub(n);
-            Ok(log[start..].to_vec())
+            let skip = log.len().saturating_sub(n);
+            Ok(log.iter().skip(skip).cloned().collect())
         }
-        None => Ok(log.clone()),
+        None => Ok(log.iter().cloned().collect()),
     }
 }
 
@@ -315,9 +362,10 @@ pub fn run_sweep(
     geometry_json: String,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let output_dir = app.path()
+    let app_data = app.path()
         .app_data_dir()
-        .unwrap()
+        .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+    let output_dir = app_data
         .join("simulations")
         .join("sweep")
         .to_string_lossy()
@@ -327,37 +375,48 @@ pub fn run_sweep(
         return Err("A simulation is already running. Cancel it first.".to_string());
     }
 
-    log_message(&format!(
+    log_message_with_emit(&format!(
         "[sweep] Starting parameter sweep: Re=[{}..{}] x {} steps",
         re_min, re_max, re_steps
-    ));
-    log_message(&format!("[sweep] Output directory: {}", output_dir));
+    ), &app);
+    log_message_with_emit(&format!("[sweep] Output directory: {}", output_dir), &app);
 
-    let _ = std::fs::remove_dir_all(&output_dir);
+    // Clean stale frames from previous runs (with path safety check)
+    if std::path::Path::new(&output_dir).exists() {
+        let canonical_output = std::path::Path::new(&output_dir).canonicalize()
+            .map_err(|e| format!("Invalid output path: {}", e))?;
+        let canonical_base = app_data.canonicalize()
+            .map_err(|e| format!("Invalid base path: {}", e))?;
+        if !canonical_output.starts_with(&canonical_base) {
+            return Err("Output path escapes application directory".to_string());
+        }
+        let _ = std::fs::remove_dir_all(&output_dir);
+    }
 
     // Reset cancel flag and mark running
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     solver::set_cancel_flag(false);
     SIM_RUNNING.store(true, Ordering::SeqCst);
 
-    log_message("[sweep] Running parameter sweep in background thread...");
+    log_message_with_emit("[sweep] Running parameter sweep in background thread...", &app);
 
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
+    let app_clone = app.clone();
     let handle = thread::spawn(move || {
         let result = solver::run_sweep(
             nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
             &out_dir_clone, &geom_clone,
         );
-        SIM_RUNNING.store(false, Ordering::SeqCst);
         match result {
             Ok(_) => {
-                log_message("[sweep] Parameter sweep complete.");
+                log_message_with_emit("[sweep] Parameter sweep complete.", &app_clone);
             }
             Err(e) => {
-                log_message(&format!("[sweep] Failed: {}", e));
+                log_message_with_emit(&format!("[sweep] Failed: {}", e), &app_clone);
             }
         }
+        SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
     // Store handle, drop old one if exists
@@ -381,9 +440,10 @@ pub fn run_gci(
     geometry_json: String,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let output_dir = app.path()
+    let app_data = app.path()
         .app_data_dir()
-        .unwrap()
+        .map_err(|e| format!("Failed to resolve app data dir: {}", e))?;
+    let output_dir = app_data
         .join("simulations")
         .join("gci")
         .join(format!("re{}", re as i32))
@@ -394,37 +454,48 @@ pub fn run_gci(
         return Err("A simulation is already running. Cancel it first.".to_string());
     }
 
-    log_message(&format!(
+    log_message_with_emit(&format!(
         "[gci] Starting GCI study: {}x{}, Re={}, ratio={}, steps={}",
         nx_base, ny_base, re, refinement_ratio, max_steps
-    ));
-    log_message(&format!("[gci] Output directory: {}", output_dir));
+    ), &app);
+    log_message_with_emit(&format!("[gci] Output directory: {}", output_dir), &app);
 
-    let _ = std::fs::remove_dir_all(&output_dir);
+    // Clean stale frames from previous runs (with path safety check)
+    if std::path::Path::new(&output_dir).exists() {
+        let canonical_output = std::path::Path::new(&output_dir).canonicalize()
+            .map_err(|e| format!("Invalid output path: {}", e))?;
+        let canonical_base = app_data.canonicalize()
+            .map_err(|e| format!("Invalid base path: {}", e))?;
+        if !canonical_output.starts_with(&canonical_base) {
+            return Err("Output path escapes application directory".to_string());
+        }
+        let _ = std::fs::remove_dir_all(&output_dir);
+    }
 
     // Reset cancel flag and mark running
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     solver::set_cancel_flag(false);
     SIM_RUNNING.store(true, Ordering::SeqCst);
 
-    log_message("[gci] Running grid convergence study in background thread...");
+    log_message_with_emit("[gci] Running grid convergence study in background thread...", &app);
 
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
+    let app_clone = app.clone();
     let handle = thread::spawn(move || {
         let result = solver::run_gci(
             nx_base, ny_base, re, u_inflow, max_steps, save_interval,
             refinement_ratio, &out_dir_clone, &geom_clone,
         );
-        SIM_RUNNING.store(false, Ordering::SeqCst);
         match result {
             Ok(_) => {
-                log_message("[gci] Grid convergence study complete.");
+                log_message_with_emit("[gci] Grid convergence study complete.", &app_clone);
             }
             Err(e) => {
-                log_message(&format!("[gci] Failed: {}", e));
+                log_message_with_emit(&format!("[gci] Failed: {}", e), &app_clone);
             }
         }
+        SIM_RUNNING.store(false, Ordering::SeqCst);
     });
 
     // Store handle, drop old one if exists

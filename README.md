@@ -4,7 +4,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg?logo=cplusplus&logoColor=white)](https://en.cppreference.com/w/cpp/20)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A cache-optimized D2Q9 Lattice Boltzmann solver with interactive flow visualization, a native desktop application, and Physics-Informed Neural Network surrogates.
+AK-Vortex is a custom 2D CFD solver using the Lattice Boltzmann Method, packaged into a desktop application with a geometry editor, real-time flow visualization, and parameter study tools. Built with Rust and C++.
 
 ---
 
@@ -12,18 +12,13 @@ A cache-optimized D2Q9 Lattice Boltzmann solver with interactive flow visualizat
 
 ![AK-Vortex Desktop Application](docs/assets/images/cavity/simulations/re1000/re1000_contour.png)
 
-*Lid-driven cavity flow at Re=1000 -- velocity magnitude contour rendered by the AK-Vortex solver. The primary benchmark case validates against Ghia et al. 1982.*
+*Lid-driven cavity flow at Re=1000, velocity magnitude contour rendered by the AK-Vortex solver. The primary benchmark case validates against Ghia et al. 1982.*
 
 ---
 
 ## Why AK-Vortex
 
-Most LBM projects stop at a basic BGK solver with a cavity benchmark. AK-Vortex covers the **full CFD pipeline** that engineering analysts use:
-
-1. **Solve** 12 validated cases across external aerodynamics, internal flows, and urban microclimate
-2. **Accelerate** with OpenMP parallelization, cache-optimized memory, and Smagorinsky LES
-3. **Visualize** results in an interactive web viewer with velocity, pressure, and vorticity fields
-4. **Surrogate** flow fields with Physics-Informed Neural Networks for real-time design exploration
+Most commercial analysis tools are locked into specific operating systems or requirements with little flexibility. Commercial solvers like ANSYS are powerful tools, but their complexity hides away the underlying physics. To better understand CFD at the implementation level, I set out to build a solver from scratch.
 
 ---
 
@@ -31,39 +26,21 @@ Most LBM projects stop at a basic BGK solver with a cavity benchmark. AK-Vortex 
 
 ### Geometry Editor
 
-Draw circles, rectangles, and polygons directly on the canvas. Place a NACA 2412 airfoil with parametric camber, thickness, and rotation controls. Drag to reposition, resize via handles, and detect shape collisions automatically.
-
-- Interactive obstacle placement with drag-and-drop
-- NACA 4-digit airfoil generator with parametric controls
-- Collision detection prevents overlapping geometry
-- Presets for cylinder, step, airfoil, and custom polygons
+Draw circles, rectangles, and polygons directly on the canvas. Design a 4-digit NACA airfoil with parametric camber, thickness, and rotation controls. Drag to reposition, resize via handles, and detect shape collisions automatically.
 
 ### Simulation Control
 
-Configure grid size, Reynolds number, and inflow velocity. Press Run and watch the solver log stream in real time as the C++ backend executes the LBM timestep loop via FFI.
-
-- Grid size from 32 to 4096 cells
-- Configurable Reynolds number and inflow velocity
-- Real-time solver log with step-by-step progress
-- Background thread keeps UI responsive during computation
+Configure grid size, Reynolds number, and inflow velocity. Press Run and watch the solver log stream in real time as the C++ backend executes the LBM timestep loop via FFI. The progress bar tracks completion while the solver runs at full native speed.
 
 ### Flow Visualization
 
-Render velocity magnitude, pressure, or vorticity fields on an HTML Canvas with a jet colormap. Toggle streamlines and quiver overlays. Probe any point to read local u, v, rho, p, and omega values.
-
-- Velocity, pressure, and vorticity field rendering
-- Streamline and quiver arrow overlays
-- Point probe for local flow values
-- Frame-by-frame playback with scrubber
+Render velocity magnitude, pressure, or vorticity fields. Toggle streamlines and quiver overlays. Probe any point to read local u, v, rho, p, and omega values. Watch the flow develop frame-by-frame from rest to steady-state.
 
 ### Parameter Studies & PINN Surrogate
 
-Run parameter sweeps across Reynolds numbers and geometry configurations. Compare two simulations side-by-side. Launch a GCI grid convergence study from the same interface. Train and deploy Physics-Informed Neural Network surrogates for real-time flow prediction.
+Run parameter sweeps across Reynolds numbers and geometry configurations. Compare two simulations side-by-side. Launch a GCI grid convergence study from the same interface.
 
-- Automated parameter sweeps with batch execution
-- Side-by-side simulation comparison mode
-- GCI grid convergence studies
-- PINN surrogates for real-time inference
+Coming soon: Train and deploy Physics-Informed Neural Network surrogates for real-time flow prediction.
 
 ---
 
@@ -250,18 +227,6 @@ AK-Vortex/
 
 ---
 
-## What This Demonstrates
-
-For Aerospace/Defense CFD roles, this project demonstrates:
-
-- **HPC competency**: C++20, OpenMP parallelization, cache-optimized memory layouts
-- **CFD fundamentals**: MRT collision, Bouzidi bounce-back, Smagorinsky LES, AMR
-- **ML integration**: PINN surrogates with ONNX browser inference
-- **Software engineering**: Tauri + Rust + React desktop app, 12 unit tests, CI pipeline
-- **Communication**: Interactive web portfolio with per-case validation narratives
-
----
-
 ## References
 
 1. d'Humieres, D., "Multiple-relaxation-time Lattice Boltzmann models in 3D", Philosophical Transactions, 2002.
@@ -269,15 +234,3 @@ For Aerospace/Defense CFD roles, this project demonstrates:
 3. Smagorinsky, J., "General circulation experiments with the primitive equations", Monthly Weather Review, 1963.
 4. Raissi, M., Perdikaris, P., and Karniadakis, G.E., "Physics-informed neural networks", JCP, 2019.
 5. Ghia, U., Ghia, K.N., and Shin, C.T., "High-Re solutions for incompressible flow using the Navier-Stokes equations and a multigrid method", JCP, 1982.
-
----
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  <i>Built for Aerospace/Defense CFD roles at SpaceX, Firefly Aerospace, Lockheed Martin, and similar.</i>
-</p>

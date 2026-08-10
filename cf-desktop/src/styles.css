@@ -1,5 +1,5 @@
 /* ==========================================================================
-   LBM-2D Desktop CFD - Ansys/ParaView Inspired Dark Theme
+   AK-Vortex Desktop CFD - Ansys/ParaView Inspired Dark Theme
    ========================================================================== */
 
 :root {
@@ -928,6 +928,37 @@ canvas {
   border: none;
   width: 100%;
   height: auto;
+}
+
+/* ==========================================================================
+   Error Boundary Fallback
+   ========================================================================== */
+
+.error-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px;
+  color: var(--danger, #e03838);
+  text-align: center;
+}
+
+.error-fallback h2 {
+  font-size: 14px;
+}
+
+.error-message {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary, #a0a0b0);
+  background: var(--bg-tertiary, #1a1a2e);
+  padding: 12px;
+  border-radius: 4px;
+  max-width: 500px;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 /* ==========================================================================

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type { SimConfig, FrameData } from '../types';
 import type { Shape } from '../components/GeometryEditor';
 
@@ -70,22 +71,29 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         return () => { cancelled = true; };
     }, [frameIndex, frames, outputDir]);
 
+    // Subscribe to incremental solver-log events while running
+    useEffect(() => {
+        if (!running) return;
+
+        const unlisten = listen<string>('solver-log', (event) => {
+            setSolverLog((prev) => {
+                const next = [...prev, event.payload];
+                return next.length > 5000 ? next.slice(next.length - 5000) : next;
+            });
+        });
+
+        return () => { unlisten.then((fn) => fn()); };
+    }, [running]);
+
     // Poll solver status while simulation is running
     useEffect(() => {
         if (!running) return;
 
         let prevFrameCount = 0;
-        let prevLogLen = 0;
 
         const pollStatus = async () => {
             try {
-                const status = await invoke<{ running: boolean; log: string[] }>('get_simulation_status');
-
-                // Only update log if it grew
-                if (status.log.length !== prevLogLen) {
-                    prevLogLen = status.log.length;
-                    setSolverLog(status.log);
-                }
+                const status = await invoke<{ running: boolean }>('get_simulation_status');
 
                 // Check for new frames (only update state if count changed)
                 if (outputDirRef.current) {

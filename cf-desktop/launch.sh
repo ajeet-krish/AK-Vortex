@@ -1,5 +1,5 @@
 #!/bin/bash
-# LBM-2D Desktop CFD Launcher
+# AK-Vortex Desktop CFD Launcher
 # Builds and runs the desktop application
 
 set -e
@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== LBM-2D Desktop CFD ==="
+echo "=== AK-Vortex Desktop CFD ==="
 echo "Building C++ solver library..."
 cd "$PROJECT_DIR/build"
 cmake .. -DCMAKE_BUILD_TYPE=Release > /dev/null 2>&1

@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capabilities for the LBM Desktop app",
+  "description": "AK-Vortex Desktop CFD",
   "windows": ["main"],
   "permissions": [
     "core:default",
