@@ -67,26 +67,45 @@ export function parseBinaryFrame(buffer: ArrayBuffer): FrameData {
   const n = nx * ny;
   const f32 = new Float32Array(buffer, 24);
 
-  // Extract channels as number[] (FlowCanvas expects number[])
-  const u = new Array<number>(n);
-  const v = new Array<number>(n);
-  const p = new Array<number>(n);
-  const omega = new Array<number>(n);
-  const obstacle = new Array<number>(n);
-  const velocity = new Array<number>(n);
+  // Zero-copy views into the underlying buffer (no allocation per channel)
+  const u = new Float32Array(f32.buffer, f32.byteOffset + 0 * n * 4, n);
+  const v = new Float32Array(f32.buffer, f32.byteOffset + 1 * n * 4, n);
+  const p = new Float32Array(f32.buffer, f32.byteOffset + 2 * n * 4, n);
+  const omega = new Float32Array(f32.buffer, f32.byteOffset + 3 * n * 4, n);
+  const obstacle = new Float32Array(f32.buffer, f32.byteOffset + 4 * n * 4, n);
 
+  // Derived channel: velocity magnitude (requires new allocation)
+  const velocity = new Float32Array(n);
   for (let k = 0; k < n; k++) {
-    u[k] = f32[k];                          // channel 0
-    v[k] = f32[n + k];                      // channel 1
-    p[k] = f32[2 * n + k];                  // channel 2
-    omega[k] = f32[3 * n + k];              // channel 3
-    obstacle[k] = f32[4 * n + k];           // channel 4
     velocity[k] = Math.sqrt(u[k] * u[k] + v[k] * v[k]);
   }
 
   // Incompressible LBM: rho is approximately 1.0 everywhere.
   // The binary format does not store rho, so fill with constant 1.0.
-  const rho = new Array<number>(n).fill(1.0);
+  const rho = new Float32Array(n);
+  rho.fill(1.0);
 
   return { nx, ny, velocity, u, v, rho, p, omega, obstacle };
+}
+
+/**
+ * Wrap a JSON-serialized frame (number[] fields) into a FrameData with
+ * Float32Array fields. Used as the fallback when binary frames are unavailable.
+ */
+export function wrapFrameData(json: {
+  nx: number; ny: number;
+  velocity: number[]; u: number[]; v: number[];
+  rho: number[]; p: number[]; omega: number[]; obstacle: number[];
+}): FrameData {
+  return {
+    nx: json.nx,
+    ny: json.ny,
+    velocity: new Float32Array(json.velocity),
+    u: new Float32Array(json.u),
+    v: new Float32Array(json.v),
+    rho: new Float32Array(json.rho),
+    p: new Float32Array(json.p),
+    omega: new Float32Array(json.omega),
+    obstacle: new Float32Array(json.obstacle),
+  };
 }

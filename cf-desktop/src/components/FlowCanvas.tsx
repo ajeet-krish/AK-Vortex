@@ -260,7 +260,7 @@ export default function FlowCanvas({
 // Draw obstacle boundary cells as dark filled rectangles
 function drawObstacles(
     ctx: CanvasRenderingContext2D,
-    obs: number[],
+    obs: Float32Array,
     nx: number,
     ny: number,
     sx: number,
@@ -303,8 +303,8 @@ function drawObstacles(
 function drawStreamlines(
     ctx: CanvasRenderingContext2D,
     lines: Array<Array<{ x: number; y: number }>>,
-    u: number[],
-    v: number[],
+    u: Float32Array,
+    v: Float32Array,
     nx: number,
     ny: number,
     vmax: number,

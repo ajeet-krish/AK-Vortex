@@ -19,11 +19,11 @@ export const DEFAULT_QUIVER_CONFIG: QuiverConfig = {
 
 export function drawQuiver(
   ctx: CanvasRenderingContext2D,
-  u: number[],
-  v: number[],
+  u: Float32Array,
+  v: Float32Array,
   nx: number,
   ny: number,
-  obstacle: number[],
+  obstacle: Float32Array,
   vmax: number,
   sx: number,
   sy: number,

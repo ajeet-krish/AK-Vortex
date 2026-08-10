@@ -11,7 +11,7 @@ import FeatureTree from './components/FeatureTree';
 import { useSimulation } from './hooks/useSimulation';
 import { usePlayback } from './hooks/usePlayback';
 import { useVisualization } from './hooks/useVisualization';
-import type { FrameData } from './types';
+import { wrapFrameData } from './utils/binaryFrame';
 
 function App() {
   // Geometry editor state (local to layout)
@@ -196,8 +196,12 @@ function App() {
       const frameList = await invoke<number[]>('list_frames', { path: dir });
       if (frameList.length > 0) {
         const lastFrame = frameList[frameList.length - 1];
-        const data = await invoke<FrameData>('read_frame_json', { path: dir, step: lastFrame });
-        viz.setCompareData(data);
+        const json = await invoke<{
+          nx: number; ny: number;
+          velocity: number[]; u: number[]; v: number[];
+          rho: number[]; p: number[]; omega: number[]; obstacle: number[];
+        }>('read_frame_json', { path: dir, step: lastFrame });
+        viz.setCompareData(wrapFrameData(json));
         viz.setCompareMode(true);
       }
     }

@@ -11,7 +11,7 @@ export interface Point {
  * Coordinates are clamped to grid bounds.
  */
 export function sampleField(
-    arr: number[],
+    arr: Float32Array,
     nx: number,
     ny: number,
     x: number,
@@ -48,11 +48,11 @@ export function sampleField(
  * @returns Array of points along the streamline
  */
 export function traceStreamline(
-    u: number[],
-    v: number[],
+    u: Float32Array,
+    v: Float32Array,
     nx: number,
     ny: number,
-    obs: number[],
+    obs: Float32Array,
     x0: number,
     y0: number,
     dir: 1 | -1,
@@ -110,11 +110,11 @@ export function traceStreamline(
  * @returns Array of polylines (each an array of Points)
  */
 export function buildStreamlines(
-    u: number[],
-    v: number[],
+    u: Float32Array,
+    v: Float32Array,
     nx: number,
     ny: number,
-    obs: number[],
+    obs: Float32Array,
     nSeeds = 13
 ): Point[][] {
     const lines: Point[][] = [];

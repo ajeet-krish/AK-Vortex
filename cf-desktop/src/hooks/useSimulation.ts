@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { SimConfig, FrameData } from '../types';
 import type { Shape } from '../components/GeometryEditor';
-import { parseBinaryFrame } from '../utils/binaryFrame';
+import { parseBinaryFrame, wrapFrameData } from '../utils/binaryFrame';
 
 export interface SimProgress {
     step: number;
@@ -77,9 +77,9 @@ export function useSimulation(shapes: Shape[]): SimulationState {
             .catch(() => {
                 // Binary not available; fall back to JSON
                 if (cancelled) return;
-                invoke<FrameData>("read_frame_json", { path: outputDir, step })
-                    .then((data) => {
-                        if (!cancelled) setFrameData(data);
+                invoke<{nx:number;ny:number;velocity:number[];u:number[];v:number[];rho:number[];p:number[];omega:number[];obstacle:number[]}>('read_frame_json', { path: outputDir, step })
+                    .then((json) => {
+                        if (!cancelled) setFrameData(wrapFrameData(json));
                     })
                     .catch((e) => {
                         if (!cancelled) console.error(e);

@@ -1,13 +1,13 @@
 export interface FrameData {
   nx: number;
   ny: number;
-  velocity: number[];
-  u: number[];
-  v: number[];
-  rho: number[];
-  p: number[];
-  omega: number[];
-  obstacle: number[];
+  velocity: Float32Array;
+  u: Float32Array;
+  v: Float32Array;
+  rho: Float32Array;
+  p: Float32Array;
+  omega: Float32Array;
+  obstacle: Float32Array;
 }
 
 export interface SimConfig {
