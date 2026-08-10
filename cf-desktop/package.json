@@ -21,9 +21,12 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.0.0",
-    "react-refresh": "^0.14.2",
+    "react-refresh": "0.14.2",
     "typescript": "^5.0.0",
     "vite": "^5.0.0",
     "vite-plugin-glsl": "^1.6.1"
+  },
+  "overrides": {
+    "react-refresh": "0.14.2"
   }
 }
