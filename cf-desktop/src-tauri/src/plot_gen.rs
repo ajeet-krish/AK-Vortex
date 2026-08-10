@@ -110,13 +110,35 @@ pub fn generate_report_plots(
 /// Locate `plot_generator.py` on disk.
 ///
 /// Search order:
-///   1. `src-tauri/scripts/plot_generator.py` (dev mode, relative to CWD)
-///   2. `{exe_dir}/scripts/plot_generator.py` (bundled alongside the binary)
+///   1. `scripts/plot_generator.py` (relative to src-tauri CWD in dev mode)
+///   2. `src-tauri/scripts/plot_generator.py` (relative to project root)
+///   3. `{exe_dir}/scripts/plot_generator.py` (bundled alongside the binary)
 fn find_python_script() -> Result<String, String> {
-    // Dev mode: relative to the current working directory
-    let dev_path = PathBuf::from("src-tauri/scripts/plot_generator.py");
+    // Dev mode: relative to src-tauri CWD
+    let dev_path = PathBuf::from("scripts/plot_generator.py");
     if dev_path.exists() {
         return Ok(dev_path.to_string_lossy().into_owned());
+    }
+
+    // Dev mode: relative to project root (cargo runs from src-tauri/)
+    let project_root_path = PathBuf::from("src-tauri/scripts/plot_generator.py");
+    if project_root_path.exists() {
+        return Ok(project_root_path.to_string_lossy().into_owned());
+    }
+
+    // Try absolute path from CWD
+    if let Ok(cwd) = std::env::current_dir() {
+        let cwd_path = cwd.join("scripts/plot_generator.py");
+        if cwd_path.exists() {
+            return Ok(cwd_path.to_string_lossy().into_owned());
+        }
+        // Also try parent directory (in case CWD is src-tauri/)
+        let parent_path = cwd.parent()
+            .unwrap_or(&cwd)
+            .join("src-tauri/scripts/plot_generator.py");
+        if parent_path.exists() {
+            return Ok(parent_path.to_string_lossy().into_owned());
+        }
     }
 
     // Production: relative to the executable

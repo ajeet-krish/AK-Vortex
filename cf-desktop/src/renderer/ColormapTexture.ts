@@ -107,7 +107,7 @@ function generateViridis(n: number): Uint8Array {
 export class ColormapTexture {
   private gl: WebGL2RenderingContext;
   private texture: WebGLTexture;
-  private currentColormap: ColormapName = 'jet';
+  private currentColormap: ColormapName = '' as ColormapName;
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
