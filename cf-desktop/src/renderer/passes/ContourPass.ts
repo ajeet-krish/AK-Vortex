@@ -49,7 +49,7 @@ export class ContourPass {
   }
 
   render(
-    proj: Float32Array,
+    _proj: Float32Array,
     cmap: ColormapTexture,
     min: number,
     max: number,
@@ -58,7 +58,6 @@ export class ContourPass {
   ): void {
     const gl = this.gl;
     this.program.use();
-    this.program.setMat3('u_proj', proj);
     this.program.setFloat('u_min', min);
     this.program.setFloat('u_max', max);
     this.program.setVec2('u_gridSize', nx, ny);

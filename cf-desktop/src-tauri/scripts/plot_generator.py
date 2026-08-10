@@ -193,9 +193,8 @@ def plot_velocity(frame: dict, config: dict, geometry, output_dir: Path):
     _draw_obstacle_mask(ax, frame["obstacle"], nx, ny)
     _draw_geometry(ax, geometry, nx, ny, filled=False)
 
-    case_name = config.get("caseType", "CFD")
     re = config.get("re", "")
-    ax.set_title(f"Velocity Contour -- {case_name} Re={re}", fontweight="bold")
+    ax.set_title(f"Velocity Contour - Re={re}", fontweight="bold")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_xlim(0, nx)
@@ -229,16 +228,15 @@ def plot_streamlines(frame: dict, config: dict, geometry, output_dir: Path):
 
     strm = ax.streamplot(
         xs, ys, u, v, color=speed, cmap="jet",
-        density=1.5, linewidth=0.8, arrowsize=1.0,
+        density=1.5, linewidth=0.8, arrowsize=0,
         broken_streamlines=False,
     )
 
     _draw_obstacle_mask(ax, frame["obstacle"], nx, ny)
     _draw_geometry(ax, geometry, nx, ny, filled=False)
 
-    case_name = config.get("caseType", "CFD")
     re = config.get("re", "")
-    ax.set_title(f"Velocity Streamlines -- {case_name} Re={re}", fontweight="bold")
+    ax.set_title(f"Velocity Streamlines - Re={re}", fontweight="bold")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_xlim(0, nx)
@@ -287,9 +285,8 @@ def plot_pressure(frame: dict, config: dict, geometry, output_dir: Path):
     _draw_obstacle_mask(ax, frame["obstacle"], nx, ny)
     _draw_geometry(ax, geometry, nx, ny, filled=False)
 
-    case_name = config.get("caseType", "CFD")
     re = config.get("re", "")
-    ax.set_title(f"Pressure Coefficient -- {case_name} Re={re}", fontweight="bold")
+    ax.set_title(f"Pressure Coefficient - Re={re}", fontweight="bold")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_xlim(0, nx)
@@ -325,9 +322,8 @@ def plot_vorticity(frame: dict, config: dict, geometry, output_dir: Path):
     _draw_obstacle_mask(ax, frame["obstacle"], nx, ny)
     _draw_geometry(ax, geometry, nx, ny, filled=False)
 
-    case_name = config.get("caseType", "CFD")
     re = config.get("re", "")
-    ax.set_title(f"Vorticity -- {case_name} Re={re}", fontweight="bold")
+    ax.set_title(f"Vorticity - Re={re}", fontweight="bold")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_xlim(0, nx)

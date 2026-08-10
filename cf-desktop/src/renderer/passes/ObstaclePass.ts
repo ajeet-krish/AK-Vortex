@@ -46,10 +46,9 @@ export class ObstaclePass {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  render(proj: Float32Array, nx: number, ny: number): void {
+  render(_proj: Float32Array, nx: number, ny: number): void {
     const gl = this.gl;
     this.program.use();
-    this.program.setMat3('u_proj', proj);
     this.program.setVec2('u_gridSize', nx, ny);
 
     gl.activeTexture(gl.TEXTURE0);
