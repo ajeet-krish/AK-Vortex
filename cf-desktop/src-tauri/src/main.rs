@@ -13,6 +13,7 @@ fn main() {
             commands::run_simulation,
             commands::run_geometry_simulation,
             commands::read_frame_json,
+            commands::read_frame_binary,
             commands::list_frames,
             commands::get_solver_log,
             commands::clear_solver_log,

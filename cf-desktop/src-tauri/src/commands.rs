@@ -271,6 +271,31 @@ pub fn read_frame_json(path: String, step: i32) -> Result<serde_json::Value, Str
 }
 
 #[command]
+pub fn read_frame_binary(path: String, step: i32) -> Result<Vec<u8>, String> {
+    validate_path(&path)?;
+    let frame_path = format!("{}/frames/frame_{}.bin", path, step);
+
+    // Canonicalize and verify path is under the provided base
+    let canonical_frame = std::fs::canonicalize(&frame_path)
+        .map_err(|e| format!("Failed to resolve frame path: {}", e))?;
+    let canonical_base = std::fs::canonicalize(&path)
+        .map_err(|e| format!("Failed to resolve base path: {}", e))?;
+    if !canonical_frame.starts_with(&canonical_base) {
+        return Err("Frame path escapes base directory".to_string());
+    }
+
+    // File size limit: 100 MB
+    let metadata = std::fs::metadata(&canonical_frame)
+        .map_err(|e| format!("Failed to read frame metadata: {}", e))?;
+    if metadata.len() > 100 * 1024 * 1024 {
+        return Err("Binary frame too large (>100 MB)".to_string());
+    }
+
+    std::fs::read(&canonical_frame)
+        .map_err(|e| format!("Failed to read binary frame: {}", e))
+}
+
+#[command]
 pub fn list_frames(path: String) -> Result<Vec<i32>, String> {
     validate_path(&path)?;
     let frames_dir = format!("{}/frames", path);
@@ -279,12 +304,19 @@ pub fn list_frames(path: String) -> Result<Vec<i32>, String> {
         .filter_map(|e| e.ok())
         .filter_map(|e| {
             let name = e.file_name().to_string_lossy().to_string();
-            name.strip_prefix("frame_")
-                .and_then(|s| s.strip_suffix(".json"))
-                .and_then(|s| s.parse().ok())
+            if let Some(s) = name.strip_prefix("frame_") {
+                if let Some(s) = s.strip_suffix(".json") {
+                    return s.parse().ok();
+                }
+                if let Some(s) = s.strip_suffix(".bin") {
+                    return s.parse().ok();
+                }
+            }
+            None
         })
         .collect();
     frames.sort();
+    frames.dedup();
     Ok(frames)
 }
 

@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { SimConfig, FrameData } from '../types';
 import type { Shape } from '../components/GeometryEditor';
+import { parseBinaryFrame } from '../utils/binaryFrame';
 
 export interface SimProgress {
     step: number;
@@ -57,16 +58,33 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     const outputDirRef = useRef(outputDir);
     outputDirRef.current = outputDir;
 
-    // Auto-load frame when frameIndex changes
+    // Auto-load frame when frameIndex changes (binary-first, JSON fallback)
     useEffect(() => {
         if (frames.length === 0 || !outputDir) return;
         const step = frames[frameIndex];
         if (step === undefined) return;
 
         let cancelled = false;
-        invoke<FrameData>('read_frame_json', { path: outputDir, step })
-            .then((data) => { if (!cancelled) setFrameData(data); })
-            .catch((e) => { if (!cancelled) console.error(e); });
+
+        // Try binary frame first (faster, single network read)
+        invoke<number[]>("read_frame_binary", { path: outputDir, step })
+            .then((bytes) => {
+                if (cancelled) return;
+                const buf = new Uint8Array(bytes).buffer;
+                const data = parseBinaryFrame(buf);
+                setFrameData(data);
+            })
+            .catch(() => {
+                // Binary not available; fall back to JSON
+                if (cancelled) return;
+                invoke<FrameData>("read_frame_json", { path: outputDir, step })
+                    .then((data) => {
+                        if (!cancelled) setFrameData(data);
+                    })
+                    .catch((e) => {
+                        if (!cancelled) console.error(e);
+                    });
+            });
 
         return () => { cancelled = true; };
     }, [frameIndex, frames, outputDir]);

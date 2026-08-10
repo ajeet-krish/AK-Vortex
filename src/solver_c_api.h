@@ -48,6 +48,8 @@ int lbm_run_gci(
 
 void lbm_set_cancel_flag(bool cancel);
 
+void lbm_save_binary_frame(void* system, int step, const char* output_dir);
+
 #ifdef __cplusplus
 }
 #endif

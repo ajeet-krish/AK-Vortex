@@ -17,6 +17,11 @@ extern "C" void lbm_set_cancel_flag(bool cancel) {
     g_cancel_flag.store(cancel, std::memory_order_relaxed);
 }
 
+extern "C" void lbm_save_binary_frame(void* system, int step, const char* output_dir) {
+    auto* sys = static_cast<LBMCapabilities*>(system);
+    save_binary_frame(*sys, step, std::string(output_dir));
+}
+
 // ==========================================================================
 // Reset all C++ global solver state between runs
 // ==========================================================================
@@ -435,6 +440,7 @@ int lbm_solve_c(
         // Save frames
         if (step % save_interval == 0) {
             save_json_frame(system, step, out_dir);
+            save_binary_frame(system, step, out_dir);
         }
     }
 
@@ -572,6 +578,7 @@ int lbm_solve_geometry(
         // Save frames
         if (step % save_interval == 0) {
             save_json_frame(system, step, out_dir);
+            save_binary_frame(system, step, out_dir);
         }
     }
 

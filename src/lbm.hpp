@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <cstdio>
 
 // ==========================================================================
 // D2Q9 LATTICE BOLTZMANN METHOD -- Core solver
@@ -1026,6 +1027,111 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
     out << "}";
     out << "}";
     out.close();
+}
+
+// ------------------------------------------------------------------
+// Binary frame export: velocity/pressure/vorticity/obstacle fields
+// Writes output_dir/frames/frame_{step}.bin
+// 24-byte header + 5 float32 channels (u, v, p, omega, obstacle)
+// ------------------------------------------------------------------
+inline void save_binary_frame(const LBMCapabilities& sys, int step, const std::string& output_dir) {
+    int ds = std::max(1, NX / 100);                // downsample factor (same as JSON)
+    int nx_ds = (NX + ds - 1) / ds;                // ceil division
+    int ny_ds = (NY + ds - 1) / ds;
+
+    std::string dir = output_dir + "/frames";
+    std::filesystem::create_directories(dir);
+
+    std::string filename = dir + "/frame_" + std::to_string(step) + ".bin";
+    FILE* fp = fopen(filename.c_str(), "wb");
+    if (!fp) return;
+
+    // 24-byte header: magic, version, nx_ds, ny_ds, n_channels, dtype_flag
+    uint32_t magic = 0x4C424D31;   // "LBM1"
+    uint32_t version = 1;
+    uint32_t u_nx_ds = static_cast<uint32_t>(nx_ds);
+    uint32_t u_ny_ds = static_cast<uint32_t>(ny_ds);
+    uint32_t n_channels = 5;       // u, v, p, omega, obstacle
+    uint32_t dtype_flag = 0;       // 0 = float32
+    fwrite(&magic, sizeof(uint32_t), 1, fp);
+    fwrite(&version, sizeof(uint32_t), 1, fp);
+    fwrite(&u_nx_ds, sizeof(uint32_t), 1, fp);
+    fwrite(&u_ny_ds, sizeof(uint32_t), 1, fp);
+    fwrite(&n_channels, sizeof(uint32_t), 1, fp);
+    fwrite(&dtype_flag, sizeof(uint32_t), 1, fp);
+
+    int n_ds = nx_ds * ny_ds;
+    std::vector<float> u_arr(n_ds, 0.0f);
+    std::vector<float> v_arr(n_ds, 0.0f);
+    std::vector<float> rho_arr(n_ds, 0.0f);
+    std::vector<float> omega_arr(n_ds, 0.0f);
+    std::vector<float> obst_arr(n_ds, 0.0f);
+    std::vector<bool> is_obstacle(n_ds, false);
+
+    int idx2 = 0;
+    for (int y = 0; y < NY; y += ds) {
+        for (int x = 0; x < NX; x += ds) {
+            int idx = node_index(x, y);
+            if (sys.obstacle[idx]) {
+                is_obstacle[idx2] = true;
+                obst_arr[idx2] = 1.0f;
+                ++idx2;
+                continue;
+            }
+            double rho, u, v;
+            compute_macros(&sys.f[idx * 9], rho, u, v);
+            if (rho < 1e-12 || std::isnan(rho)) { rho = 1.0; u = 0.0; v = 0.0; }
+            if (std::isnan(u)) u = 0.0;
+            if (std::isnan(v)) v = 0.0;
+            u_arr[idx2] = static_cast<float>(u);
+            v_arr[idx2] = static_cast<float>(v);
+            rho_arr[idx2] = static_cast<float>(rho);
+            ++idx2;
+        }
+    }
+
+    // Compute vorticity on downsampled grid using 9-point stencil
+    // omega = dv/dx - du/dy  (same logic as save_json_frame)
+    for (int j = 0; j < ny_ds; ++j) {
+        for (int i = 0; i < nx_ds; ++i) {
+            int idx = j * nx_ds + i;
+            if (is_obstacle[idx]) continue;
+            int il = std::max(0, i - 1);
+            int ir = std::min(nx_ds - 1, i + 1);
+            int jd = std::max(0, j - 1);
+            int ju = std::min(ny_ds - 1, j + 1);
+            double dv_dx = (v_arr[j * nx_ds + ir] - v_arr[j * nx_ds + il])
+                           / (2.0 * static_cast<double>((ir - il) * ds));
+            double du_dy = (u_arr[ju * nx_ds + i] - u_arr[jd * nx_ds + i])
+                           / (2.0 * static_cast<double>((ju - jd) * ds));
+            omega_arr[idx] = static_cast<float>(dv_dx - du_dy);
+        }
+    }
+
+    // Write 5 channels sequentially as float32: u, v, p, omega, obstacle
+    // For obstacle nodes, field channels are NaN
+    std::vector<float> p_arr(n_ds, 0.0f);
+    float nan_val = static_cast<float>(std::nan(""));
+    for (int i = 0; i < n_ds; ++i) {
+        if (is_obstacle[i]) {
+            u_arr[i] = nan_val;
+            v_arr[i] = nan_val;
+            omega_arr[i] = nan_val;
+            // p = (rho - 1) / 3
+            p_arr[i] = nan_val;
+        } else {
+            // Pressure perturbation: p' = (rho - 1) / 3
+            p_arr[i] = (rho_arr[i] - 1.0f) / 3.0f;
+        }
+    }
+
+    fwrite(u_arr.data(), sizeof(float), n_ds, fp);
+    fwrite(v_arr.data(), sizeof(float), n_ds, fp);
+    fwrite(p_arr.data(), sizeof(float), n_ds, fp);
+    fwrite(omega_arr.data(), sizeof(float), n_ds, fp);
+    fwrite(obst_arr.data(), sizeof(float), n_ds, fp);
+
+    fclose(fp);
 }
 
 // ------------------------------------------------------------------
