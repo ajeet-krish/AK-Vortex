@@ -8,7 +8,6 @@ import FlowCanvas from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
 import ReportPlots from './components/ReportPlots';
 import FeatureTree from './components/FeatureTree';
-import LogTerminal from './components/LogTerminal';
 import { useSimulation } from './hooks/useSimulation';
 import { usePlayback } from './hooks/usePlayback';
 import { useVisualization } from './hooks/useVisualization';
@@ -25,6 +24,7 @@ function App() {
   const viz = useVisualization(sim.frameData);
 
   const [gciRunning, setGciRunning] = useState(false);
+  const [logExpanded, setLogExpanded] = useState(false);
   const [gciResults, setGciResults] = useState<{
     grids: Array<{ grid: string; nx: number; ny: number; maxVel: number }>;
     apparentOrder: number;
@@ -388,31 +388,18 @@ function App() {
             frames={sim.frames}
             frameIndex={sim.frameIndex}
             setFrameIndex={sim.setFrameIndex}
-            frameData={sim.frameData}
             field={viz.field}
             setField={viz.setField}
             playing={playback.playing}
             playbackSpeed={playback.playbackSpeed}
             setPlaybackSpeed={playback.setPlaybackSpeed}
             togglePlay={playback.togglePlay}
-            useManualRange={viz.useManualRange}
-            setUseManualRange={viz.setUseManualRange}
-            manualMin={viz.manualMin}
-            setManualMin={viz.setManualMin}
-            manualMax={viz.manualMax}
-            setManualMax={viz.setManualMax}
             runSimulation={handleRunSimulation}
             resetSimulation={handleReset}
             handleExportPng={handleExportPng}
             handleExportVtk={handleExportVtk}
             probe={viz.probe}
             shapes={shapes}
-            solverLog={sim.solverLog}
-            setSolverLog={sim.setSolverLog}
-            showQuiver={viz.showQuiver}
-            setShowQuiver={viz.setShowQuiver}
-            quiverConfig={viz.quiverConfig}
-            setQuiverConfig={viz.setQuiverConfig}
             selectedShapeId={selectedShapeId}
             onCreateArray={handleCreateArray}
             compareMode={viz.compareMode}
@@ -484,6 +471,15 @@ function App() {
 
           {/* Results - Interactive mode */}
           <div style={{ display: viz.viewMode === 'results' && viz.vizMode === 'interactive' ? 'contents' : 'none' }}>
+            {/* Info bar - above canvas */}
+            {sim.frameData && (
+              <div className="info-bar">
+                <span>Re: {sim.config.re}</span>
+                <span>Grid: {sim.config.nx} x {sim.config.ny}</span>
+                <span>Step: {currentStep}</span>
+                <span>Max |V|: {resultMetrics?.maxVel.toFixed(4) || '--'}</span>
+              </div>
+            )}
             {sim.frameData ? (
               <div className="visualization" ref={containerRef}>
                 <h2>{viz.field.charAt(0).toUpperCase() + viz.field.slice(1)} Field - Step {currentStep}</h2>
@@ -507,27 +503,7 @@ function App() {
             ) : null}
           </div>
 
-          {/* Summary bar */}
-          {viz.viewMode === 'results' && sim.frameData && (
-            <div className="summary-bar">
-              <div className="summary-item">
-                <span className="summary-label">Re:</span>
-                <span className="summary-value">{sim.config.re}</span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Grid:</span>
-                <span className="summary-value">{sim.config.nx}x{sim.config.ny}</span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Step:</span>
-                <span className="summary-value">{currentStep}</span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Max |V|:</span>
-                <span className="summary-value">{resultMetrics?.maxVel.toFixed(4) || '--'}</span>
-              </div>
-            </div>
-          )}
+          {/* Summary bar - removed (info is now above canvas) */}
 
           {/* Results - Report mode */}
           {viz.viewMode === 'results' && viz.vizMode === 'report' && (
@@ -572,8 +548,48 @@ function App() {
         </select>
       </div>
 
-      {/* Log Terminal (fixed at bottom) */}
-      <LogTerminal log={sim.solverLog} onClear={() => sim.setSolverLog([])} />
+      {/* Log expansion - appears above status bar when expanded */}
+      {logExpanded && (
+        <div className="log-panel" style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '280px',
+          right: 0,
+          height: '180px',
+          background: 'var(--bg-secondary)',
+          borderTop: '1px solid var(--border)',
+          overflow: 'auto',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '11px',
+          padding: '6px 12px',
+          zIndex: 15,
+        }}>
+          {sim.solverLog.length === 0 && (
+            <div style={{ color: 'var(--text-muted)', padding: '8px 0' }}>No log entries</div>
+          )}
+          {sim.solverLog.map((entry, i) => (
+            <div key={i} style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry}</div>
+          ))}
+          <button
+            onClick={() => sim.setSolverLog([])}
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              float: 'right',
+              padding: '3px 8px',
+              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              color: 'var(--text-muted)',
+              fontSize: '10px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Status Bar */}
       <div className="status-bar">
@@ -588,6 +604,28 @@ function App() {
         <div className="status-separator" />
         <div className="status-item"><span>Frame: {currentStep}</span></div>
         <div className="status-item"><span>Shapes: {shapes.length}</span></div>
+        <div className="status-separator" />
+        <button
+          onClick={() => setLogExpanded(!logExpanded)}
+          style={{
+            marginLeft: 'auto',
+            padding: '2px 8px',
+            background: 'transparent',
+            border: '1px solid var(--border)',
+            borderRadius: '2px',
+            color: 'var(--text-secondary)',
+            fontSize: '11px',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          {logExpanded ? '▼ Log' : '▶ Log'}
+          {sim.solverLog.length > 0 && (
+            <span style={{ marginLeft: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
+              ({sim.solverLog.length})
+            </span>
+          )}
+        </button>
       </div>
 
     </div>

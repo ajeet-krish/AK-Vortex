@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Shape } from './GeometryEditor';
-import type { ProbeInfo, SimConfig, FrameData } from '../types';
-import type { QuiverConfig } from '../utils/quiver';
+import type { ProbeInfo, SimConfig } from '../types';
 
 interface SimProgress {
     step: number;
@@ -25,31 +24,18 @@ interface FeatureTreeProps {
     frames: number[];
     frameIndex: number;
     setFrameIndex: (i: number) => void;
-    frameData: FrameData | null;
     field: 'velocity' | 'pressure' | 'vorticity';
     setField: (f: 'velocity' | 'pressure' | 'vorticity') => void;
     playing: boolean;
     playbackSpeed: number;
     setPlaybackSpeed: (s: number) => void;
     togglePlay: () => void;
-    useManualRange: boolean;
-    setUseManualRange: (v: boolean) => void;
-    manualMin: string;
-    setManualMin: (v: string) => void;
-    manualMax: string;
-    setManualMax: (v: string) => void;
     runSimulation: () => void;
     resetSimulation: () => void;
     handleExportPng: () => void;
     handleExportVtk: () => void;
     probe: ProbeInfo | null;
     shapes: Shape[];
-    solverLog: string[];
-    setSolverLog: (log: string[]) => void;
-    showQuiver: boolean;
-    setShowQuiver: (v: boolean) => void;
-    quiverConfig: QuiverConfig;
-    setQuiverConfig: (cfg: QuiverConfig) => void;
     selectedShapeId: string | null;
     onCreateArray: (count: number, spacing: number, angle: number) => void;
     compareMode: boolean;
@@ -102,13 +88,6 @@ const IconResults = () => (
         <rect x="2" y="8" width="2.5" height="4" rx="0.5" fill="#4ec9b0" />
         <rect x="5.5" y="5" width="2.5" height="7" rx="0.5" fill="#569cd6" />
         <rect x="9" y="3" width="2.5" height="9" rx="0.5" fill="#ce9178" />
-    </svg>
-);
-
-const IconViz = () => (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <circle cx="7" cy="7" r="5" stroke="#808080" strokeWidth="1" />
-        <path d="M3 7C5 4 9 4 11 7C9 10 5 10 3 7Z" stroke="#569cd6" strokeWidth="0.8" fill="rgba(86,156,216,0.15)" />
     </svg>
 );
 
@@ -248,31 +227,18 @@ export default function FeatureTree({
     frames,
     frameIndex,
     setFrameIndex,
-    frameData,
     field,
     setField,
     playing,
     playbackSpeed,
     setPlaybackSpeed,
     togglePlay,
-    useManualRange,
-    setUseManualRange,
-    manualMin,
-    setManualMin,
-    manualMax,
-    setManualMax,
     runSimulation,
     resetSimulation,
     handleExportPng,
     handleExportVtk,
     probe,
     shapes,
-    solverLog,
-    setSolverLog,
-    showQuiver,
-    setShowQuiver,
-    quiverConfig,
-    setQuiverConfig,
     selectedShapeId,
     onCreateArray,
     compareMode,
@@ -286,7 +252,6 @@ export default function FeatureTree({
     const [arraySpacing, setArraySpacing] = useState(50);
     const [arrayAngle, setArrayAngle] = useState(0);
     const hasResults = frames.length > 0;
-    const hasFrame = !!frameData;
     const currentStep = frames.length > 0 ? frames[frameIndex] : 0;
     const totalSteps = frames.length > 0 ? frames[frames.length - 1] : 0;
 
@@ -673,90 +638,6 @@ export default function FeatureTree({
             )}
 
             {/* ============================================================ */}
-            {/*  VISUALIZATION                                                */}
-            {/* ============================================================ */}
-            {hasFrame && (
-                <TreeSection icon={<IconViz />} label="Visualization" defaultOpen={true}>
-                    <div className="tree-item">
-                        <label className="tree-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={showQuiver}
-                                onChange={(e) => setShowQuiver(e.target.checked)}
-                                disabled={field !== 'velocity'}
-                            />
-                            <span>Quiver (Vectors)</span>
-                        </label>
-                    </div>
-
-                    {showQuiver && (
-                        <div className="tree-range-row">
-                            <div className="tree-range-field">
-                                <span className="tree-range-label">Grid</span>
-                                <input
-                                    type="number"
-                                    step="1"
-                                    min="4"
-                                    max="80"
-                                    className="tree-num-input"
-                                    value={quiverConfig.gridSpacing}
-                                    onChange={(e) => setQuiverConfig({ ...quiverConfig, gridSpacing: Math.max(4, +e.target.value || 20) })}
-                                />
-                            </div>
-                            <div className="tree-range-field">
-                                <span className="tree-range-label">Scale</span>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0.1"
-                                    max="5"
-                                    className="tree-num-input"
-                                    value={quiverConfig.arrowScale}
-                                    onChange={(e) => setQuiverConfig({ ...quiverConfig, arrowScale: Math.max(0.1, +e.target.value || 1.0) })}
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="tree-item">
-                        <label className="tree-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={useManualRange}
-                                onChange={(e) => setUseManualRange(e.target.checked)}
-                            />
-                            <span>Manual Range</span>
-                        </label>
-                    </div>
-
-                    {useManualRange && (
-                        <div className="tree-range-row">
-                            <div className="tree-range-field">
-                                <span className="tree-range-label">Min</span>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    className="tree-num-input"
-                                    value={manualMin}
-                                    onChange={(e) => setManualMin(e.target.value)}
-                                />
-                            </div>
-                            <div className="tree-range-field">
-                                <span className="tree-range-label">Max</span>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    className="tree-num-input"
-                                    value={manualMax}
-                                    onChange={(e) => setManualMax(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </TreeSection>
-            )}
-
-            {/* ============================================================ */}
             {/*  PROBE                                                        */}
             {/* ============================================================ */}
             {probe && (
@@ -773,36 +654,6 @@ export default function FeatureTree({
                 </TreeSection>
             )}
 
-            {/* ============================================================ */}
-            {/*  LOG (collapsible at bottom)                                  */}
-            {/* ============================================================ */}
-            {solverLog.length > 0 && (
-                <TreeSection
-                    icon={
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <rect x="2" y="3" width="10" height="8" rx="1" stroke="#808080" strokeWidth="1" />
-                            <path d="M4 6h3M4 8h5" stroke="#808080" strokeWidth="0.8" />
-                        </svg>
-                    }
-                    label="Log"
-                    defaultOpen={false}
-                    badge={`${solverLog.length}`}
-                >
-                    <div className="tree-log-content">
-                        {solverLog.slice(-50).map((entry, i) => (
-                            <div key={i} className="tree-log-entry">{entry}</div>
-                        ))}
-                    </div>
-                    <button
-                        className="tree-log-clear"
-                        onClick={() => {
-                            setSolverLog([]);
-                        }}
-                    >
-                        Clear Log
-                    </button>
-                </TreeSection>
-            )}
         </div>
     );
 }
