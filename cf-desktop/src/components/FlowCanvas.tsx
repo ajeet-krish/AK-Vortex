@@ -2,7 +2,6 @@ import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Renderer, type RenderConfig } from '../renderer/Renderer';
 import type { ColormapName } from '../renderer/ColormapTexture';
 import type { FrameData, ProbeInfo } from '../types';
-import type { Point } from '../utils/streamline';
 import { sampleField } from '../utils/streamline';
 
 export type { ProbeInfo } from '../types';
@@ -10,27 +9,21 @@ export type { ProbeInfo } from '../types';
 interface FlowCanvasProps {
     frameData: FrameData;
     field: 'velocity' | 'pressure' | 'vorticity';
-    showStreamlines: boolean;
     showQuiver: boolean;
-    showMesh?: boolean;
     quiverConfig?: { gridSpacing: number; arrowScale: number };
     canvasSize: { width: number; height: number };
     colorRange?: { min: number; max: number } | null;
     onProbe?: (info: ProbeInfo | null) => void;
-    streamlines?: Point[][];
 }
 
 export default function FlowCanvas({
     frameData,
     field,
-    showStreamlines,
     showQuiver,
-    showMesh = false,
     quiverConfig,
     canvasSize,
     colorRange,
     onProbe,
-    streamlines: streamlinesProp,
 }: FlowCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rendererRef = useRef<Renderer | null>(null);
@@ -109,15 +102,6 @@ export default function FlowCanvas({
         rendererRef.current.uploadFrameData(frameData);
     }, [frameData]);
 
-    // Upload streamlines to GPU
-    useEffect(() => {
-        if (!rendererRef.current) return;
-        const lines = streamlinesProp ?? [];
-        if (lines.length > 0) {
-            rendererRef.current.uploadStreamlines(lines, frameData.velocity, effectiveRange.max);
-        }
-    }, [streamlinesProp, frameData, effectiveRange]);
-
     // Upload quiver data to GPU
     useEffect(() => {
         if (!rendererRef.current) return;
@@ -134,16 +118,14 @@ export default function FlowCanvas({
 
         const config: RenderConfig = {
             field,
-            showMesh,
             showObstacles: true,
-            showStreamlines,
             showQuiver,
             colorRange: effectiveRange,
             cmap,
         };
 
         renderer.render(config, frameData);
-    }, [frameData, field, showMesh, showStreamlines, showQuiver, effectiveRange, cmap]);
+    }, [frameData, field, showQuiver, effectiveRange, cmap]);
 
     // Mouse probe: convert canvas pixel to grid coordinate (accounting for Y flip)
     const handleMouseMove = useCallback(

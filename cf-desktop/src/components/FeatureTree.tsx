@@ -32,8 +32,6 @@ interface FeatureTreeProps {
     playbackSpeed: number;
     setPlaybackSpeed: (s: number) => void;
     togglePlay: () => void;
-    showStreamlines: boolean;
-    setShowStreamlines: (v: boolean) => void;
     useManualRange: boolean;
     setUseManualRange: (v: boolean) => void;
     manualMin: string;
@@ -50,8 +48,6 @@ interface FeatureTreeProps {
     setSolverLog: (log: string[]) => void;
     showQuiver: boolean;
     setShowQuiver: (v: boolean) => void;
-    showMesh: boolean;
-    setShowMesh: (v: boolean) => void;
     quiverConfig: QuiverConfig;
     setQuiverConfig: (cfg: QuiverConfig) => void;
     selectedShapeId: string | null;
@@ -259,8 +255,6 @@ export default function FeatureTree({
     playbackSpeed,
     setPlaybackSpeed,
     togglePlay,
-    showStreamlines,
-    setShowStreamlines,
     useManualRange,
     setUseManualRange,
     manualMin,
@@ -277,8 +271,6 @@ export default function FeatureTree({
     setSolverLog,
     showQuiver,
     setShowQuiver,
-    showMesh,
-    setShowMesh,
     quiverConfig,
     setQuiverConfig,
     selectedShapeId,
@@ -689,34 +681,11 @@ export default function FeatureTree({
                         <label className="tree-checkbox">
                             <input
                                 type="checkbox"
-                                checked={showStreamlines}
-                                onChange={(e) => setShowStreamlines(e.target.checked)}
-                                disabled={field !== 'velocity'}
-                            />
-                            <span>Streamlines</span>
-                        </label>
-                    </div>
-
-                    <div className="tree-item">
-                        <label className="tree-checkbox">
-                            <input
-                                type="checkbox"
                                 checked={showQuiver}
                                 onChange={(e) => setShowQuiver(e.target.checked)}
                                 disabled={field !== 'velocity'}
                             />
                             <span>Quiver (Vectors)</span>
-                        </label>
-                    </div>
-
-                    <div className="tree-item">
-                        <label className="tree-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={showMesh}
-                                onChange={(e) => setShowMesh(e.target.checked)}
-                            />
-                            <span>Show Mesh</span>
                         </label>
                     </div>
 

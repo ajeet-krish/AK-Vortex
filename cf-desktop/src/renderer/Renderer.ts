@@ -3,18 +3,12 @@ import { ColormapTexture, type ColormapName } from './ColormapTexture';
 import { Viewport } from './Viewport';
 import { ContourPass } from './passes/ContourPass';
 import { ObstaclePass } from './passes/ObstaclePass';
-import { MeshPass } from './passes/MeshPass';
-import { StreamlinePass } from './passes/StreamlinePass';
 import { QuiverPass } from './passes/QuiverPass';
-import { ColorBarPass } from './passes/ColorBarPass';
 import type { FrameData } from '../types';
-import type { Point } from '../utils/streamline';
 
 export interface RenderConfig {
   field: 'velocity' | 'pressure' | 'vorticity';
-  showMesh: boolean;
   showObstacles: boolean;
-  showStreamlines: boolean;
   showQuiver: boolean;
   colorRange: { min: number; max: number };
   cmap: ColormapName;
@@ -26,10 +20,7 @@ export class Renderer {
   private viewport: Viewport;
   private contourPass: ContourPass;
   private obstaclePass: ObstaclePass;
-  private meshPass: MeshPass;
-  private streamlinePass: StreamlinePass;
   private quiverPass: QuiverPass;
-  private colorbarPass: ColorBarPass;
   private nx = 0;
   private ny = 0;
   private quiverVmax = 1;
@@ -40,10 +31,7 @@ export class Renderer {
     this.viewport = new Viewport(canvas, 100, 100);
     this.contourPass = new ContourPass(this.ctx.gl);
     this.obstaclePass = new ObstaclePass(this.ctx.gl);
-    this.meshPass = new MeshPass(this.ctx.gl);
-    this.streamlinePass = new StreamlinePass(this.ctx.gl);
     this.quiverPass = new QuiverPass(this.ctx.gl);
-    this.colorbarPass = new ColorBarPass(this.ctx.gl);
   }
 
   uploadFrameData(frame: FrameData): void {
@@ -60,14 +48,6 @@ export class Renderer {
 
     // Upload obstacle texture
     this.obstaclePass.uploadObstacle(frame.obstacle, this.nx, this.ny);
-  }
-
-  uploadStreamlines(
-    lines: Point[][],
-    speed: Float32Array,
-    vmax: number,
-  ): void {
-    this.streamlinePass.uploadStreamlines(lines, speed, this.nx, this.ny, vmax);
   }
 
   uploadQuiver(
@@ -128,19 +108,7 @@ export class Renderer {
       this.obstaclePass.render(proj, this.nx, this.ny);
     }
 
-    // 3. Mesh (semi-transparent grid lines)
-    if (config.showMesh) {
-      const zoom = this.viewport.getState().zoom;
-      this.meshPass.updateGrid(this.nx, this.ny, zoom);
-      this.meshPass.render(proj, zoom);
-    }
-
-    // 4. Streamlines (colored line strips)
-    if (config.showStreamlines) {
-      this.streamlinePass.render(proj, this.cmap);
-    }
-
-    // 5. Quiver (instanced arrow glyphs)
+    // 3. Quiver (instanced arrow glyphs)
     if (config.showQuiver) {
       this.quiverPass.render(
         proj,
@@ -150,15 +118,6 @@ export class Renderer {
         this.quiverVmax,
       );
     }
-
-    // 6. Color bar (screen-space overlay, always shown)
-    this.colorbarPass.render(
-      this.cmap,
-      cw,
-      ch,
-      config.colorRange.min,
-      config.colorRange.max,
-    );
   }
 
   resize(width: number, height: number): void {
@@ -174,10 +133,7 @@ export class Renderer {
   destroy(): void {
     this.contourPass.destroy();
     this.obstaclePass.destroy();
-    this.meshPass.destroy();
-    this.streamlinePass.destroy();
     this.quiverPass.destroy();
-    this.colorbarPass.destroy();
     this.cmap.destroy();
     this.viewport.destroy();
   }

@@ -23,8 +23,7 @@ export function usePlayback(
             setFrameIndex((prev) => {
                 const next = prev + 1;
                 if (next >= frameCount) {
-                    setPlaying(false);
-                    return prev;
+                    return 0; // Loop back to start
                 }
                 return next;
             });

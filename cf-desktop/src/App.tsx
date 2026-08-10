@@ -8,10 +8,10 @@ import FlowCanvas from './components/FlowCanvas';
 import ColorScaleBar from './components/ColorScaleBar';
 import ReportPlots from './components/ReportPlots';
 import FeatureTree from './components/FeatureTree';
+import LogTerminal from './components/LogTerminal';
 import { useSimulation } from './hooks/useSimulation';
 import { usePlayback } from './hooks/usePlayback';
 import { useVisualization } from './hooks/useVisualization';
-import { useStreamlines } from './hooks/useStreamlines';
 import { wrapFrameData } from './utils/binaryFrame';
 
 function App() {
@@ -23,7 +23,6 @@ function App() {
   const sim = useSimulation(shapes);
   const playback = usePlayback(sim.frames.length, sim.setFrameIndex);
   const viz = useVisualization(sim.frameData);
-  const streamlines = useStreamlines(sim.frameData, viz.showStreamlines);
 
   const [gciRunning, setGciRunning] = useState(false);
   const [gciResults, setGciResults] = useState<{
@@ -116,8 +115,8 @@ function App() {
         });
       } else {
         setCanvasSize({
-          width: Math.min(800, Math.max(100, availW)),
-          height: Math.min(400, Math.max(100, availH)),
+          width: Math.max(100, availW),
+          height: Math.max(100, availH),
         });
       }
     };
@@ -396,8 +395,6 @@ function App() {
             playbackSpeed={playback.playbackSpeed}
             setPlaybackSpeed={playback.setPlaybackSpeed}
             togglePlay={playback.togglePlay}
-            showStreamlines={viz.showStreamlines}
-            setShowStreamlines={viz.setShowStreamlines}
             useManualRange={viz.useManualRange}
             setUseManualRange={viz.setUseManualRange}
             manualMin={viz.manualMin}
@@ -414,8 +411,6 @@ function App() {
             setSolverLog={sim.setSolverLog}
             showQuiver={viz.showQuiver}
             setShowQuiver={viz.setShowQuiver}
-            showMesh={viz.showMesh}
-            setShowMesh={viz.setShowMesh}
             quiverConfig={viz.quiverConfig}
             setQuiverConfig={viz.setQuiverConfig}
             selectedShapeId={selectedShapeId}
@@ -496,14 +491,11 @@ function App() {
                   <FlowCanvas
                     frameData={sim.frameData}
                     field={viz.field}
-                    showStreamlines={viz.showStreamlines}
                     showQuiver={viz.showQuiver}
-                    showMesh={viz.showMesh}
                     quiverConfig={viz.quiverConfig}
                     canvasSize={canvasSize}
                     colorRange={viz.useManualRange ? viz.colorRange : null}
                     onProbe={viz.setProbe}
-                    streamlines={streamlines}
                   />
                   <ColorScaleBar
                     min={viz.colorRange.min}
@@ -513,37 +505,6 @@ function App() {
                 </div>
               </div>
             ) : null}
-          </div>
-
-          {/* Inline playback controls */}
-          <div style={{ display: viz.viewMode === 'results' && viz.vizMode === 'interactive' && sim.frameData ? 'contents' : 'none' }}>
-            <div className="playback-row">
-              <button className="play-btn" onClick={playback.togglePlay}>
-                {playback.playing ? '\u23F8' : '\u25B6'}
-              </button>
-              <input
-                type="range"
-                className="playback-slider"
-                min={0}
-                max={sim.frames.length - 1}
-                value={sim.frameIndex}
-                onChange={(e) => sim.setFrameIndex(parseInt(e.target.value))}
-              />
-              <span className="playback-label">
-                Step {currentStep} ({sim.frameIndex + 1}/{sim.frames.length})
-              </span>
-              <select
-                className="speed-select"
-                value={playback.playbackSpeed}
-                onChange={(e) => playback.setPlaybackSpeed(parseInt(e.target.value))}
-              >
-                <option value={500}>0.5x</option>
-                <option value={200}>1x</option>
-                <option value={100}>2x</option>
-                <option value={50}>4x</option>
-                <option value={25}>8x</option>
-              </select>
-            </div>
           </div>
 
           {/* Summary bar */}
@@ -581,6 +542,38 @@ function App() {
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* Playback Bar (fixed at bottom) */}
+      <div className="playback-bar" style={{ display: viz.viewMode === 'results' && viz.vizMode === 'interactive' && sim.frameData ? 'flex' : 'none' }}>
+        <button className="play-btn" onClick={playback.togglePlay}>
+          {playback.playing ? '\u23F8' : '\u25B6'}
+        </button>
+        <input
+          type="range"
+          className="playback-slider"
+          min={0}
+          max={sim.frames.length - 1}
+          value={sim.frameIndex}
+          onChange={(e) => sim.setFrameIndex(parseInt(e.target.value))}
+        />
+        <span className="playback-label">
+          Step {currentStep} ({sim.frameIndex + 1}/{sim.frames.length})
+        </span>
+        <select
+          className="speed-select"
+          value={playback.playbackSpeed}
+          onChange={(e) => playback.setPlaybackSpeed(parseInt(e.target.value))}
+        >
+          <option value={500}>0.5x</option>
+          <option value={200}>1x</option>
+          <option value={100}>2x</option>
+          <option value={50}>4x</option>
+          <option value={25}>8x</option>
+        </select>
+      </div>
+
+      {/* Log Terminal (fixed at bottom) */}
+      <LogTerminal log={sim.solverLog} onClear={() => sim.setSolverLog([])} />
 
       {/* Status Bar */}
       <div className="status-bar">
