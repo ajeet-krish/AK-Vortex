@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Renderer, type RenderConfig } from '../renderer/Renderer';
 import type { ColormapName } from '../renderer/ColormapTexture';
 import type { FrameData, ProbeInfo } from '../types';
@@ -34,6 +34,7 @@ export default function FlowCanvas({
 }: FlowCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rendererRef = useRef<Renderer | null>(null);
+    const [webglError, setWebglError] = useState<string | null>(null);
 
     // Initialize WebGL renderer on mount
     useEffect(() => {
@@ -42,8 +43,10 @@ export default function FlowCanvas({
 
         try {
             rendererRef.current = new Renderer(canvas);
+            setWebglError(null);
         } catch (e) {
             console.error('WebGL initialization failed:', e);
+            setWebglError(e instanceof Error ? e.message : 'WebGL initialization failed');
         }
 
         return () => {
@@ -199,6 +202,31 @@ export default function FlowCanvas({
     // Guard: skip render when grid has zero size
     if (frameData.nx === 0 || frameData.ny === 0) {
         return <div className="flow-canvas-container" />;
+    }
+
+    // WebGL initialization failed fallback
+    if (webglError) {
+        return (
+            <div className="flow-canvas-container" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                padding: '24px',
+                color: 'var(--danger)',
+                background: 'var(--bg-tertiary)',
+                borderRadius: '4px',
+                width: canvasSize.width,
+                height: canvasSize.height,
+            }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>WebGL Error</p>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>{webglError}</p>
+                <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
+                    WebGL 2.0 is required for visualization. Please check your graphics drivers.
+                </p>
+            </div>
+        );
     }
 
     return (

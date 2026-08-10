@@ -16,6 +16,7 @@ export class ShaderProgram {
     gl.compileShader(vert);
     if (!gl.getShaderParameter(vert, gl.COMPILE_STATUS)) {
       const info = gl.getShaderInfoLog(vert);
+      console.error('[Shader] Vertex compile error:', info);
       gl.deleteShader(vert);
       throw new Error(`Vertex shader compile error: ${info}`);
     }
@@ -25,6 +26,7 @@ export class ShaderProgram {
     gl.compileShader(frag);
     if (!gl.getShaderParameter(frag, gl.COMPILE_STATUS)) {
       const info = gl.getShaderInfoLog(frag);
+      console.error('[Shader] Fragment compile error:', info);
       gl.deleteShader(frag);
       gl.deleteShader(vert);
       throw new Error(`Fragment shader compile error: ${info}`);
@@ -36,6 +38,7 @@ export class ShaderProgram {
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
       const info = gl.getProgramInfoLog(program);
+      console.error('[Shader] Link error:', info);
       gl.deleteProgram(program);
       gl.deleteShader(frag);
       gl.deleteShader(vert);
