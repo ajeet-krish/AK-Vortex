@@ -17,6 +17,8 @@ export interface VisualizationState {
   setShowStreamlines: React.Dispatch<React.SetStateAction<boolean>>;
   showQuiver: boolean;
   setShowQuiver: React.Dispatch<React.SetStateAction<boolean>>;
+  showMesh: boolean;
+  setShowMesh: React.Dispatch<React.SetStateAction<boolean>>;
   quiverConfig: QuiverConfig;
   setQuiverConfig: React.Dispatch<React.SetStateAction<QuiverConfig>>;
   useManualRange: boolean;
@@ -46,6 +48,7 @@ export function useVisualization(frameData: FrameData | null): VisualizationStat
   const [field, setField] = useState<'velocity' | 'pressure' | 'vorticity'>('velocity');
   const [showStreamlines, setShowStreamlines] = useState(true);
   const [showQuiver, setShowQuiver] = useState(false);
+  const [showMesh, setShowMesh] = useState(false);
   const [quiverConfig, setQuiverConfig] = useState<QuiverConfig>(DEFAULT_QUIVER_CONFIG);
   const [useManualRange, setUseManualRange] = useState(false);
   const [manualMin, setManualMin] = useState('0');
@@ -104,6 +107,8 @@ export function useVisualization(frameData: FrameData | null): VisualizationStat
     setShowStreamlines,
     showQuiver,
     setShowQuiver,
+    showMesh,
+    setShowMesh,
     quiverConfig,
     setQuiverConfig,
     useManualRange,

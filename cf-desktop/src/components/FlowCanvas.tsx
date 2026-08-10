@@ -1,8 +1,9 @@
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { sampleColormap } from '../utils/colormap';
-import { sampleField, type Point } from '../utils/streamline';
-import { drawQuiver, type QuiverConfig, DEFAULT_QUIVER_CONFIG } from '../utils/quiver';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { Renderer, type RenderConfig } from '../renderer/Renderer';
+import type { ColormapName } from '../renderer/ColormapTexture';
 import type { FrameData, ProbeInfo } from '../types';
+import type { Point } from '../utils/streamline';
+import { sampleField } from '../utils/streamline';
 
 export type { ProbeInfo } from '../types';
 
@@ -11,11 +12,12 @@ interface FlowCanvasProps {
     field: 'velocity' | 'pressure' | 'vorticity';
     showStreamlines: boolean;
     showQuiver: boolean;
-    quiverConfig?: QuiverConfig;
+    showMesh?: boolean;
+    quiverConfig?: { gridSpacing: number; arrowScale: number };
     canvasSize: { width: number; height: number };
     colorRange?: { min: number; max: number } | null;
     onProbe?: (info: ProbeInfo | null) => void;
-    streamlines?: Point[][];  // Precomputed streamlines from Web Worker
+    streamlines?: Point[][];
 }
 
 export default function FlowCanvas({
@@ -23,6 +25,7 @@ export default function FlowCanvas({
     field,
     showStreamlines,
     showQuiver,
+    showMesh = false,
     quiverConfig,
     canvasSize,
     colorRange,
@@ -30,40 +33,61 @@ export default function FlowCanvas({
     streamlines: streamlinesProp,
 }: FlowCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const imageDataRef = useRef<ImageData | null>(null);
-    const tempCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const [probe, setProbe] = useState<ProbeInfo | null>(null);
+    const rendererRef = useRef<Renderer | null>(null);
 
-    const { nx, ny, velocity, u, v, p, omega, obstacle } = frameData;
+    // Initialize WebGL renderer on mount
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-    // Compute color range from data (NaN-safe, symmetric for pressure)
-    const range = useMemo(() => {
+        try {
+            rendererRef.current = new Renderer(canvas);
+        } catch (e) {
+            console.error('WebGL initialization failed:', e);
+        }
+
+        return () => {
+            rendererRef.current?.destroy();
+            rendererRef.current = null;
+        };
+    }, []);
+
+    // Handle canvas resize
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        canvas.width = canvasSize.width;
+        canvas.height = canvasSize.height;
+        rendererRef.current?.resize(canvasSize.width, canvasSize.height);
+    }, [canvasSize]);
+
+    // Compute color range (NaN-safe, symmetric for pressure)
+    const effectiveRange = useMemo(() => {
         if (colorRange) return colorRange;
 
         if (field === 'velocity') {
             let maxVal = 0;
-            for (const val of velocity) {
+            for (const val of frameData.velocity) {
                 if (Number.isFinite(val) && val > maxVal) maxVal = val;
             }
             return { min: 0, max: maxVal || 1 };
         } else if (field === 'pressure') {
             let minVal = Infinity;
             let maxVal = -Infinity;
-            for (const val of p) {
+            for (const val of frameData.p) {
                 if (!Number.isFinite(val)) continue;
                 if (val < minVal) minVal = val;
                 if (val > maxVal) maxVal = val;
             }
-            // Fallback for empty, NaN-only, or constant fields
             if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
                 return { min: -1, max: 1 };
             }
-            // Use symmetric range around 0 for pressure (fluctuations are symmetric)
             const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
             return { min: -absMax, max: absMax };
         } else {
             let maxAbs = 0;
-            for (const val of omega) {
+            for (const val of frameData.omega) {
                 if (Number.isFinite(val)) {
                     const abs = Math.abs(val);
                     if (abs > maxAbs) maxAbs = abs;
@@ -71,132 +95,85 @@ export default function FlowCanvas({
             }
             return { min: -maxAbs, max: maxAbs || 1 };
         }
-    }, [field, velocity, p, omega, colorRange]);
+    }, [field, frameData, colorRange]);
 
-    // Choose colormap
-    const cmap = field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet';
+    // Choose colormap based on field
+    const cmap: ColormapName = field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet';
 
-    // Get the values array for the selected field
-    const values = field === 'velocity' ? velocity : field === 'pressure' ? p : omega;
-
-    // Use precomputed streamlines from Web Worker (prop), fallback to empty
-    const streamlines = streamlinesProp ?? [];
-
-    // Render contour + obstacles
-    const renderContour = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        canvas.width = canvasSize.width;
-        canvas.height = canvasSize.height;
-
-        const { min, max } = range;
-        const dataRange = max - min || 1;
-
-        // Create or reuse pixel buffer at native grid resolution
-        if (!imageDataRef.current || imageDataRef.current.width !== nx || imageDataRef.current.height !== ny) {
-            imageDataRef.current = ctx.createImageData(nx, ny);
-        }
-        const imageData = imageDataRef.current;
-        const data = imageData.data;
-
-        // FLIP: canvas row 0 = data row ny-1 (top = lid)
-        for (let j = 0; j < ny; j++) {
-            const srcRow = ny - 1 - j;
-            for (let i = 0; i < nx; i++) {
-                const pixelIdx = (j * nx + i) * 4;
-                const valIdx = srcRow * nx + i;
-
-                if (obstacle[valIdx]) {
-                    data[pixelIdx] = 30;
-                    data[pixelIdx + 1] = 30;
-                    data[pixelIdx + 2] = 30;
-                    data[pixelIdx + 3] = 255;
-                    continue;
-                }
-
-                const t = (values[valIdx] - min) / dataRange;
-                const c = sampleColormap(cmap, t);
-                data[pixelIdx] = c[0];
-                data[pixelIdx + 1] = c[1];
-                data[pixelIdx + 2] = c[2];
-                data[pixelIdx + 3] = 255;
-            }
-        }
-
-        // Scale up to display canvas (reuse temp canvas)
-        if (!tempCanvasRef.current) {
-            tempCanvasRef.current = document.createElement('canvas');
-        }
-        const tempCanvas = tempCanvasRef.current;
-        tempCanvas.width = nx;
-        tempCanvas.height = ny;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (!tempCtx) return;
-
-        tempCtx.putImageData(imageData, 0, 0);
-
-        ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(tempCanvas, 0, 0, canvasSize.width, canvasSize.height);
-
-        // Compute scale factors for overlays
-        const sx = canvasSize.width / nx;
-        const sy = canvasSize.height / ny;
-
-        // Draw obstacle boundary edges
-        drawObstacles(ctx, obstacle, nx, ny, sx, sy);
-
-        // Draw streamlines (only for velocity field)
-        if (field === 'velocity' && showStreamlines && streamlines.length > 0) {
-            drawStreamlines(ctx, streamlines, u, v, nx, ny, range.max, sx, sy);
-        }
-
-        // Draw quiver arrows (velocity field only)
-        if (field === 'velocity' && showQuiver && u && v && obstacle) {
-            const scaleX = canvas.width / nx;
-            const scaleY = canvas.height / ny;
-            const scale = Math.min(scaleX, scaleY);
-            const offX = (canvas.width - nx * scale) / 2;
-            const offY = (canvas.height - ny * scale) / 2;
-            drawQuiver(ctx, u, v, nx, ny, obstacle, range.max, scale, scale, offX, offY, cmap, quiverConfig ?? DEFAULT_QUIVER_CONFIG);
-        }
-    }, [frameData, field, showStreamlines, showQuiver, quiverConfig, canvasSize, range, cmap, values, obstacle, u, v, nx, ny, streamlines]);
-
+    // Upload frame data (obstacles uploaded internally by Renderer)
     useEffect(() => {
-        renderContour();
-    }, [renderContour]);
+        if (!rendererRef.current) return;
+        rendererRef.current.uploadFrameData(frameData);
+    }, [frameData]);
 
-    // Mouse probe handler
+    // Upload streamlines to GPU
+    useEffect(() => {
+        if (!rendererRef.current) return;
+        const lines = streamlinesProp ?? [];
+        if (lines.length > 0) {
+            rendererRef.current.uploadStreamlines(lines, frameData.velocity, effectiveRange.max);
+        }
+    }, [streamlinesProp, frameData, effectiveRange]);
+
+    // Upload quiver data to GPU
+    useEffect(() => {
+        if (!rendererRef.current) return;
+        if (showQuiver) {
+            const step = quiverConfig?.gridSpacing ?? 8;
+            rendererRef.current.uploadQuiver(frameData.u, frameData.v, frameData.obstacle, step);
+        }
+    }, [frameData, showQuiver, quiverConfig]);
+
+    // Render frame via WebGL
+    useEffect(() => {
+        const renderer = rendererRef.current;
+        if (!renderer) return;
+
+        const config: RenderConfig = {
+            field,
+            showMesh,
+            showObstacles: true,
+            showStreamlines,
+            showQuiver,
+            colorRange: effectiveRange,
+            cmap,
+        };
+
+        renderer.render(config, frameData);
+    }, [frameData, field, showMesh, showStreamlines, showQuiver, effectiveRange, cmap]);
+
+    // Mouse probe: convert canvas pixel to grid coordinate (accounting for Y flip)
     const handleMouseMove = useCallback(
         (e: React.MouseEvent<HTMLCanvasElement>) => {
+            if (!rendererRef.current || !onProbe) return;
             const canvas = canvasRef.current;
-            if (!canvas || !onProbe) return;
+            if (!canvas) return;
 
             const rect = canvas.getBoundingClientRect();
-            const scaleX = nx / rect.width;
-            const scaleY = ny / rect.height;
-
-            // Convert to grid coordinates (y=0 at bottom in data, top in canvas)
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
-            const gx = canvasX * scaleX;
-            const gy = ny - 1 - canvasY * scaleY;
 
-            if (gx < 0 || gx >= nx || gy < 0 || gy >= ny) {
-                setProbe(null);
+            // Convert CSS pixels to canvas pixel coordinates
+            const cx = canvasX * (canvas.width / rect.width);
+            const cy = canvasY * (canvas.height / rect.height);
+
+            // Invert the viewport transform (projection flips Y)
+            const viewport = rendererRef.current.getViewport();
+            const vs = viewport.getState();
+            const gx = vs.centerX + (cx - canvas.width / 2) / vs.zoom;
+            const gy = vs.centerY - (cy - canvas.height / 2) / vs.zoom;
+
+            if (gx < 0 || gx >= frameData.nx || gy < 0 || gy >= frameData.ny) {
                 onProbe(null);
                 return;
             }
 
             const ix = Math.floor(gx);
             const iy = Math.floor(gy);
-            const idx = iy * nx + ix;
+            const idx = iy * frameData.nx + ix;
 
-            const uVal = sampleField(u, nx, ny, gx, gy);
-            const vVal = sampleField(v, nx, ny, gx, gy);
+            const uVal = sampleField(frameData.u, frameData.nx, frameData.ny, gx, gy);
+            const vVal = sampleField(frameData.v, frameData.nx, frameData.ny, gx, gy);
 
             const info: ProbeInfo = {
                 x: ix,
@@ -204,25 +181,23 @@ export default function FlowCanvas({
                 u: uVal,
                 v: vVal,
                 speed: Math.hypot(uVal, vVal),
-                p: p[idx],
-                omega: omega[idx],
+                p: frameData.p[idx],
+                omega: frameData.omega[idx],
                 canvasX,
                 canvasY,
             };
 
-            setProbe(info);
             onProbe(info);
         },
-        [u, v, p, omega, nx, ny, onProbe]
+        [frameData, onProbe]
     );
 
     const handleMouseLeave = useCallback(() => {
-        setProbe(null);
-        if (onProbe) onProbe(null);
+        onProbe?.(null);
     }, [onProbe]);
 
     // Guard: skip render when grid has zero size
-    if (nx === 0 || ny === 0) {
+    if (frameData.nx === 0 || frameData.ny === 0) {
         return <div className="flow-canvas-container" />;
     }
 
@@ -232,110 +207,10 @@ export default function FlowCanvas({
                 ref={canvasRef}
                 width={canvasSize.width}
                 height={canvasSize.height}
+                style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                style={{ cursor: 'crosshair' }}
             />
-            {probe && (
-                <div
-                    className="probe-tooltip"
-                    style={{
-                        left: Math.min(probe.canvasX + 12, canvasSize.width - 150),
-                        top: Math.max(Math.min(probe.canvasY - 40, canvasSize.height - 80), 4),
-                    }}
-                >
-                    <span>x={probe.x}, y={probe.y}</span>
-                    <span>u={probe.u.toFixed(4)}</span>
-                    <span>v={probe.v.toFixed(4)}</span>
-                    <span>|V|={probe.speed.toFixed(4)}</span>
-                    <span>p={probe.p.toFixed(4)}</span>
-                    <span>&omega;={probe.omega.toFixed(4)}</span>
-                </div>
-            )}
         </div>
     );
-}
-
-// Draw obstacle boundary cells as dark filled rectangles
-function drawObstacles(
-    ctx: CanvasRenderingContext2D,
-    obs: Float32Array,
-    nx: number,
-    ny: number,
-    sx: number,
-    sy: number
-) {
-    ctx.fillStyle = '#1a1e22';
-
-    const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-    for (let y = 0; y < ny; y++) {
-        for (let x = 0; x < nx; x++) {
-            if (!obs[y * nx + x]) continue;
-
-            // Only draw boundary cells (adjacent to fluid)
-            const isBoundary = neighbors.some(([dx, dy]) => {
-                const nx2 = x + dx;
-                const ny2 = y + dy;
-                return (
-                    nx2 >= 0 &&
-                    nx2 < nx &&
-                    ny2 >= 0 &&
-                    ny2 < ny &&
-                    !obs[ny2 * nx + nx2]
-                );
-            });
-
-            if (isBoundary) {
-                ctx.fillRect(
-                    x * sx,
-                    (ny - 1 - y) * sy,
-                    sx + 0.5,
-                    sy + 0.5
-                );
-            }
-        }
-    }
-}
-
-// Draw speed-colored streamlines
-function drawStreamlines(
-    ctx: CanvasRenderingContext2D,
-    lines: Array<Array<{ x: number; y: number }>>,
-    u: Float32Array,
-    v: Float32Array,
-    nx: number,
-    ny: number,
-    vmax: number,
-    sx: number,
-    sy: number
-) {
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 1.5;
-
-    for (const line of lines) {
-        for (let i = 1; i < line.length; i++) {
-            const a = line[i - 1];
-            const b = line[i];
-
-            // Sample speed at midpoint for coloring
-            const mx = (a.x + b.x) / 2;
-            const my = (a.y + b.y) / 2;
-            const sp = Math.hypot(
-                sampleField(u, nx, ny, mx, my),
-                sampleField(v, nx, ny, mx, my)
-            );
-            const t = Math.min(1, sp / (vmax || 1));
-            const [r, g, bl] = sampleColormap('jet', t);
-
-            ctx.strokeStyle = `rgba(${r},${g},${bl},0.9)`;
-
-            // Transform: canvas_y = ny - 1 - grid_y (y=0 bottom in data, top in canvas)
-            ctx.beginPath();
-            ctx.moveTo(a.x * sx, (ny - 1 - a.y) * sy);
-            ctx.lineTo(b.x * sx, (ny - 1 - b.y) * sy);
-            ctx.stroke();
-        }
-    }
 }

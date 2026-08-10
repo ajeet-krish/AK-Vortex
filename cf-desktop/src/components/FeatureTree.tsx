@@ -50,6 +50,8 @@ interface FeatureTreeProps {
     setSolverLog: (log: string[]) => void;
     showQuiver: boolean;
     setShowQuiver: (v: boolean) => void;
+    showMesh: boolean;
+    setShowMesh: (v: boolean) => void;
     quiverConfig: QuiverConfig;
     setQuiverConfig: (cfg: QuiverConfig) => void;
     selectedShapeId: string | null;
@@ -275,6 +277,8 @@ export default function FeatureTree({
     setSolverLog,
     showQuiver,
     setShowQuiver,
+    showMesh,
+    setShowMesh,
     quiverConfig,
     setQuiverConfig,
     selectedShapeId,
@@ -702,6 +706,17 @@ export default function FeatureTree({
                                 disabled={field !== 'velocity'}
                             />
                             <span>Quiver (Vectors)</span>
+                        </label>
+                    </div>
+
+                    <div className="tree-item">
+                        <label className="tree-checkbox">
+                            <input
+                                type="checkbox"
+                                checked={showMesh}
+                                onChange={(e) => setShowMesh(e.target.checked)}
+                            />
+                            <span>Show Mesh</span>
                         </label>
                     </div>
 

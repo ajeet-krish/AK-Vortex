@@ -414,6 +414,8 @@ function App() {
             setSolverLog={sim.setSolverLog}
             showQuiver={viz.showQuiver}
             setShowQuiver={viz.setShowQuiver}
+            showMesh={viz.showMesh}
+            setShowMesh={viz.setShowMesh}
             quiverConfig={viz.quiverConfig}
             setQuiverConfig={viz.setQuiverConfig}
             selectedShapeId={selectedShapeId}
@@ -496,6 +498,7 @@ function App() {
                     field={viz.field}
                     showStreamlines={viz.showStreamlines}
                     showQuiver={viz.showQuiver}
+                    showMesh={viz.showMesh}
                     quiverConfig={viz.quiverConfig}
                     canvasSize={canvasSize}
                     colorRange={viz.useManualRange ? viz.colorRange : null}
