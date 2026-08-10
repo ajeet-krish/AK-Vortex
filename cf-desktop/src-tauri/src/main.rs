@@ -24,6 +24,7 @@ fn main() {
             commands::run_gci,
             commands::cancel_simulation,
             commands::get_simulation_status,
+            commands::get_system_info,
             plot_gen::generate_report_plots,
         ])
         .run(tauri::generate_context!())

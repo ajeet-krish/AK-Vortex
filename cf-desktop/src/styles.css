@@ -1998,3 +1998,238 @@ canvas {
 .btn-secondary:hover {
   background: var(--border);
 }
+
+/* ==========================================================================
+   Grid Configuration Panel (GridConfigPanel)
+   ========================================================================== */
+
+.grid-config-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* Quality Preset Pills */
+.gcp-presets {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.gcp-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 1;
+  min-width: 0;
+}
+
+.gcp-preset-btn:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.gcp-preset-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.gcp-preset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gcp-preset-label {
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.gcp-preset-scale {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* Grid Dimension Inputs */
+.gcp-dimensions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gcp-dim-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.gcp-dim-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 16px;
+}
+
+.gcp-dim-input {
+  width: 100%;
+  padding: 3px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
+.gcp-dim-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.gcp-dim-input:disabled {
+  opacity: 0.5;
+}
+
+/* Aspect Ratio Lock Button */
+.gcp-lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.gcp-lock-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.gcp-lock-btn.locked {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.gcp-lock-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Summary Stats */
+.gcp-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.gcp-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 6px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+}
+
+.gcp-stat-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.gcp-stat-value {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+}
+
+/* Memory Bar */
+.gcp-memory-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gcp-memory-bar-label {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.gcp-memory-bar-track {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.gcp-memory-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Validation Messages */
+.gcp-errors,
+.gcp-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gcp-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--danger);
+  line-height: 1.3;
+}
+
+.gcp-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--warning);
+  line-height: 1.3;
+}
+
+.gcp-error svg,
+.gcp-warning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Case Info */
+.gcp-case-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-muted);
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.gcp-case-info-label {
+  font-weight: 500;
+}

@@ -122,8 +122,11 @@ export class Renderer {
 
   resize(width: number, height: number): void {
     const canvas = this.ctx.gl.canvas as HTMLCanvasElement;
-    canvas.width = width;
-    canvas.height = height;
+    const dpr = window.devicePixelRatio || 1;
+    // Backing store = CSS size * DPR for retina-sharp rendering
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    // CSS size is set by FlowCanvas (style.width/height)
   }
 
   getViewport(): Viewport {

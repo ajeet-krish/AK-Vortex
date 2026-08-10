@@ -10,6 +10,7 @@ use tauri::command;
 use tauri::Emitter;
 use tauri::Manager;
 use crate::solver::{self, SolverConfig};
+use sysinfo::System;
 
 // Maximum number of log entries to retain (ring buffer)
 const LOG_CAPACITY: usize = 5000;
@@ -72,6 +73,19 @@ fn validate_path(path: &str) -> Result<(), String> {
         return Err("Invalid path: contains ..".to_string());
     }
     Ok(())
+}
+
+/// Query system capabilities: total/available RAM and CPU core count.
+/// Uses the sysinfo crate for accurate native memory detection.
+#[command]
+pub fn get_system_info() -> Result<serde_json::Value, String> {
+    let mut sys = System::new();
+    sys.refresh_memory();
+    Ok(serde_json::json!({
+        "total_ram_bytes": sys.total_memory(),
+        "available_ram_bytes": sys.available_memory(),
+        "cpu_cores": System::physical_core_count().unwrap_or(4),
+    }))
 }
 
 #[command]

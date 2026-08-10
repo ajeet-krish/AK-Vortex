@@ -48,14 +48,16 @@ export default function FlowCanvas({
         };
     }, []);
 
-    // Handle canvas resize
+    // Handle canvas resize (DPR-aware for retina-sharp rendering)
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        canvas.width = canvasSize.width;
-        canvas.height = canvasSize.height;
+        // Renderer.resize() sets backing store = CSS size * DPR
         rendererRef.current?.resize(canvasSize.width, canvasSize.height);
+        // CSS dimensions (what the user sees)
+        canvas.style.width = `${canvasSize.width}px`;
+        canvas.style.height = `${canvasSize.height}px`;
     }, [canvasSize]);
 
     // Compute color range (NaN-safe, symmetric for pressure)

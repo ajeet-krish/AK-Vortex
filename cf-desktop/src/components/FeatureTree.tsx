@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Shape } from './GeometryEditor';
-import type { ProbeInfo, SimConfig } from '../types';
+import type { ProbeInfo, SimConfig, GridConfig, SystemInfo } from '../types';
+import GridConfigPanel from './GridConfigPanel';
 
 interface SimProgress {
     step: number;
@@ -18,6 +19,9 @@ interface GciResults {
 interface FeatureTreeProps {
     config: SimConfig;
     setConfig: (cfg: SimConfig) => void;
+    gridConfig: GridConfig;
+    setGridConfig: (cfg: GridConfig) => void;
+    systemInfo: SystemInfo | null;
     onCaseTypeChange: (caseType: string) => void;
     running: boolean;
     simProgress: SimProgress;
@@ -221,6 +225,9 @@ function TreeSelectableItem({
 export default function FeatureTree({
     config,
     setConfig,
+    gridConfig,
+    setGridConfig,
+    systemInfo,
     onCaseTypeChange,
     running,
     simProgress,
@@ -248,9 +255,6 @@ export default function FeatureTree({
     gciResults,
     runGci,
 }: FeatureTreeProps) {
-    const [arrayCount, setArrayCount] = useState(5);
-    const [arraySpacing, setArraySpacing] = useState(50);
-    const [arrayAngle, setArrayAngle] = useState(0);
     const hasResults = frames.length > 0;
     const currentStep = frames.length > 0 ? frames[frameIndex] : 0;
     const totalSteps = frames.length > 0 ? frames[frames.length - 1] : 0;
@@ -284,27 +288,15 @@ export default function FeatureTree({
                 </TreeItem>
 
                 <TreeItem label="Grid">
-                    <span className="tree-inline-inputs">
-                        <input
-                            type="number"
-                            className="tree-num-input"
-                            min="100"
-                            max="2000"
-                            step="100"
-                            value={config.nx}
-                            onChange={(e) => setConfig({ ...config, nx: Math.max(100, Math.min(2000, +e.target.value || 100)) })}
-                        />
-                        <span className="tree-x">×</span>
-                        <input
-                            type="number"
-                            className="tree-num-input"
-                            min="100"
-                            max="2000"
-                            step="100"
-                            value={config.ny}
-                            onChange={(e) => setConfig({ ...config, ny: Math.max(100, Math.min(2000, +e.target.value || 100)) })}
-                        />
-                    </span>
+                    <GridConfigPanel
+                        caseType={config.caseType}
+                        gridConfig={gridConfig}
+                        onGridConfigChange={setGridConfig}
+                        maxSteps={config.maxSteps}
+                        saveInterval={config.saveInterval}
+                        systemInfo={systemInfo}
+                        disabled={running}
+                    />
                 </TreeItem>
 
                 {config.caseType === 'custom' && shapes.length > 0 && (
@@ -319,49 +311,6 @@ export default function FeatureTree({
                                 onClick={() => {}}
                             />
                         ))}
-                        {selectedShapeId && (
-                            <div className="tree-array-tool">
-                                <div className="tree-subgroup-header">Array Tool</div>
-                                <TreeItem label="Count">
-                                    <input
-                                        type="number"
-                                        className="tree-num-input"
-                                        min="2"
-                                        max="50"
-                                        value={arrayCount}
-                                        onChange={(e) => setArrayCount(Math.max(2, Math.min(50, +e.target.value || 2)))}
-                                    />
-                                </TreeItem>
-                                <TreeItem label="Spacing">
-                                    <input
-                                        type="number"
-                                        className="tree-num-input"
-                                        min="10"
-                                        max="500"
-                                        step="10"
-                                        value={arraySpacing}
-                                        onChange={(e) => setArraySpacing(Math.max(10, +e.target.value || 50))}
-                                    />
-                                </TreeItem>
-                                <TreeItem label="Angle">
-                                    <input
-                                        type="number"
-                                        className="tree-num-input"
-                                        min="0"
-                                        max="360"
-                                        step="5"
-                                        value={arrayAngle}
-                                        onChange={(e) => setArrayAngle(+e.target.value || 0)}
-                                    />
-                                </TreeItem>
-                                <button
-                                    className="tree-action-btn"
-                                    onClick={() => onCreateArray(arrayCount, arraySpacing, arrayAngle)}
-                                >
-                                    Create Array
-                                </button>
-                            </div>
-                        )}
                     </div>
                 )}
             </TreeSection>

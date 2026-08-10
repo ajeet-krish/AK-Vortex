@@ -1,9 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { SimConfig, FrameData } from '../types';
+import type { SimConfig, FrameData, GridConfig, SystemInfo } from '../types';
 import type { Shape } from '../components/GeometryEditor';
 import { parseBinaryFrame, wrapFrameData } from '../utils/binaryFrame';
+import { getDefaultGridConfig } from '../config/gridPresets';
+import { getSystemInfo } from '../utils/systemInfo';
 
 export interface SimProgress {
     step: number;
@@ -20,6 +22,9 @@ const CASE_DEFAULTS: Record<string, { nx: number; ny: number }> = {
 export interface SimulationState {
     config: SimConfig;
     setConfig: React.Dispatch<React.SetStateAction<SimConfig>>;
+    gridConfig: GridConfig;
+    setGridConfig: React.Dispatch<React.SetStateAction<GridConfig>>;
+    systemInfo: SystemInfo | null;
     running: boolean;
     canCancel: boolean;
     simProgress: SimProgress;
@@ -46,6 +51,13 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         saveInterval: 1000,
         caseType: 'custom',
     });
+
+    const [gridConfig, setGridConfig] = useState<GridConfig>(
+        getDefaultGridConfig('custom'),
+    );
+
+    const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+
     const [running, setRunning] = useState(false);
     const [canCancel, setCanCancel] = useState(false);
     const [simProgress, setSimProgress] = useState<SimProgress>({ step: 0, total: 0, status: '' });
@@ -57,6 +69,20 @@ export function useSimulation(shapes: Shape[]): SimulationState {
 
     const outputDirRef = useRef(outputDir);
     outputDirRef.current = outputDir;
+
+    // Query system info on mount
+    useEffect(() => {
+        getSystemInfo().then(setSystemInfo).catch(console.warn);
+    }, []);
+
+    // Sync gridConfig.nx/ny -> config.nx/ny (gridConfig is the source of truth)
+    useEffect(() => {
+        setConfig((prev) => ({
+            ...prev,
+            nx: gridConfig.nx,
+            ny: gridConfig.ny,
+        }));
+    }, [gridConfig.nx, gridConfig.ny]);
 
     // Auto-load frame when frameIndex changes (binary-first, JSON fallback)
     useEffect(() => {
@@ -242,6 +268,8 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     }, []);
 
     const handleCaseTypeChange = useCallback((caseType: string) => {
+        const newGridConfig = getDefaultGridConfig(caseType);
+        setGridConfig(newGridConfig);
         const defaults = CASE_DEFAULTS[caseType] || { nx: 800, ny: 300 };
         setConfig((prev) => ({ ...prev, caseType, nx: defaults.nx, ny: defaults.ny }));
     }, []);
@@ -249,6 +277,9 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     return {
         config,
         setConfig,
+        gridConfig,
+        setGridConfig,
+        systemInfo,
         running,
         canCancel,
         simProgress,

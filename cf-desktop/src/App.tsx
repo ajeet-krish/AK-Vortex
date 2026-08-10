@@ -16,7 +16,7 @@ import { wrapFrameData } from './utils/binaryFrame';
 function App() {
   // Geometry editor state (local to layout)
   const [shapes, setShapes] = useState<Shape[]>([]);
-  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [, setSelectedShapeId] = useState<string | null>(null);
 
   // Hooks
   const sim = useSimulation(shapes);
@@ -126,33 +126,6 @@ function App() {
     observer.observe(container);
     return () => observer.disconnect();
   }, [sim.frameData]);
-
-  // Create array of shapes from selected shape
-  const handleCreateArray = useCallback((count: number, spacing: number, angle: number) => {
-    if (!selectedShapeId || count < 2) return;
-    const sourceShape = shapes.find((s) => s.id === selectedShapeId);
-    if (!sourceShape) return;
-
-    const rad = (angle * Math.PI) / 180;
-    const dx = spacing * Math.cos(rad);
-    const dy = spacing * Math.sin(rad);
-
-    const newShapes: Shape[] = [...shapes];
-    for (let i = 1; i < count; i++) {
-      const copy: Shape = {
-        ...sourceShape,
-        id: Date.now().toString() + i,
-        name: `${sourceShape.name} (${i + 1})`,
-        x: sourceShape.x + dx * i,
-        y: sourceShape.y + dy * i,
-        points: sourceShape.points
-          ? sourceShape.points.map((p) => ({ x: p.x + dx * i, y: p.y + dy * i }))
-          : undefined,
-      };
-      newShapes.push(copy);
-    }
-    setShapes(newShapes);
-  }, [selectedShapeId, shapes]);
 
   const handleExportPng = useCallback(async () => {
     const canvas = document.querySelector('.flow-canvas-container canvas') as HTMLCanvasElement | null;
@@ -382,6 +355,9 @@ function App() {
           <FeatureTree
             config={sim.config}
             setConfig={sim.setConfig}
+            gridConfig={sim.gridConfig}
+            setGridConfig={sim.setGridConfig}
+            systemInfo={sim.systemInfo}
             onCaseTypeChange={sim.handleCaseTypeChange}
             running={sim.running}
             simProgress={sim.simProgress}
@@ -400,8 +376,6 @@ function App() {
             handleExportVtk={handleExportVtk}
             probe={viz.probe}
             shapes={shapes}
-            selectedShapeId={selectedShapeId}
-            onCreateArray={handleCreateArray}
             compareMode={viz.compareMode}
             loadComparison={loadComparison}
             unloadComparison={unloadComparison}
