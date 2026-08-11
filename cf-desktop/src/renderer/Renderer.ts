@@ -107,6 +107,13 @@ export class Renderer {
     else if (config.field === 'vorticity') cmapType = 2;
 
     this.contourPass.uploadField(sanitizedData, this.nx, this.ny);
+    
+    // Debug: verify GL state before contour render
+    const err = gl.getError();
+    if (err !== gl.NO_ERROR) {
+        console.error('[Renderer] GL error before contour:', err);
+    }
+    
     this.contourPass.render(
       proj,
       cmapType,
@@ -115,6 +122,13 @@ export class Renderer {
       this.nx,
       this.ny,
     );
+    
+    // Debug: check GL error after contour render
+    const errAfter = gl.getError();
+    if (errAfter !== gl.NO_ERROR) {
+        console.error('[Renderer] GL error after contour:', errAfter);
+    }
+    console.log(`[Renderer] Contour rendered: nx=${this.nx}, ny=${this.ny}, range=[${config.colorRange.min.toFixed(4)}, ${config.colorRange.max.toFixed(4)}], cmap=${cmapType}`);
 
     // 2. Obstacles (semi-transparent overlay)
     if (config.showObstacles) {

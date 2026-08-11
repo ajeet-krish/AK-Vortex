@@ -66,6 +66,9 @@ export class ContourPass {
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTexture);
     this.program.setInt('u_fieldTex', 0);
 
+    // Debug: verify uniforms
+    console.log(`[ContourPass] render: min=${min}, max=${max}, gridSize=${nx}x${ny}, cmapType=${_cmapType}`);
+
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.bindVertexArray(null);

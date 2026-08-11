@@ -209,7 +209,7 @@ export default function FeatureTree({
             {/*  GEOMETRY                                                     */}
             {/* ============================================================ */}
             <TreeSection icon={<IconGeometry />} label="Grid" defaultOpen={false}>
-                <TreeItem label="Dimensions">
+                <TreeItem label="Resolution">
                     <GridConfigPanel
                         caseType={config.caseType}
                         gridConfig={gridConfig}
