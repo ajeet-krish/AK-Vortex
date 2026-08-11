@@ -146,7 +146,7 @@ export default function GridConfigPanel({
 
       {/* ---- Grid Dimensions ---- */}
       <div className="gcp-dimensions">
-        <div className="gcp-dim-row">
+        <div className="gcp-dim-row" style={{ alignItems: 'center' }}>
           <label className="gcp-dim-label">Nx</label>
           <input
             type="number"
@@ -157,33 +157,32 @@ export default function GridConfigPanel({
             value={gridConfig.nx}
             onChange={(e) => handleNxChange(+e.target.value || GRID_MIN)}
             disabled={disabled}
+            style={{ width: '60px', flex: 'none' }}
           />
-        </div>
 
-        <button
-          className={`gcp-lock-btn ${gridConfig.lockAspectRatio ? 'locked' : ''}`}
-          onClick={handleAspectRatioToggle}
-          disabled={disabled}
-          title={
-            gridConfig.lockAspectRatio
-              ? 'Aspect ratio locked (click to unlock)'
-              : 'Aspect ratio unlocked (click to lock)'
-          }
-        >
-          {gridConfig.lockAspectRatio ? (
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <rect x="3" y="6" width="8" height="6" rx="1" />
-              <path d="M5 6V4a2 2 0 014 0v2" />
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <rect x="3" y="6" width="8" height="6" rx="1" />
-              <path d="M5 6V4a2 2 0 014 0" />
-            </svg>
-          )}
-        </button>
+          <button
+            className={`gcp-lock-btn ${gridConfig.lockAspectRatio ? 'locked' : ''}`}
+            onClick={handleAspectRatioToggle}
+            disabled={disabled}
+            title={
+              gridConfig.lockAspectRatio
+                ? 'Aspect ratio locked (click to unlock)'
+                : 'Aspect ratio unlocked (click to lock)'
+            }
+          >
+            {gridConfig.lockAspectRatio ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <rect x="3" y="6" width="8" height="6" rx="1" />
+                <path d="M5 6V4a2 2 0 014 0v2" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <rect x="3" y="6" width="8" height="6" rx="1" />
+                <path d="M5 6V4a2 2 0 014 0" />
+              </svg>
+            )}
+          </button>
 
-        <div className="gcp-dim-row">
           <label className="gcp-dim-label">Ny</label>
           <input
             type="number"
@@ -194,17 +193,18 @@ export default function GridConfigPanel({
             value={gridConfig.ny}
             onChange={(e) => handleNyChange(+e.target.value || GRID_MIN)}
             disabled={disabled}
+            style={{ width: '60px', flex: 'none' }}
           />
         </div>
       </div>
 
       {/* ---- Compact Stats (cells + aspect only) ---- */}
       <div className="gcp-stats-compact">
-        <div className="gcp-stat">
+        <div className="gcp-stat-item">
           <span className="gcp-stat-label">Cells</span>
           <span className="gcp-stat-value">{totalNodesDisplay}</span>
         </div>
-        <div className="gcp-stat">
+        <div className="gcp-stat-item">
           <span className="gcp-stat-label">Aspect</span>
           <span className="gcp-stat-value">
             {(gridConfig.nx / gridConfig.ny).toFixed(1)}:1
@@ -222,20 +222,6 @@ export default function GridConfigPanel({
                 <path d="M6 3v3M6 8v.5" strokeWidth="1.2" />
               </svg>
               {err}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {validation.warnings.length > 0 && (
-        <div className="gcp-warnings">
-          {validation.warnings.map((warn, i) => (
-            <div key={i} className="gcp-warning">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                <path d="M6 1L11 10H1z" fill="none" stroke="currentColor" strokeWidth="1" />
-                <path d="M6 4.5v2.5M6 8.5v.5" strokeWidth="1" />
-              </svg>
-              {warn}
             </div>
           ))}
         </div>

@@ -450,6 +450,8 @@ function App() {
                   ny={sim.config.ny}
                   onGeometryChange={setShapes}
                   onSelectionChange={setSelectedShapeId}
+                  externalShapes={shapes}
+                  externalSelectedId={selectedShapeId}
                 />
               </div>
             ) : (

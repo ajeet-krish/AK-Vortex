@@ -353,8 +353,9 @@ def parse_args(argv=None):
         ),
     )
     parser.add_argument(
-        "--frame", required=True, type=Path,
-        help="Path to LBM frame JSON file",
+        "--frame", required=False, type=Path, default=None,
+        help="Path to LBM frame JSON file. If omitted, auto-detects the last "
+             "frame in the frames/ subdirectory of --output.",
     )
     parser.add_argument(
         "--geometry", default="[]",
@@ -366,7 +367,7 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--output", required=True, type=Path,
-        help="Directory to write the 4 PNG files",
+        help="Directory containing frames/frame_*.json, or to write the 4 PNG files",
     )
     return parser.parse_args(argv)
 
@@ -374,9 +375,24 @@ def parse_args(argv=None):
 def main(argv=None) -> int:
     args = parse_args(argv)
 
+    # Resolve frame path ------------------------------------------------------
+    frame_path = args.frame
+    if frame_path is None:
+        # Auto-detect: look for frames/ subdirectory inside --output
+        frames_dir = args.output / "frames"
+        if not frames_dir.is_dir():
+            # Try --output itself as the frames directory
+            frames_dir = args.output
+        frame_files = sorted(frames_dir.glob("frame_*.json"))
+        if not frame_files:
+            print(f"ERROR: no frame_*.json files found in {frames_dir}", file=sys.stderr)
+            return 1
+        frame_path = frame_files[-1]  # Last frame (highest step number)
+        print(f"Auto-detected last frame: {frame_path}")
+
     # Validate inputs --------------------------------------------------------
-    if not args.frame.is_file():
-        print(f"ERROR: frame file not found: {args.frame}", file=sys.stderr)
+    if not frame_path.is_file():
+        print(f"ERROR: frame file not found: {frame_path}", file=sys.stderr)
         return 1
 
     output_dir: Path = args.output
@@ -400,7 +416,7 @@ def main(argv=None) -> int:
 
     # Load data --------------------------------------------------------------
     try:
-        frame = load_frame(args.frame)
+        frame = load_frame(frame_path)
     except Exception as exc:
         print(f"ERROR: failed to load frame: {exc}", file=sys.stderr)
         return 1

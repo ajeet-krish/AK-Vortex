@@ -23,6 +23,11 @@ interface GeometryEditorProps {
     ny: number;
     onGeometryChange: (shapes: Shape[]) => void;
     onSelectionChange?: (id: string | null) => void;
+    /** External shapes array from parent (App). When this changes,
+     *  internal state syncs to keep canvas in sync with sidebar deletes. */
+    externalShapes?: Shape[];
+    /** External selected shape ID from parent. */
+    externalSelectedId?: string | null;
 }
 
 type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca' | 'move';
@@ -41,7 +46,7 @@ function nextShapeName(type: string, shapes: Shape[]): string {
     return `${label} ${count}`;
 }
 
-export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionChange }: GeometryEditorProps) {
+export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionChange, externalShapes, externalSelectedId }: GeometryEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [activeTool, setActiveTool] = useState<DrawTool>('circle');
@@ -60,6 +65,23 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
 
     // Collision warning
     const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
+
+    // Canvas context menu
+    const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; shapeId: string } | null>(null);
+
+    // Sync from external shapes (e.g., when deleted from sidebar ObstacleTree)
+    useEffect(() => {
+        if (externalShapes) {
+            setShapes(externalShapes);
+        }
+    }, [externalShapes]);
+
+    // Sync selected ID from external source
+    useEffect(() => {
+        if (externalSelectedId !== undefined) {
+            setSelectedId(externalSelectedId);
+        }
+    }, [externalSelectedId]);
 
     // Drag-to-move state
     const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -686,8 +708,63 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
         setSelectedId(null);
         onSelectionChange?.(null);
         setCollisionWarning(null);
+        setCanvasContextMenu(null);
         onGeometryChange([]);
     };
+
+    // Canvas right-click context menu
+    const handleCanvasContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
+        const pt = getMouseGrid(e);
+        const hit = findShapeAtPoint(pt.x, pt.y);
+        if (hit) {
+            setSelectedId(hit.id);
+            onSelectionChange?.(hit.id);
+            setCanvasContextMenu({ x: e.clientX, y: e.clientY, shapeId: hit.id });
+        } else {
+            setCanvasContextMenu(null);
+        }
+    }, [findShapeAtPoint, onSelectionChange]);
+
+    // Close context menu on outside click
+    useEffect(() => {
+        if (!canvasContextMenu) return;
+        const close = () => setCanvasContextMenu(null);
+        document.addEventListener('click', close);
+        return () => document.removeEventListener('click', close);
+    }, [canvasContextMenu]);
+
+    // Context menu actions
+    const handleContextDuplicate = useCallback(() => {
+        if (!canvasContextMenu) return;
+        const original = shapes.find((s) => s.id === canvasContextMenu.shapeId);
+        if (original) {
+            const copy: Shape = {
+                ...original,
+                id: Date.now().toString() + '-' + (++idCounter),
+                name: `${original.name} Copy`,
+                x: original.x + 20,
+                y: original.y + 20,
+                points: original.points ? original.points.map((p) => ({ x: p.x + 20, y: p.y + 20 })) : undefined,
+            };
+            const updated = [...shapes, copy];
+            setShapes(updated);
+            onGeometryChange(updated);
+        }
+        setCanvasContextMenu(null);
+    }, [canvasContextMenu, shapes, onGeometryChange]);
+
+    const handleContextDelete = useCallback(() => {
+        if (!canvasContextMenu) return;
+        const updated = shapes.filter((s) => s.id !== canvasContextMenu.shapeId);
+        setShapes(updated);
+        if (selectedId === canvasContextMenu.shapeId) {
+            setSelectedId(null);
+            onSelectionChange?.(null);
+        }
+        onGeometryChange(updated);
+        setCanvasContextMenu(null);
+    }, [canvasContextMenu, shapes, selectedId, onGeometryChange, onSelectionChange]);
 
     const loadPreset = (preset: string) => {
         let newShapes: Shape[] = [];
@@ -881,9 +958,24 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
+                    onContextMenu={handleCanvasContextMenu}
                     style={{ cursor: cursorStyle }}
                 />
             </div>
+
+            {canvasContextMenu && (
+                <div
+                    className="context-menu"
+                    style={{ left: canvasContextMenu.x, top: canvasContextMenu.y }}
+                >
+                    <button className="context-menu-item" onClick={handleContextDuplicate}>
+                        Duplicate
+                    </button>
+                    <button className="context-menu-item danger" onClick={handleContextDelete}>
+                        Delete
+                    </button>
+                </div>
+            )}
 
             {collisionWarning && (
                 <div className="collision-warning">

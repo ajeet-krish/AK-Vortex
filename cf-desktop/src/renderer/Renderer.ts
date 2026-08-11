@@ -35,19 +35,16 @@ export class Renderer {
   }
 
   uploadFrameData(frame: FrameData): void {
-    this.nx = frame.nx;
-    this.ny = frame.ny;
-
     // Reposition viewport to center on new grid without re-creating
     // (avoids re-attaching mouse/wheel listeners)
     this.viewport.setState({
-      centerX: this.nx / 2,
-      centerY: this.ny / 2,
+      centerX: frame.nx / 2,
+      centerY: frame.ny / 2,
       zoom: this.viewport.getState().zoom,
     });
 
     // Upload obstacle texture
-    this.obstaclePass.uploadObstacle(frame.obstacle, this.nx, this.ny);
+    this.obstaclePass.uploadObstacle(frame.obstacle, frame.nx, frame.ny);
   }
 
   uploadQuiver(
@@ -68,6 +65,10 @@ export class Renderer {
   }
 
   render(config: RenderConfig, frameData: FrameData): void {
+    // Ensure dimensions are current (uploadFrameData may not have run yet)
+    this.nx = frameData.nx;
+    this.ny = frameData.ny;
+
     const gl = this.ctx.gl;
     const cw = gl.canvas.width;
     const ch = gl.canvas.height;

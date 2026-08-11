@@ -55,6 +55,13 @@ pub fn generate_report_plots(
 
     // Build the path to the requested frame JSON
     let frame_path = format!("{}/frames/frame_{}.json", output_dir, step);
+    let frame_path = if PathBuf::from(&frame_path).exists() {
+        frame_path
+    } else {
+        // Fallback: find the last frame in the frames directory
+        let frames_dir = format!("{}/frames", output_dir);
+        find_last_frame(&frames_dir).unwrap_or_else(|| frame_path)
+    };
     if !PathBuf::from(&frame_path).exists() {
         return Err(format!("Frame file not found: {}", frame_path));
     }
@@ -177,4 +184,31 @@ fn read_png_base64(path: &PathBuf) -> Result<String, String> {
     let data =
         std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     Ok(STANDARD.encode(&data))
+}
+
+/// Find the last frame file (frame_*.json) in a directory, sorted by step number.
+fn find_last_frame(frames_dir: &str) -> Option<String> {
+    let dir = Path::new(frames_dir);
+    if !dir.is_dir() {
+        return None;
+    }
+    let mut frames: Vec<(u64, PathBuf)> = std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("frame_") && name.ends_with(".json") {
+                let num: u64 = name
+                    .strip_prefix("frame_")?
+                    .strip_suffix(".json")?
+                    .parse()
+                    .ok()?;
+                Some((num, entry.path()))
+            } else {
+                None
+            }
+        })
+        .collect();
+    frames.sort_by_key(|(num, _)| *num);
+    frames.last().map(|(_, path)| path.to_string_lossy().into_owned())
 }
