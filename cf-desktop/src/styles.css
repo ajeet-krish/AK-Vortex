@@ -2061,34 +2061,28 @@ canvas {
 }
 
 /* Grid Dimension Inputs */
-.gcp-dimensions {
+.gcp-dims-row {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.gcp-dim-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
+  width: 100%;
 }
 
 .gcp-dim-label {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 600;
-  min-width: 16px;
+  min-width: 20px;
 }
 
 .gcp-dim-input {
-  width: 100%;
-  padding: 3px 6px;
+  width: 50px;
+  padding: 2px 4px;
+  font-size: 11px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: 2px;
   color: var(--text-primary);
-  font-size: 11px;
   font-family: 'JetBrains Mono', monospace;
   text-align: right;
 }

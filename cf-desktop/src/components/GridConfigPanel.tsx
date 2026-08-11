@@ -145,57 +145,51 @@ export default function GridConfigPanel({
       </div>
 
       {/* ---- Grid Dimensions ---- */}
-      <div className="gcp-dimensions">
-        <div className="gcp-dim-row" style={{ alignItems: 'center' }}>
-          <label className="gcp-dim-label">Nx</label>
-          <input
-            type="number"
-            className="gcp-dim-input"
-            min={GRID_MIN}
-            max={GRID_MAX}
-            step={16}
-            value={gridConfig.nx}
-            onChange={(e) => handleNxChange(+e.target.value || GRID_MIN)}
-            disabled={disabled}
-            style={{ width: '60px', flex: 'none' }}
-          />
-
-          <button
-            className={`gcp-lock-btn ${gridConfig.lockAspectRatio ? 'locked' : ''}`}
-            onClick={handleAspectRatioToggle}
-            disabled={disabled}
-            title={
-              gridConfig.lockAspectRatio
-                ? 'Aspect ratio locked (click to unlock)'
-                : 'Aspect ratio unlocked (click to lock)'
-            }
-          >
-            {gridConfig.lockAspectRatio ? (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                <rect x="3" y="6" width="8" height="6" rx="1" />
-                <path d="M5 6V4a2 2 0 014 0v2" />
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                <rect x="3" y="6" width="8" height="6" rx="1" />
-                <path d="M5 6V4a2 2 0 014 0" />
-              </svg>
-            )}
-          </button>
-
-          <label className="gcp-dim-label">Ny</label>
-          <input
-            type="number"
-            className="gcp-dim-input"
-            min={GRID_MIN}
-            max={GRID_MAX}
-            step={16}
-            value={gridConfig.ny}
-            onChange={(e) => handleNyChange(+e.target.value || GRID_MIN)}
-            disabled={disabled}
-            style={{ width: '60px', flex: 'none' }}
-          />
-        </div>
+      <div className="gcp-dims-row">
+        <label className="gcp-dim-label">NX</label>
+        <input
+          type="number"
+          className="gcp-dim-input"
+          min={GRID_MIN}
+          max={GRID_MAX}
+          step={16}
+          value={gridConfig.nx}
+          onChange={(e) => handleNxChange(+e.target.value || GRID_MIN)}
+          disabled={disabled}
+        />
+        <label className="gcp-dim-label">NY</label>
+        <input
+          type="number"
+          className="gcp-dim-input"
+          min={GRID_MIN}
+          max={GRID_MAX}
+          step={16}
+          value={gridConfig.ny}
+          onChange={(e) => handleNyChange(+e.target.value || GRID_MIN)}
+          disabled={disabled}
+        />
+        <button
+          className={`gcp-lock-btn ${gridConfig.lockAspectRatio ? 'locked' : ''}`}
+          onClick={handleAspectRatioToggle}
+          disabled={disabled}
+          title={
+            gridConfig.lockAspectRatio
+              ? 'Aspect ratio locked (click to unlock)'
+              : 'Aspect ratio unlocked (click to lock)'
+          }
+        >
+          {gridConfig.lockAspectRatio ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <rect x="3" y="6" width="8" height="6" rx="1" />
+              <path d="M5 6V4a2 2 0 014 0v2" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <rect x="3" y="6" width="8" height="6" rx="1" />
+              <path d="M5 6V4a2 2 0 014 0" />
+            </svg>
+          )}
+        </button>
       </div>
 
       {/* ---- Compact Stats (cells + aspect only) ---- */}
