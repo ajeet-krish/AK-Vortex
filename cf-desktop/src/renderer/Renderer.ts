@@ -93,6 +93,25 @@ export class Renderer {
         break;
     }
 
+    // Debug: check field data statistics
+    if (fieldData && fieldData.length > 0) {
+      let min = Infinity, max = -Infinity, nonZero = 0, nanCount = 0;
+      for (let i = 0; i < fieldData.length; i++) {
+        const v = fieldData[i];
+        if (!Number.isFinite(v)) { nanCount++; continue; }
+        if (v < min) min = v;
+        if (v > max) max = v;
+        if (v !== 0) nonZero++;
+      }
+      console.log(
+        `[Renderer] field=${config.field}, nx=${this.nx}, ny=${this.ny}, ` +
+        `dataLen=${fieldData.length}, expectedLen=${this.nx * this.ny}, ` +
+        `min=${min}, max=${max}, nonZero=${nonZero}/${fieldData.length}, ` +
+        `nan=${nanCount}, ` +
+        `range=[${config.colorRange.min}, ${config.colorRange.max}]`
+      );
+    }
+
     // 1. Contour (opaque background)
     // Map field type to analytic colormap index: 0=jet, 1=coolwarm, 2=rdbu
     let cmapType = 0;

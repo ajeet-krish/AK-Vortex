@@ -62,37 +62,59 @@ export default function FlowCanvas({
 
     // Compute color range (NaN-safe, symmetric for pressure)
     const effectiveRange = useMemo(() => {
-        if (colorRange) return colorRange;
+        if (colorRange) {
+            console.log(`[FlowCanvas] Using manual color range: [${colorRange.min}, ${colorRange.max}]`);
+            return colorRange;
+        }
+
+        let range: { min: number; max: number };
 
         if (field === 'velocity') {
             let maxVal = 0;
+            let finiteCount = 0;
             for (const val of frameData.velocity) {
-                if (Number.isFinite(val) && val > maxVal) maxVal = val;
+                if (Number.isFinite(val) && val > maxVal) {
+                    maxVal = val;
+                    finiteCount++;
+                }
             }
-            return { min: 0, max: maxVal || 1 };
+            // Add 5% headroom so max value doesn't clip at pure red
+            const headroom = maxVal > 0 ? maxVal * 1.05 : 1;
+            range = { min: 0, max: headroom };
+            console.log(`[FlowCanvas] velocity range: [0, ${maxVal}] -> effective [0, ${headroom}], finite=${finiteCount}/${frameData.velocity.length}`);
         } else if (field === 'pressure') {
             let minVal = Infinity;
             let maxVal = -Infinity;
+            let finiteCount = 0;
             for (const val of frameData.p) {
                 if (!Number.isFinite(val)) continue;
                 if (val < minVal) minVal = val;
                 if (val > maxVal) maxVal = val;
+                finiteCount++;
             }
             if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
-                return { min: -1, max: 1 };
+                range = { min: -1, max: 1 };
+            } else {
+                const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
+                range = { min: -absMax, max: absMax };
             }
-            const absMax = Math.max(Math.abs(minVal), Math.abs(maxVal));
-            return { min: -absMax, max: absMax };
+            console.log(`[FlowCanvas] pressure range: [${minVal}, ${maxVal}] -> effective [${range.min}, ${range.max}], finite=${finiteCount}/${frameData.p.length}`);
         } else {
             let maxAbs = 0;
+            let finiteCount = 0;
             for (const val of frameData.omega) {
                 if (Number.isFinite(val)) {
                     const abs = Math.abs(val);
                     if (abs > maxAbs) maxAbs = abs;
+                    finiteCount++;
                 }
             }
-            return { min: -maxAbs, max: maxAbs || 1 };
+            const headroom = maxAbs > 0 ? maxAbs * 1.05 : 1;
+            range = { min: -headroom, max: headroom };
+            console.log(`[FlowCanvas] vorticity range: [-${maxAbs}, ${maxAbs}] -> effective [${range.min}, ${range.max}], finite=${finiteCount}/${frameData.omega.length}`);
         }
+
+        return range;
     }, [field, frameData, colorRange]);
 
     // Choose colormap based on field

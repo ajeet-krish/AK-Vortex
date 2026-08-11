@@ -60,17 +60,19 @@ export default function ObstacleTree({
             onClick={() => onSelect(shape.id)}
             onContextMenu={(e) => handleContextMenu(e, shape.id)}
           >
-            <span className="obstacle-icon">{getShapeIcon(shape.type)}</span>
-            <span className="tree-item-label">{shape.name}</span>
-            <span className="obstacle-summary">{getShapeSummary(shape)}</span>
             {!disabled && (
               <button
                 className="tree-item-delete"
+                style={{ opacity: 1, marginRight: '4px' }}
                 onClick={(e) => { e.stopPropagation(); onDelete(shape.id); }}
+                title="Delete obstacle"
               >
                 &times;
               </button>
             )}
+            <span className="obstacle-icon">{getShapeIcon(shape.type)}</span>
+            <span className="tree-item-label">{shape.name}</span>
+            <span className="obstacle-summary">{getShapeSummary(shape)}</span>
           </div>
         ))}
       </div>

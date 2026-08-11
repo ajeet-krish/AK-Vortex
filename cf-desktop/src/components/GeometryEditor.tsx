@@ -32,6 +32,28 @@ interface GeometryEditorProps {
 
 type DrawTool = 'circle' | 'rectangle' | 'polygon' | 'naca' | 'move';
 
+/* ------------------------------------------------------------------ */
+/*  SVG Icons (inline, 14x14, monochrome)                             */
+/* ------------------------------------------------------------------ */
+
+const CircleIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="7" cy="7" r="5.5" />
+    </svg>
+);
+
+const RectIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="2" y="2" width="10" height="10" />
+    </svg>
+);
+
+const LineIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <line x1="2" y1="12" x2="12" y2="2" />
+    </svg>
+);
+
 // Counter to avoid Date.now() ID collisions when multiple shapes are created
 // within the same millisecond
 let idCounter = 0;
@@ -68,6 +90,10 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
 
     // Canvas context menu
     const [canvasContextMenu, setCanvasContextMenu] = useState<{ x: number; y: number; shapeId: string } | null>(null);
+
+    // Inline rename state
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
 
     // Sync from external shapes (e.g., when deleted from sidebar ObstacleTree)
     useEffect(() => {
@@ -766,6 +792,33 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
         setCanvasContextMenu(null);
     }, [canvasContextMenu, shapes, selectedId, onGeometryChange, onSelectionChange]);
 
+    // Rename handlers
+    const startRename = useCallback((id: string) => {
+        const shape = shapes.find((s) => s.id === id);
+        if (shape) {
+            setRenamingId(id);
+            setRenameValue(shape.name);
+            setCanvasContextMenu(null);
+        }
+    }, [shapes]);
+
+    const finishRename = useCallback(() => {
+        if (renamingId && renameValue.trim()) {
+            const updated = shapes.map((s) =>
+                s.id === renamingId ? { ...s, name: renameValue.trim() } : s
+            );
+            setShapes(updated);
+            onGeometryChange(updated);
+        }
+        setRenamingId(null);
+        setRenameValue('');
+    }, [renamingId, renameValue, shapes, onGeometryChange]);
+
+    const cancelRename = useCallback(() => {
+        setRenamingId(null);
+        setRenameValue('');
+    }, []);
+
     const loadPreset = (preset: string) => {
         let newShapes: Shape[] = [];
         if (preset === 'cylinder') {
@@ -843,21 +896,21 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                         onClick={() => { setActiveTool('circle'); setPolygonPoints([]); }}
                         title="Draw Circle"
                     >
-                        O
+                        <CircleIcon /> Circle
                     </button>
                     <button
                         className={`tool-btn ${activeTool === 'rectangle' ? 'active' : ''}`}
                         onClick={() => { setActiveTool('rectangle'); setPolygonPoints([]); }}
                         title="Draw Rectangle"
                     >
-                        []
+                        <RectIcon /> Rect
                     </button>
                     <button
                         className={`tool-btn ${activeTool === 'polygon' ? 'active' : ''}`}
                         onClick={() => setActiveTool('polygon')}
                         title="Draw Polygon (click vertices, click first point to close)"
                     >
-                        /_/
+                        <LineIcon /> Line
                     </button>
                     <button
                         className={`tool-btn ${activeTool === 'naca' ? 'active' : ''}`}
@@ -874,6 +927,14 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                         Move
                     </button>
                 </div>
+                <div className="toolbar-separator" />
+                <div className="tool-group editor-presets">
+                    <button className="preset-btn" onClick={() => loadPreset('cylinder')}>Cylinder</button>
+                    <button className="preset-btn" onClick={() => loadPreset('step')}>Step</button>
+                    <button className="preset-btn" onClick={() => loadPreset('naca2412')}>NACA 2412</button>
+                    <button className="preset-btn" onClick={() => loadPreset('naca0012')}>NACA 0012</button>
+                </div>
+                <div className="toolbar-separator" />
                 <div className="tool-group">
                     <button className="tool-btn danger" onClick={clearAll} title="Clear All">
                         Clear
@@ -944,14 +1005,6 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                 </div>
             )}
 
-            <div className="editor-presets">
-                <span className="preset-label">Presets:</span>
-                <button className="preset-btn" onClick={() => loadPreset('cylinder')}>Cylinder</button>
-                <button className="preset-btn" onClick={() => loadPreset('step')}>Step</button>
-                <button className="preset-btn" onClick={() => loadPreset('naca2412')}>NACA 2412</button>
-                <button className="preset-btn" onClick={() => loadPreset('naca0012')}>NACA 0012</button>
-            </div>
-
             <div className="editor-canvas-container">
                 <canvas
                     ref={canvasRef}
@@ -961,6 +1014,53 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                     onContextMenu={handleCanvasContextMenu}
                     style={{ cursor: cursorStyle }}
                 />
+                {renamingId && (() => {
+                    const shape = shapes.find((s) => s.id === renamingId);
+                    if (!shape) return null;
+                    const canvas = canvasRef.current;
+                    if (!canvas) return null;
+                    let labelX: number, labelY: number;
+                    if (shape.type === 'polygon' && shape.points && shape.points.length > 0) {
+                        let cx = 0, cy = 0;
+                        for (const pt of shape.points) { cx += pt.x; cy += pt.y; }
+                        cx /= shape.points.length;
+                        cy /= shape.points.length;
+                        const conv = gridToCanvas(cx, cy, canvas.width, canvas.height);
+                        labelX = conv.px;
+                        labelY = conv.py;
+                    } else {
+                        const conv = gridToCanvas(shape.x, shape.y, canvas.width, canvas.height);
+                        labelX = conv.px;
+                        labelY = conv.py;
+                    }
+                    return (
+                        <input
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') finishRename();
+                                if (e.key === 'Escape') cancelRename();
+                            }}
+                            onBlur={finishRename}
+                            autoFocus
+                            style={{
+                                position: 'absolute',
+                                left: `${labelX - 40}px`,
+                                top: `${labelY - 10}px`,
+                                width: '80px',
+                                padding: '2px 4px',
+                                background: 'var(--bg-tertiary)',
+                                border: '1px solid var(--accent)',
+                                color: 'var(--text-primary)',
+                                fontSize: '11px',
+                                fontFamily: 'inherit',
+                                textAlign: 'center',
+                                zIndex: 10,
+                            }}
+                        />
+                    );
+                })()}
             </div>
 
             {canvasContextMenu && (
@@ -968,6 +1068,9 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
                     className="context-menu"
                     style={{ left: canvasContextMenu.x, top: canvasContextMenu.y }}
                 >
+                    <button className="context-menu-item" onClick={() => startRename(canvasContextMenu.shapeId)}>
+                        Rename
+                    </button>
                     <button className="context-menu-item" onClick={handleContextDuplicate}>
                         Duplicate
                     </button>

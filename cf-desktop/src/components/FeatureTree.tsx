@@ -161,7 +161,7 @@ export default function FeatureTree({
     gridConfig,
     setGridConfig,
     systemInfo,
-    onCaseTypeChange,
+    onCaseTypeChange: _onCaseTypeChange,
     running,
     simProgress,
     frames,
@@ -208,21 +208,8 @@ export default function FeatureTree({
             {/* ============================================================ */}
             {/*  GEOMETRY                                                     */}
             {/* ============================================================ */}
-            <TreeSection icon={<IconGeometry />} label="Geometry" defaultOpen={true}>
-                <TreeItem label="Case">
-                    <select
-                        className="tree-select"
-                        value={config.caseType}
-                        onChange={(e) => onCaseTypeChange(e.target.value)}
-                    >
-                        <option value="cylinder">Cylinder Flow</option>
-                        <option value="cavity">Lid-Driven Cavity</option>
-                        <option value="step">Backward Step</option>
-                        <option value="custom">Custom Geometry</option>
-                    </select>
-                </TreeItem>
-
-                <TreeItem label="Grid">
+            <TreeSection icon={<IconGeometry />} label="Grid" defaultOpen={false}>
+                <TreeItem label="Dimensions">
                     <GridConfigPanel
                         caseType={config.caseType}
                         gridConfig={gridConfig}
