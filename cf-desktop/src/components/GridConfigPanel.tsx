@@ -7,7 +7,7 @@
  * Replaces the inline grid inputs that were previously in FeatureTree.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import type {
   QualityLevel,
   GridConfig,

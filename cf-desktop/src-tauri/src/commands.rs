@@ -84,7 +84,7 @@ pub fn get_system_info() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({
         "total_ram_bytes": sys.total_memory(),
         "available_ram_bytes": sys.available_memory(),
-        "cpu_cores": System::physical_core_count().unwrap_or(4),
+        "cpu_cores": sys.cpus().len(),
     }))
 }
 

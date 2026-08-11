@@ -40,8 +40,6 @@ interface FeatureTreeProps {
     handleExportVtk: () => void;
     probe: ProbeInfo | null;
     shapes: Shape[];
-    selectedShapeId: string | null;
-    onCreateArray: (count: number, spacing: number, angle: number) => void;
     compareMode: boolean;
     loadComparison: () => void;
     unloadComparison: () => void;
@@ -246,8 +244,6 @@ export default function FeatureTree({
     handleExportVtk,
     probe,
     shapes,
-    selectedShapeId,
-    onCreateArray,
     compareMode,
     loadComparison,
     unloadComparison,
