@@ -132,39 +132,15 @@
       </div>
 
       <div class="vf-cell">
-        <h4>Flow Evolution</h4>
-        <div class="fv-stage">
-          <canvas id="lbmCanvas" class="fv-canvas" width="100" height="38"></canvas>
-        </div>
-        <div class="fv-controls">
-          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-        </div>
-      </div>
-
-      <div class="vf-cell">
         <h4>Pressure Coefficient C<sub>p</sub></h4>
         <img id="cpImg" class="static-field-img" src="" alt="Cp">
-      </div>
-
-      <div class="vf-cell">
-        <h4>Pressure Coefficient C<sub>p</sub></h4>
-        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
       </div>
 
       <div class="vf-cell">
         <h4>Vorticity</h4>
         <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
       </div>
-
-      <div class="vf-cell">
-        <h4>Vorticity</h4>
-        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
-      </div>
     </div>
-
-    <p class="fv-note" id="fvStatus"></p>
 
     <h2>AoA Sweep: Validation (Re=1000)</h2>
 
@@ -306,25 +282,6 @@
   </footer>
 
   <script src="assets/js/slider.js"></script>
-
-  <script src="assets/js/colormaps.js"></script>
-  <script src="assets/js/flow-viewer.js"></script>
-  <script src="assets/js/viewer-common-v2.js"></script>
-  <div id="fieldTabs" style="margin:8px 0"></div>
-  <script>
-    initVFSplitSections({
-      dataDir: 'assets/data/flatplate',
-      paramLabel: 'AoA',
-      cmap: 'jet',
-      imageBasePath: function(config) { return 'flatplate/simulations/re1000/' + config.file; },
-      imageSuffix: function(config) { return 're' + config.suffix; },
-      lbmConfigs: [
-        { label: '0', file: 'aoa0', suffix: '1000_aoa0' },
-        { label: '5', file: 'aoa5', suffix: '1000_aoa5' },
-        { label: '10', file: 'aoa10', suffix: '1000_aoa10' }
-      ]
-    });
-  </script>
 
   <script src="assets/js/main.js" type="module" defer></script>
 

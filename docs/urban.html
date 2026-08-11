@@ -87,32 +87,12 @@
       <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
     </div>
     <div class="vf-cell">
-      <h4>Flow Evolution</h4>
-      <div class="fv-stage"><canvas id="lbmCanvas_side"></canvas></div>
-      <div class="fv-controls">
-        <button id="lbmPlay_side">&#9654; Play</button>
-        <input id="lbmScrubber_side" type="range" min="0" max="50" value="0" class="fv-slider">
-        <span id="lbmFrameLabel_side">Frame 0 / 50</span>
-      </div>
-    </div>
-    <div class="vf-cell">
       <h4>Pressure Coefficient C<sub>p</sub></h4>
       <img id="cpImg_side" class="static-field-img" src="" alt="Cp">
     </div>
-
-    <div class="vf-cell">
-      <h4>Pressure Coefficient C<sub>p</sub></h4>
-      <div class="fv-stage"><canvas id="cpCanvas_side"></canvas></div>
-    </div>
-
     <div class="vf-cell">
       <h4>Vorticity</h4>
       <img id="vortImg_side" class="static-field-img" src="" alt="Vorticity">
-    </div>
-
-    <div class="vf-cell">
-      <h4>Vorticity</h4>
-      <div class="fv-stage"><canvas id="vorticityCanvas_side"></canvas></div>
     </div>
   </div>
 
@@ -144,32 +124,12 @@
       <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
     </div>
     <div class="vf-cell">
-      <h4>Flow Evolution</h4>
-      <div class="fv-stage"><canvas id="lbmCanvas_topdown"></canvas></div>
-      <div class="fv-controls">
-        <button id="lbmPlay_topdown">&#9654; Play</button>
-        <input id="lbmScrubber_topdown" type="range" min="0" max="50" value="0" class="fv-slider">
-        <span id="lbmFrameLabel_topdown">Frame 0 / 50</span>
-      </div>
-    </div>
-    <div class="vf-cell">
       <h4>Pressure Coefficient C<sub>p</sub></h4>
       <img id="cpImg_topdown" class="static-field-img" src="" alt="Cp">
     </div>
-
-    <div class="vf-cell">
-      <h4>Pressure Coefficient C<sub>p</sub></h4>
-      <div class="fv-stage"><canvas id="cpCanvas_topdown"></canvas></div>
-    </div>
-
     <div class="vf-cell">
       <h4>Vorticity</h4>
       <img id="vortImg_topdown" class="static-field-img" src="" alt="Vorticity">
-    </div>
-
-    <div class="vf-cell">
-      <h4>Vorticity</h4>
-      <div class="fv-stage"><canvas id="vorticityCanvas_topdown"></canvas></div>
     </div>
   </div>
 
@@ -203,32 +163,12 @@
       <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
     </div>
     <div class="vf-cell">
-      <h4>Flow Evolution</h4>
-      <div class="fv-stage"><canvas id="lbmCanvas_topdownH"></canvas></div>
-      <div class="fv-controls">
-        <button id="lbmPlay_topdownH">&#9654; Play</button>
-        <input id="lbmScrubber_topdownH" type="range" min="0" max="50" value="0" class="fv-slider">
-        <span id="lbmFrameLabel_topdownH">Frame 0 / 50</span>
-      </div>
-    </div>
-    <div class="vf-cell">
       <h4>Pressure Coefficient C<sub>p</sub></h4>
       <img id="cpImg_topdownH" class="static-field-img" src="" alt="Cp">
     </div>
-
-    <div class="vf-cell">
-      <h4>Pressure Coefficient C<sub>p</sub></h4>
-      <div class="fv-stage"><canvas id="cpCanvas_topdownH"></canvas></div>
-    </div>
-
     <div class="vf-cell">
       <h4>Vorticity</h4>
       <img id="vortImg_topdownH" class="static-field-img" src="" alt="Vorticity">
-    </div>
-
-    <div class="vf-cell">
-      <h4>Vorticity</h4>
-      <div class="fv-stage"><canvas id="vorticityCanvas_topdownH"></canvas></div>
     </div>
   </div>
 
@@ -260,32 +200,12 @@
       <p class="fv-note">Drag the handle to compare velocity contour (left) and streamlines (right).</p>
     </div>
     <div class="vf-cell">
-      <h4>Flow Evolution</h4>
-      <div class="fv-stage"><canvas id="lbmCanvas_downwash"></canvas></div>
-      <div class="fv-controls">
-        <button id="lbmPlay_downwash">&#9654; Play</button>
-        <input id="lbmScrubber_downwash" type="range" min="0" max="50" value="0" class="fv-slider">
-        <span id="lbmFrameLabel_downwash">Frame 0 / 50</span>
-      </div>
-    </div>
-    <div class="vf-cell">
       <h4>Pressure Coefficient C<sub>p</sub></h4>
       <img id="cpImg_downwash" class="static-field-img" src="" alt="Cp">
     </div>
-
-    <div class="vf-cell">
-      <h4>Pressure Coefficient C<sub>p</sub></h4>
-      <div class="fv-stage"><canvas id="cpCanvas_downwash"></canvas></div>
-    </div>
-
     <div class="vf-cell">
       <h4>Vorticity</h4>
       <img id="vortImg_downwash" class="static-field-img" src="" alt="Vorticity">
-    </div>
-
-    <div class="vf-cell">
-      <h4>Vorticity</h4>
-      <div class="fv-stage"><canvas id="vorticityCanvas_downwash"></canvas></div>
     </div>
   </div>
 
@@ -344,28 +264,12 @@
 </footer>
 
 <script src="assets/js/slider.js"></script>
-<script src="assets/js/colormaps.js"></script>
-<script src="assets/js/flow-viewer.js"></script>
 <script>
-// ====================================================================
-// Reusable 3x2 section initializer for each urban sub-section
-// ====================================================================
-function initUrbanSection(prefix, dataDir, imageCase, imageSuffixFn, lbmConfigs, imageBasePathFn) {
+// Static image switching for each urban sub-section (no FlowViewer)
+function initUrbanSectionStatic(prefix, imageCase, imageSuffixFn, configs, imageBasePathFn) {
   var reTabs = document.getElementById('reTabs_' + prefix);
-  var lbmCanvas = document.getElementById('lbmCanvas_' + prefix);
-  if (!lbmCanvas || !reTabs) return;
-
-  var viewer = new FlowViewer(lbmCanvas, dataDir, { cmap: 'jet' });
-  var currentConfig = lbmConfigs[0];
-
-  viewer.onFrameChange = function (f) {
-    var lbl = document.getElementById('lbmFrameLabel_' + prefix);
-    if (lbl && viewer.cache[viewer.re]) {
-      lbl.textContent = 'Frame ' + f + ' / ' + (viewer.cache[viewer.re].lbm.n_frames - 1);
-      var scr = document.getElementById('lbmScrubber_' + prefix);
-      if (scr) { scr.max = viewer.cache[viewer.re].lbm.n_frames - 1; scr.value = f; }
-    }
-  };
+  if (!reTabs) return;
+  var currentConfig = configs[0];
 
   function imageUrl(config, type) {
     if (imageBasePathFn) {
@@ -420,72 +324,28 @@ function initUrbanSection(prefix, dataDir, imageCase, imageSuffixFn, lbmConfigs,
     }, 200);
   }
 
-  function switchConfig(config) {
-    currentConfig = config;
-    reTabs.querySelectorAll('.teaser-link').forEach(function (btn) {
-      btn.classList.toggle('active', btn.getAttribute('data-file') === config.file);
-    });
-    updateImages(config);
-    resetSlider();
-    viewer.setRe(config.file).then(function () {
-      if (!viewer.playing) viewer.play();
-      var pb = document.getElementById('lbmPlay_' + prefix);
-      if (pb) pb.innerHTML = '&#10074;&#10074; Pause';
-      renderStaticFields();
-    });
-  }
-
-  lbmConfigs.forEach(function (config) {
+  configs.forEach(function (config) {
     var btn = document.createElement('button');
     btn.className = 'teaser-link' + (config === currentConfig ? ' active' : '');
     btn.setAttribute('data-file', config.file);
     btn.textContent = config.label;
     btn.style.fontSize = '0.7em';
-    btn.onclick = function () { switchConfig(config); };
+    btn.onclick = function () {
+      currentConfig = config;
+      reTabs.querySelectorAll('.teaser-link').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-file') === config.file);
+      });
+      updateImages(config);
+      resetSlider();
+    };
     reTabs.appendChild(btn);
   });
 
-  var playBtn = document.getElementById('lbmPlay_' + prefix);
-  if (playBtn) {
-    playBtn.addEventListener('click', function () {
-      var playing = viewer.togglePlay();
-      this.innerHTML = playing ? '&#10074;&#10074; Pause' : '&#9654; Play';
-    });
-  }
-
-  var scrubber = document.getElementById('lbmScrubber_' + prefix);
-  if (scrubber) {
-    scrubber.addEventListener('input', function () {
-      viewer.pause();
-      if (playBtn) playBtn.innerHTML = '&#9654; Play';
-      viewer.setFrame(parseInt(this.value, 10));
-    });
-  }
-
-  function renderStaticFields() {
-    var entry = viewer.cache[viewer.re];
-    if (!entry) return;
-    var pCanvas = document.getElementById('cpCanvas_' + prefix);
-    var oCanvas = document.getElementById('vorticityCanvas_' + prefix);
-    if (pCanvas && entry.pmin !== undefined) {
-      viewer.renderStatic(pCanvas, 2, 'jet', entry.pmin, entry.pmax);
-    }
-    if (oCanvas && entry.omegaMax !== undefined) {
-      viewer.renderStatic(oCanvas, 3, 'rdbu', -entry.omegaMax, entry.omegaMax);
-    }
-  }
-
   updateImages(currentConfig);
-  viewer.init(currentConfig.file).then(function () {
-    viewer.play();
-    if (playBtn) playBtn.innerHTML = '&#10074;&#10074; Pause';
-    renderStaticFields();
-    lbmConfigs.slice(1).forEach(function (c) { viewer.load(c.file); });
-  });
 }
 
 // Section 1: Side-View Canyon (H/W sweep)
-initUrbanSection('side', 'assets/data/urban', 'urban', function (config) {
+initUrbanSectionStatic('side', 'urban', function (config) {
   return config.file;
 }, [
   { label: 'H/W = 0.3 (2 bldgs)', file: 'side_a03' },
@@ -493,7 +353,6 @@ initUrbanSection('side', 'assets/data/urban', 'urban', function (config) {
   { label: 'H/W = 0.6 (3 bldgs)', file: 'side_a06' },
   { label: 'H/W = 0.8 (2 bldgs)', file: 'side_a08' }
 ], function (config) {
-  // Map side_a03 -> simulations/side/2p_ar0.3, side_a05 -> simulations/side/2p_ar0.5, etc.
   var f = config.file;
   if (f === 'side_a03') return 'urban/simulations/side/2p_ar0.3';
   if (f === 'side_a05') return 'urban/simulations/side/2p_ar0.5';
@@ -503,7 +362,7 @@ initUrbanSection('side', 'assets/data/urban', 'urban', function (config) {
 });
 
 // Section 2: Top-Down Vertical Buildings
-initUrbanSection('topdown', 'assets/data/urban', 'urban', function (config) {
+initUrbanSectionStatic('topdown', 'urban', function (config) {
   return config.file;
 }, [
   { label: 'Re = 100', file: 'topdown' }
@@ -512,7 +371,7 @@ initUrbanSection('topdown', 'assets/data/urban', 'urban', function (config) {
 });
 
 // Section 3: Top-Down Horizontal Buildings (funnel flow)
-initUrbanSection('topdownH', 'assets/data/urban', 'urban', function (config) {
+initUrbanSectionStatic('topdownH', 'urban', function (config) {
   return config.file;
 }, [
   { label: 'Re = 100', file: 'topdown_h' }
@@ -521,7 +380,7 @@ initUrbanSection('topdownH', 'assets/data/urban', 'urban', function (config) {
 });
 
 // Section 4: Building Downwash
-initUrbanSection('downwash', 'assets/data/urban', 'urban', function (config) {
+initUrbanSectionStatic('downwash', 'urban', function (config) {
   return config.file;
 }, [
   { label: 'Re = 100', file: 'downwash' }

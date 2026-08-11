@@ -1,5 +1,4 @@
 import { ShaderProgram } from '../ShaderProgram';
-import type { ColormapTexture } from '../ColormapTexture';
 import vertSrc from '../shaders/contour.vert.glsl';
 import fragSrc from '../shaders/contour.frag.glsl';
 
@@ -42,15 +41,15 @@ export class ContourPass {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, nx, ny, 0, gl.RED, gl.FLOAT, data);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
   render(
     _proj: Float32Array,
-    cmap: ColormapTexture,
+    _cmapType: number,
     min: number,
     max: number,
     nx: number,
@@ -61,13 +60,11 @@ export class ContourPass {
     this.program.setFloat('u_min', min);
     this.program.setFloat('u_max', max);
     this.program.setVec2('u_gridSize', nx, ny);
+    this.program.setInt('u_cmapType', _cmapType);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTexture);
     this.program.setInt('u_fieldTex', 0);
-
-    cmap.bind(1);
-    this.program.setInt('u_cmapTex', 1);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

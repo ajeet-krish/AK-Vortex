@@ -120,35 +120,13 @@
       </div>
 
       <div class="vf-cell">
-        <h4>Flow Evolution</h4>
-        <div class="fv-stage">
-          <canvas id="lbmCanvas" class="fv-canvas" width="96" height="96"></canvas>
-        </div>
-        <div class="fv-controls">
-          <button class="fv-btn" id="lbmPlay">&#9654; Play</button>
-          <input type="range" id="lbmScrubber" min="0" max="50" value="0" class="fv-slider">
-          <span class="fv-frame" id="lbmFrameLabel">Frame 0 / 50</span>
-        </div>
-      </div>
-
-      <div class="vf-cell">
         <h4>Pressure Coefficient C<sub>p</sub></h4>
         <img id="cpImg" class="static-field-img" src="" alt="Cp">
       </div>
 
       <div class="vf-cell">
-        <h4>Pressure Coefficient C<sub>p</sub></h4>
-        <div class="fv-stage"><canvas id="cpCanvas" class="fv-canvas"></canvas></div>
-      </div>
-
-      <div class="vf-cell">
         <h4>Vorticity</h4>
         <img id="vortImg" class="static-field-img" src="" alt="Vorticity">
-      </div>
-
-      <div class="vf-cell">
-        <h4>Vorticity</h4>
-        <div class="fv-stage"><canvas id="vorticityCanvas" class="fv-canvas"></canvas></div>
       </div>
     </div>
 
@@ -366,27 +344,6 @@
       flow structure rather than a mean. The vortex center migrates with Re (y/H &asymp; 0.64
       at Re=100 &rarr; 0.58 at Re=400), matching the steady-state trend above.
     </p>
-
-    <div class="fv-stage">
-      <canvas id="pinnCanvas" class="fv-canvas" width="96" height="96"></canvas>
-    </div>
-
-    <div class="fv-controls">
-      <button class="fv-btn" id="pinnPlay">&#9654; Play</button>
-      <input type="range" id="pinnScrubber" min="0" max="50" value="0" class="fv-slider">
-      <span class="fv-frame" id="pinnFrameLabel">Frame 0 / 50</span>
-    </div>
-
-    <div class="fv-controls">
-      <div class="fv-group" id="pinnReGroup">
-        <span class="fv-label-txt">Re</span>
-        <button class="fv-btn fv-re active" data-re="100">100</button>
-        <button class="fv-btn fv-re" data-re="400">400</button>
-        <button class="fv-btn fv-re" data-re="1000">1000</button>
-      </div>
-    </div>
-
-    <p class="fv-note" id="fvStatus"></p>
 
     <h3>Steady-State Accuracy Summary</h3>
 
@@ -606,208 +563,64 @@
   </footer>
 
   <script src="assets/js/slider.js"></script>
-  <script src="assets/js/colormaps.js"></script>
-  <script src="assets/js/flow-viewer.js"></script>
-  <script src="assets/js/pinn-inference.js"></script>
   <script>
-    const CASE_CONFIG = {
-      paramLabel: 'Re',
-      reValues: [100, 400, 1000],
-      stats: {
-        100: { re: 100, cd: '--', cl: '--', st: '--', xr: '--' },
-        400: { re: 400, cd: '--', cl: '--', st: '--', xr: '--' },
-        1000: { re: 1000, cd: '--', cl: '--', st: '--', xr: '--' },
-      }
-    };
-
-    let currentRe = CASE_CONFIG.reValues[0];
-    // Hook the unified Re selector uses to drive the LBM evolution animation.
-    let vfOnReChange = null;
-
-    function imageUrl(re, type) {
-      return 'assets/images/cavity/simulations/re' + re + '/re' + re + '_' + type + '.png';
-    }
-
-    function makePlaceholder(re, type) {
-      return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">' +
-        '<rect width="400" height="400" fill="#0d1117"/>' +
-        '<rect x="10" y="10" width="380" height="380" fill="none" stroke="#484f58" stroke-width="2"/>' +
-        '<text x="200" y="190" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
-        'Cavity Re=' + re + ' ' + type + '</text>' +
-        '<text x="200" y="210" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
-        '(simulation running, placeholder)</text></svg>'
-      );
-    }
-
-    function updateImages(re) {
-      var before = document.getElementById('sliderImgBefore');
-      var after = document.getElementById('sliderImgAfter');
-      before.onerror = function () { this.src = makePlaceholder(re, 'contour'); };
-      after.onerror = function () { this.src = makePlaceholder(re, 'streamlines'); };
-      before.src = imageUrl(re, 'contour');
-      after.src = imageUrl(re, 'streamlines');
-    }
-
-    function updateStats(re) {
-      var s = CASE_CONFIG.stats[re];
-      if (!s) return;
-    }
-
-    function switchRe(re) {
-      currentRe = re;
-      document.querySelectorAll('#reTabs .teaser-link').forEach(function (btn) {
-        var rm = btn.textContent.match(/\d+/);
-        var br = rm ? parseInt(rm[0]) : 0;
-        btn.classList.toggle('active', br === re);
-      });
-      updateImages(re);
-      updateStats(re);
-      setTimeout(function () {
-        var c = document.getElementById('fieldSlider');
-        var h = c.querySelector('.slider-handle');
-        var a = c.querySelector('.img-after');
-        if (h) h.style.left = '50%';
-        if (a) a.style.clipPath = 'inset(0 50% 0 0)';
-      }, 200);
-      // Drive the LBM evolution animation from the same selector and auto-play.
-      if (vfOnReChange) vfOnReChange(re);
-    }
-
-    var rc = document.getElementById('reTabs');
-    CASE_CONFIG.reValues.forEach(function (re) {
-      var btn = document.createElement('button');
-      btn.className = 'teaser-link' + (re === currentRe ? ' active' : '');
-      btn.textContent = CASE_CONFIG.paramLabel + ' = ' + re;
-      btn.style.fontSize = '0.7em';
-      btn.onclick = function () { switchRe(re); };
-      rc.appendChild(btn);
-    });
-
-    updateImages(currentRe);
-    updateStats(currentRe);
-
-    /* ---- Interactive Flow Viewer (LBM Evolution + PINN Prediction) ---- */
     (function () {
-      // Single colormap for EVERY plot + animation on this case, so the
-      // static field, the LBM evolution, and the PINN prediction all read
-      // the same way. Turbo (perceptually-improved rainbow) for cavity.
-      var CASE_CMAP = 'jet';
-      var DATA_DIR = 'assets/data/cavity';
-      var lbmCanvas = document.getElementById('lbmCanvas');
-      var pinnCanvas = document.getElementById('pinnCanvas');
-      var viewer = new FlowViewer(lbmCanvas, DATA_DIR, { cmap: CASE_CMAP });
+      var reValues = [100, 400, 1000];
+      var currentRe = reValues[0];
 
-      // Live temporal PINN surrogate: runs the trained ParametricPINN (ONNX)
-      // in-browser at ANY Reynolds number in [100, 1000], animating the
-      // transient evolution frame-by-frame.
-      var pinn = new PinnSurrogate(pinnCanvas, { dataDir: DATA_DIR, cmap: CASE_CMAP });
-
-      var statusEl = document.getElementById('fvStatus');
-      viewer.onStatus = function (m) { if (statusEl) statusEl.textContent = m; };
-      pinn.onStatus = function (m) { if (statusEl) statusEl.textContent = m; };
-
-      viewer.onFrameChange = function (f) {
-        var lbl = document.getElementById('lbmFrameLabel');
-        if (lbl && viewer.cache[viewer.re]) {
-          lbl.textContent = 'Frame ' + f + ' / ' + (viewer.cache[viewer.re].lbm.n_frames - 1);
-          var scr = document.getElementById('lbmScrubber');
-          if (scr) { scr.max = viewer.cache[viewer.re].lbm.n_frames - 1; scr.value = f; }
-        }
-      };
-
-      pinn.onFrameChange = function (f) {
-        var lbl = document.getElementById('pinnFrameLabel');
-        if (lbl) lbl.textContent = 'Frame ' + f + ' / ' + (pinn.nFrames - 1);
-        var scr = document.getElementById('pinnScrubber');
-        if (scr) { scr.max = pinn.nFrames - 1; scr.value = f; }
-      };
-
-      // Render static pressure + vorticity canvases
-      function renderStaticFields(frame) {
-        var entry = viewer.cache[viewer.re];
-        if (!entry) return;
-        var f = (frame !== undefined) ? frame : entry.lbm.n_frames - 1;
-        var cpCanvas = document.getElementById('cpCanvas');
-        var oCanvas = document.getElementById('vorticityCanvas');
-        if (cpCanvas && entry.pmin !== undefined) {
-          viewer.renderStatic(cpCanvas, 2, 'jet', entry.pmin, entry.pmax, f);
-        }
-        if (oCanvas && entry.omegaMax !== undefined) {
-          viewer.renderStatic(oCanvas, 3, 'rdbu', -entry.omegaMax, entry.omegaMax, f);
-        }
+      function imageUrl(re, type) {
+        return 'assets/images/cavity/simulations/re' + re + '/re' + re + '_' + type + '.png';
       }
 
-      // Unified Re selector (Velocity Field) drives the LBM evolution: load the
-      // matching frame set and auto-play so the animation tracks the static plot.
-      vfOnReChange = function (re) {
-        viewer.setRe(re).then(function () {
-          if (!viewer.playing) viewer.play();
-          var pb = document.getElementById('lbmPlay');
-          if (pb) pb.innerHTML = '&#10074;&#10074; Pause';
-          renderStaticFields();
+      function makePlaceholder(re, type) {
+        return 'data:image/svg+xml,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">' +
+          '<rect width="400" height="400" fill="#0d1117"/>' +
+          '<rect x="10" y="10" width="380" height="380" fill="none" stroke="#484f58" stroke-width="2"/>' +
+          '<text x="200" y="190" fill="#484f58" font-family="monospace" font-size="14" text-anchor="middle">' +
+          'Cavity Re=' + re + ' ' + type + '</text>' +
+          '<text x="200" y="210" fill="#30363d" font-family="monospace" font-size="11" text-anchor="middle">' +
+          '(simulation data)</text></svg>'
+        );
+      }
+
+      function updateImages(re) {
+        var before = document.getElementById('sliderImgBefore');
+        var after = document.getElementById('sliderImgAfter');
+        before.onerror = function () { this.src = makePlaceholder(re, 'contour'); };
+        after.onerror = function () { this.src = makePlaceholder(re, 'streamlines'); };
+        before.src = imageUrl(re, 'contour');
+        after.src = imageUrl(re, 'streamlines');
+      }
+
+      function switchRe(re) {
+        currentRe = re;
+        document.querySelectorAll('#reTabs .teaser-link').forEach(function (btn) {
+          var rm = btn.textContent.match(/\d+/);
+          var br = rm ? parseInt(rm[0]) : 0;
+          btn.classList.toggle('active', br === re);
         });
-      };
+        updateImages(re);
+        setTimeout(function () {
+          var c = document.getElementById('fieldSlider');
+          var h = c.querySelector('.slider-handle');
+          var a = c.querySelector('.img-after');
+          if (h) h.style.left = '50%';
+          if (a) a.style.clipPath = 'inset(0 50% 0 0)';
+        }, 200);
+      }
 
-      viewer.onFrameChange = (function(orig) {
-        return function(f) {
-          if (orig) orig(f);
-          renderStaticFields(f);
-        };
-      })(viewer.onFrameChange);
-
-      // Re buttons (PINN section) -- discrete Re, matching the LBM section.
-      document.querySelectorAll('#pinnReGroup .fv-re').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          document.querySelectorAll('#pinnReGroup .fv-re').forEach(function (b) {
-            b.classList.remove('active');
-          });
-          btn.classList.add('active');
-          pinn.setRe(parseInt(btn.getAttribute('data-re'), 10));
-        });
+      var rc = document.getElementById('reTabs');
+      reValues.forEach(function (re) {
+        var btn = document.createElement('button');
+        btn.className = 'teaser-link' + (re === currentRe ? ' active' : '');
+        btn.textContent = 'Re = ' + re;
+        btn.style.fontSize = '0.7em';
+        btn.onclick = function () { switchRe(re); };
+        rc.appendChild(btn);
       });
 
-      // LBM play / pause
-      document.getElementById('lbmPlay').addEventListener('click', function () {
-        var playing = viewer.togglePlay();
-        this.innerHTML = playing ? '&#10074;&#10074; Pause' : '&#9654; Play';
-      });
-
-      // LBM scrubber
-      document.getElementById('lbmScrubber').addEventListener('input', function () {
-        viewer.pause();
-        var pb = document.getElementById('lbmPlay');
-        if (pb) pb.innerHTML = '&#9654; Play';
-        viewer.setFrame(parseInt(this.value, 10));
-      });
-
-      // PINN play / pause
-      document.getElementById('pinnPlay').addEventListener('click', function () {
-        var playing = pinn.togglePlay();
-        this.innerHTML = playing ? '&#10074;&#10074; Pause' : '&#9654; Play';
-      });
-
-      // PINN scrubber
-      document.getElementById('pinnScrubber').addEventListener('input', function () {
-        pinn.pause();
-        var pb = document.getElementById('pinnPlay');
-        if (pb) pb.innerHTML = '&#9654; Play';
-        pinn.setFrame(parseInt(this.value, 10));
-      });
-
-      // Boot
-      viewer.init(100).then(function () {
-        viewer.play();
-        document.getElementById('lbmPlay').innerHTML = '&#10074;&#10074; Pause';
-        viewer.load(400);  // preload Re=400
-      });
-      pinn.init().then(function () {
-        pinn.setRe(100);
-        pinn.play();
-        document.getElementById('pinnPlay').innerHTML = '&#10074;&#10074; Pause';
-      }).catch(function (e) {
-        console.error('PINN surrogate init failed:', e);
-      });
+      updateImages(currentRe);
     })();
   </script>
 

@@ -93,10 +93,15 @@ export class Renderer {
     }
 
     // 1. Contour (opaque background)
+    // Map field type to analytic colormap index: 0=jet, 1=coolwarm, 2=rdbu
+    let cmapType = 0;
+    if (config.field === 'pressure') cmapType = 1;
+    else if (config.field === 'vorticity') cmapType = 2;
+
     this.contourPass.uploadField(fieldData, this.nx, this.ny);
     this.contourPass.render(
       proj,
-      this.cmap,
+      cmapType,
       config.colorRange.min,
       config.colorRange.max,
       this.nx,
