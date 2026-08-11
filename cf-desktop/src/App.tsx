@@ -84,12 +84,17 @@ function App() {
   // Auto-navigate to Results tab when simulation completes
   const wasRunningRef = useRef(false);
   useEffect(() => {
-    if (wasRunningRef.current && !sim.running && sim.frameData) {
+    if (wasRunningRef.current && !sim.running && sim.frames.length > 0) {
+      // Navigate to Results as soon as frames are available (don't wait for frameData)
       viz.setViewMode('results');
       viz.setVizMode('interactive');
+      // Ensure frameIndex is set to last frame for immediate display
+      if (sim.frameIndex < sim.frames.length - 1) {
+        sim.setFrameIndex(sim.frames.length - 1);
+      }
     }
     wasRunningRef.current = sim.running;
-  }, [sim.running, sim.frameData, viz]);
+  }, [sim.running, sim.frames.length, viz]);
 
   // Responsive canvas: measure container and compute display size
   useEffect(() => {

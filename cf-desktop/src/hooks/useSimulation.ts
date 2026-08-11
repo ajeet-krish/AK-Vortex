@@ -194,6 +194,29 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         return () => clearInterval(timer);
     }, [running]);
 
+    // Eagerly load frame data when frames list changes (fixes black screen on Results tab)
+    // This ensures frameData is available immediately when the user switches to Results
+    useEffect(() => {
+        if (frames.length === 0 || !outputDir) return;
+        // If frameData is null and we have frames, load the current frameIndex
+        if (frameData === null && frameIndex >= 0 && frameIndex < frames.length) {
+            const step = frames[frameIndex];
+            if (step !== undefined) {
+                invoke<number[]>("read_frame_binary", { path: outputDir, step })
+                    .then((bytes) => {
+                        const buf = new Uint8Array(bytes).buffer;
+                        const data = parseBinaryFrame(buf);
+                        setFrameData(data);
+                    })
+                    .catch(() => {
+                        invoke<{nx:number;ny:number;velocity:number[];u:number[];v:number[];rho:number[];p:number[];omega:number[];obstacle:number[]}>('read_frame_json', { path: outputDir, step })
+                            .then((json) => setFrameData(wrapFrameData(json)))
+                            .catch((e) => console.error(e));
+                    });
+            }
+        }
+    }, [frames, outputDir, frameIndex, frameData]);
+
     const runSimulation = useCallback(async () => {
         setRunning(true);
         setCanCancel(true);

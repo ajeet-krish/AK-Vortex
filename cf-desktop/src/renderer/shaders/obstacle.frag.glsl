@@ -6,7 +6,9 @@ uniform sampler2D u_obsTex;
 uniform vec2 u_gridSize;
 void main() {
     vec2 cellSize = 1.0 / u_gridSize;
-    vec2 cell = (floor(v_uv * u_gridSize) + 0.5) * cellSize;
+    // Flip Y to match projection matrix (Y-flip in Viewport.getProjectionMatrix)
+    vec2 flippedUV = vec2(v_uv.x, 1.0 - v_uv.y);
+    vec2 cell = (floor(flippedUV * u_gridSize) + 0.5) * cellSize;
     float obs = texture(u_obsTex, cell).r;
     if (obs < 0.5) discard;
     float obsL = texture(u_obsTex, cell + vec2(-cellSize.x, 0.0)).r;
