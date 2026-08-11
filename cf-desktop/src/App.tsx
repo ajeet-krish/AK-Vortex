@@ -16,7 +16,7 @@ import { wrapFrameData } from './utils/binaryFrame';
 function App() {
   // Geometry editor state (local to layout)
   const [shapes, setShapes] = useState<Shape[]>([]);
-  const [, setSelectedShapeId] = useState<string | null>(null);
+  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
 
   // Hooks
   const sim = useSimulation(shapes);
@@ -295,6 +295,7 @@ function App() {
     sim.resetSimulation();
     playback.stopPlayback();
     setShapes([]);
+    setSelectedShapeId(null);
     viz.setViewMode('domain');
     viz.setVizMode('interactive');
     viz.setCompareMode(false);
@@ -302,11 +303,31 @@ function App() {
     viz.setReportPlots(null);
   }, [sim, playback, viz]);
 
+  const handleDeleteShape = useCallback((id: string) => {
+    setShapes((prev) => prev.filter((s) => s.id !== id));
+    setSelectedShapeId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const handleDuplicateShape = useCallback((id: string) => {
+    setShapes((prev) => {
+      const original = prev.find((s) => s.id === id);
+      if (!original) return prev;
+      const copy: Shape = {
+        ...original,
+        id: Date.now().toString(),
+        name: `${original.name} Copy`,
+        x: original.x + 20,
+        y: original.y + 20,
+        points: original.points ? original.points.map((p) => ({ x: p.x + 20, y: p.y + 20 })) : undefined,
+      };
+      return [...prev, copy];
+    });
+  }, []);
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>AK-Vortex Desktop CFD</h1>
-        <span className="subtitle">Lattice Boltzmann Method Solver</span>
+        <h1>AK-Vortex</h1>
         <div className="header-toolbar">
           <button className="header-btn" onClick={handleReset} title="New Simulation">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -338,20 +359,6 @@ function App() {
               Cancel
             </button>
           )}
-          <div className="header-separator" />
-          <button className="header-btn" onClick={handleExportPng} disabled={!sim.frameData} title="Export PNG">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <path d="M7 2v7M4 6l3 3 3-3M2 10v1.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V10" />
-            </svg>
-            PNG
-          </button>
-          <button className="header-btn" onClick={handleExportVtk} disabled={!sim.outputDir} title="Export VTK">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <rect x="2" y="2" width="10" height="10" rx="1" />
-              <path d="M2 7h10M7 2v10" />
-            </svg>
-            VTK
-          </button>
         </div>
       </header>
 
@@ -381,6 +388,10 @@ function App() {
             handleExportVtk={handleExportVtk}
             probe={viz.probe}
             shapes={shapes}
+            selectedShapeId={selectedShapeId}
+            onSelectShape={setSelectedShapeId}
+            onDeleteShape={handleDeleteShape}
+            onDuplicateShape={handleDuplicateShape}
             compareMode={viz.compareMode}
             loadComparison={loadComparison}
             unloadComparison={unloadComparison}

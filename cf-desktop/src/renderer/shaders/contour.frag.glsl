@@ -29,15 +29,16 @@ vec3 coolwarm(float t) {
     }
 }
 
-// Analytic RdBu colormap (red-white-blue diverging)
+// Analytic RdBu colormap (blue-white-red diverging)
+// t=0: blue (negative), t=1: red (positive)
 vec3 rdbu(float t) {
-    vec3 red = vec3(0.698, 0.031, 0.149);
-    vec3 white = vec3(1.0);
     vec3 blue = vec3(0.031, 0.239, 0.557);
+    vec3 white = vec3(1.0);
+    vec3 red = vec3(0.698, 0.031, 0.149);
     if (t < 0.5) {
-        return mix(red, white, t * 2.0);
+        return mix(blue, white, t * 2.0);
     } else {
-        return mix(white, blue, (t - 0.5) * 2.0);
+        return mix(white, red, (t - 0.5) * 2.0);
     }
 }
 

@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import type { Shape } from './GeometryEditor';
 import type { ProbeInfo, SimConfig, GridConfig, SystemInfo } from '../types';
 import GridConfigPanel from './GridConfigPanel';
+import ObstacleTree from './ObstacleTree';
+import ValidatedInput from './ValidatedInput';
 
 interface SimProgress {
     step: number;
@@ -40,6 +42,10 @@ interface FeatureTreeProps {
     handleExportVtk: () => void;
     probe: ProbeInfo | null;
     shapes: Shape[];
+    selectedShapeId: string | null;
+    onSelectShape: (id: string | null) => void;
+    onDeleteShape: (id: string) => void;
+    onDuplicateShape: (id: string) => void;
     compareMode: boolean;
     loadComparison: () => void;
     unloadComparison: () => void;
@@ -100,38 +106,6 @@ const IconProbe = () => (
     </svg>
 );
 
-const IconCircle = () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <circle cx="6" cy="6" r="4" stroke="#4ec9b0" strokeWidth="1" />
-    </svg>
-);
-
-const IconRect = () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <rect x="2" y="2" width="8" height="8" stroke="#569cd6" strokeWidth="1" />
-    </svg>
-);
-
-const IconPoly = () => (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <polygon points="6,1 11,5 9,11 3,11 1,5" stroke="#c586c0" strokeWidth="1" fill="none" />
-    </svg>
-);
-
-const shapeIcon = (type: string) => {
-    switch (type) {
-        case 'circle': return <IconCircle />;
-        case 'rectangle': return <IconRect />;
-        default: return <IconPoly />;
-    }
-};
-
-const shapeLabel = (s: Shape): string => {
-    if (s.type === 'circle') return `${s.name}  r=${s.radius?.toFixed(0)}`;
-    if (s.type === 'rectangle') return `${s.name}  ${s.width?.toFixed(0)}x${s.height?.toFixed(0)}`;
-    return `${s.name}  (${s.points?.length} pts)`;
-};
-
 /* ------------------------------------------------------------------ */
 /*  Collapsible Section                                                */
 /* ------------------------------------------------------------------ */
@@ -178,45 +152,6 @@ function TreeItem({ label, children, indent = 0 }: { label: string; children: Re
 }
 
 /* ------------------------------------------------------------------ */
-/*  Selectable Item (for obstacles)                                    */
-/* ------------------------------------------------------------------ */
-
-function TreeSelectableItem({
-    icon,
-    label,
-    selected,
-    onClick,
-    onDelete,
-}: {
-    icon: ReactNode;
-    label: string;
-    selected: boolean;
-    onClick: () => void;
-    onDelete?: () => void;
-}) {
-    return (
-        <div
-            className={`tree-item tree-item-selectable ${selected ? 'selected' : ''}`}
-            onClick={onClick}
-        >
-            <span className="tree-item-icon">{icon}</span>
-            <span className="tree-item-label">{label}</span>
-            {onDelete && (
-                <button
-                    className="tree-item-delete"
-                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                    title="Delete"
-                >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
-                        <path d="M2 2l6 6M8 2l-6 6" />
-                    </svg>
-                </button>
-            )}
-        </div>
-    );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Main Feature Tree                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -244,6 +179,10 @@ export default function FeatureTree({
     handleExportVtk,
     probe,
     shapes,
+    selectedShapeId,
+    onSelectShape,
+    onDeleteShape,
+    onDuplicateShape,
     compareMode,
     loadComparison,
     unloadComparison,
@@ -263,7 +202,7 @@ export default function FeatureTree({
                     <rect x="1" y="1" width="12" height="12" rx="2" fill="#0078d4" opacity="0.2" stroke="#0078d4" strokeWidth="0.8" />
                     <text x="7" y="10" textAnchor="middle" fill="#0078d4" fontSize="7" fontWeight="600">L2</text>
                 </svg>
-                <span className="tree-root-label">AK-Vortex Desktop CFD</span>
+                <span className="tree-root-label">AK-Vortex</span>
             </div>
 
             {/* ============================================================ */}
@@ -294,72 +233,76 @@ export default function FeatureTree({
                         disabled={running}
                     />
                 </TreeItem>
+            </TreeSection>
 
-                {config.caseType === 'custom' && shapes.length > 0 && (
-                    <div className="tree-subgroup">
-                        <div className="tree-subgroup-header">Obstacles ({shapes.length})</div>
-                        {shapes.map((s) => (
-                            <TreeSelectableItem
-                                key={s.id}
-                                icon={shapeIcon(s.type)}
-                                label={shapeLabel(s)}
-                                selected={false}
-                                onClick={() => {}}
-                            />
-                        ))}
-                    </div>
-                )}
+            {/* ============================================================ */}
+            {/*  OBSTACLES (dedicated tree section)                          */}
+            {/* ============================================================ */}
+            <TreeSection
+                icon={<IconGeometry />}
+                label="Obstacles"
+                defaultOpen={shapes.length > 0}
+                badge={shapes.length > 0 ? String(shapes.length) : undefined}
+            >
+                <ObstacleTree
+                    shapes={shapes}
+                    selectedId={selectedShapeId}
+                    onSelect={onSelectShape}
+                    onDelete={onDeleteShape}
+                    onDuplicate={onDuplicateShape}
+                    disabled={running}
+                />
             </TreeSection>
 
             {/* ============================================================ */}
             {/*  PHYSICS                                                      */}
             {/* ============================================================ */}
-            <TreeSection icon={<IconPhysics />} label="Physics" defaultOpen={true}>
+            <TreeSection icon={<IconPhysics />} label="Physics" defaultOpen={false}>
                 <TreeItem label="Reynolds">
-                    <input
-                        type="number"
-                        className="tree-num-input"
-                        min="10"
-                        max="2000"
-                        step="10"
+                    <ValidatedInput
                         value={config.re}
-                        onChange={(e) => setConfig({ ...config, re: Math.max(10, Math.min(2000, +e.target.value || 10)) })}
+                        min={10}
+                        max={2000}
+                        step={10}
+                        label=""
+                        onChange={(val) => setConfig({ ...config, re: val })}
+                        disabled={running}
                     />
                 </TreeItem>
 
                 <TreeItem label="Inflow">
-                    <input
-                        type="number"
-                        className="tree-num-input"
-                        min="0.001"
-                        max="0.5"
-                        step="0.001"
+                    <ValidatedInput
                         value={config.uInflow}
-                        onChange={(e) => setConfig({ ...config, uInflow: Math.max(0.001, Math.min(0.5, +e.target.value || 0.01)) })}
+                        min={0.001}
+                        max={0.5}
+                        step={0.001}
+                        label=""
+                        onChange={(val) => setConfig({ ...config, uInflow: val })}
+                        disabled={running}
                     />
                 </TreeItem>
 
                 <TreeItem label="Max Steps">
-                    <input
-                        type="number"
-                        className="tree-num-input"
-                        min="1000"
-                        max="100000"
-                        step="1000"
+                    <ValidatedInput
                         value={config.maxSteps}
-                        onChange={(e) => setConfig({ ...config, maxSteps: Math.max(1000, Math.min(100000, +e.target.value || 1000)) })}
+                        min={1000}
+                        max={100000}
+                        step={1000}
+                        label=""
+                        onChange={(val) => setConfig({ ...config, maxSteps: val })}
+                        disabled={running}
                     />
                 </TreeItem>
 
                 <TreeItem label="Save Interval">
-                    <input
-                        type="number"
-                        className="tree-num-input"
-                        min="100"
-                        max="10000"
-                        step="100"
+                    <ValidatedInput
                         value={config.saveInterval}
-                        onChange={(e) => setConfig({ ...config, saveInterval: Math.max(100, Math.min(10000, +e.target.value || 1000)) })}
+                        min={100}
+                        max={10000}
+                        step={100}
+                        label=""
+                        onChange={(val) => setConfig({ ...config, saveInterval: val })}
+                        disabled={running}
                     />
                 </TreeItem>
             </TreeSection>
@@ -370,7 +313,7 @@ export default function FeatureTree({
             <TreeSection
                 icon={<IconSolver />}
                 label="Solver"
-                defaultOpen={true}
+                defaultOpen={false}
                 badge={running ? 'Running' : hasResults ? 'Complete' : 'Ready'}
             >
                 {running ? (

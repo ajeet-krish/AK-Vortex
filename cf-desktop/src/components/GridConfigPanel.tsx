@@ -118,13 +118,6 @@ export default function GridConfigPanel({
     onGridConfigChange({ ...gridConfig, ny, lockAspectRatio: newLock });
   }, [caseType, gridConfig, onGridConfigChange]);
 
-  // --- Memory bar color ---
-  const memoryBarColor = validation.ramPercent > 80
-    ? 'var(--danger)'
-    : validation.ramPercent > 50
-      ? 'var(--warning)'
-      : 'var(--success)';
-
   const totalNodes = gridConfig.nx * gridConfig.ny;
   const totalNodesDisplay =
     totalNodes >= 1_000_000
@@ -135,20 +128,18 @@ export default function GridConfigPanel({
 
   return (
     <div className="grid-config-panel">
-      {/* ---- Quality Presets ---- */}
-      <div className="gcp-presets">
-        {GRID_PRESETS.map((preset) => (
+      {/* ---- Quality Presets (2x2 grid) ---- */}
+      <div className="gcp-presets-grid">
+        {GRID_PRESETS.filter((p) => p.name !== 'custom').map((preset) => (
           <button
             key={preset.name}
-            className={`gcp-preset-btn ${gridConfig.quality === preset.name ? 'active' : ''}`}
+            className={`gcp-preset ${gridConfig.quality === preset.name ? 'active' : ''}`}
             onClick={() => handlePresetChange(preset.name)}
             disabled={disabled}
             title={preset.description}
           >
-            <span className="gcp-preset-label">{preset.label}</span>
-            {preset.name !== 'custom' && (
-              <span className="gcp-preset-scale">{preset.scale}x</span>
-            )}
+            <span className="gcp-preset-name">{preset.label}</span>
+            <span className="gcp-preset-desc">{preset.scale}x</span>
           </button>
         ))}
       </div>
@@ -207,8 +198,8 @@ export default function GridConfigPanel({
         </div>
       </div>
 
-      {/* ---- Summary Stats ---- */}
-      <div className="gcp-stats">
+      {/* ---- Compact Stats (cells + aspect only) ---- */}
+      <div className="gcp-stats-compact">
         <div className="gcp-stat">
           <span className="gcp-stat-label">Cells</span>
           <span className="gcp-stat-value">{totalNodesDisplay}</span>
@@ -216,36 +207,10 @@ export default function GridConfigPanel({
         <div className="gcp-stat">
           <span className="gcp-stat-label">Aspect</span>
           <span className="gcp-stat-value">
-            {(gridConfig.nx / gridConfig.ny).toFixed(2)}:1
+            {(gridConfig.nx / gridConfig.ny).toFixed(1)}:1
           </span>
         </div>
-        <div className="gcp-stat">
-          <span className="gcp-stat-label">Memory</span>
-          <span className="gcp-stat-value">{validation.memoryDisplay}</span>
-        </div>
-        <div className="gcp-stat">
-          <span className="gcp-stat-label">Runtime</span>
-          <span className="gcp-stat-value">{validation.runtimeDisplay}</span>
-        </div>
       </div>
-
-      {/* ---- Memory Bar ---- */}
-      {systemInfo && (
-        <div className="gcp-memory-bar-container">
-          <div className="gcp-memory-bar-label">
-            RAM: {validation.ramPercent.toFixed(0)}% of available
-          </div>
-          <div className="gcp-memory-bar-track">
-            <div
-              className="gcp-memory-bar-fill"
-              style={{
-                width: `${Math.min(100, validation.ramPercent)}%`,
-                background: memoryBarColor,
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* ---- Validation Messages ---- */}
       {validation.errors.length > 0 && (

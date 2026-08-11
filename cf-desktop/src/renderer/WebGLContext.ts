@@ -8,7 +8,7 @@ export function createGLContext(canvas: HTMLCanvasElement): GLContext {
 
   const gl = canvas.getContext('webgl2', {
     alpha: false,
-    antialias: true,
+    antialias: false,
     premultipliedAlpha: false,
   }) as WebGL2RenderingContext;
 

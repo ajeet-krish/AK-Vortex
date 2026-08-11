@@ -680,15 +680,6 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
         setDrawCurrent(null);
     };
 
-    const deleteShape = (id: string) => {
-        const updated = shapes.filter((s) => s.id !== id);
-        setShapes(updated);
-        setSelectedId(null);
-        onSelectionChange?.(null);
-        setCollisionWarning(null);
-        onGeometryChange(updated);
-    };
-
     const clearAll = () => {
         setShapes([]);
         setPolygonPoints([]);
@@ -916,29 +907,6 @@ export default function GeometryEditor({ nx, ny, onGeometryChange, onSelectionCh
             {activeTool === 'move' && !draggingId && (
                 <div className="editor-hint">
                     Click and drag shapes to reposition them.
-                </div>
-            )}
-
-            {shapes.length > 0 && (
-                <div className="shape-list">
-                    <h3>Obstacles ({shapes.length})</h3>
-                    {shapes.map((shape) => (
-                        <div
-                            key={shape.id}
-                            className={`shape-item ${selectedId === shape.id ? 'selected' : ''}`}
-                            onClick={() => { setSelectedId(shape.id); onSelectionChange?.(shape.id); }}
-                        >
-                            <span className="shape-info">
-                                {shape.name}
-                                {shape.type === 'circle' && ` (r=${shape.radius?.toFixed(0)})`}
-                                {shape.type === 'rectangle' && ` (${shape.width?.toFixed(0)}x${shape.height?.toFixed(0)})`}
-                                {shape.type === 'polygon' && ` (${shape.points?.length} pts)`}
-                            </span>
-                            <button className="shape-delete" onClick={() => deleteShape(shape.id)}>
-                                x
-                            </button>
-                        </div>
-                    ))}
                 </div>
             )}
         </div>

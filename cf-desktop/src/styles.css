@@ -64,12 +64,6 @@ body {
   white-space: nowrap;
 }
 
-.subtitle {
-  color: var(--text-muted);
-  font-size: 11px;
-  margin-left: auto;
-}
-
 /* Header Toolbar Buttons */
 .header-toolbar {
   display: flex;
@@ -486,6 +480,10 @@ canvas {
   display: flex;
   gap: 4px;
   align-items: center;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
 }
 
 .tool-group {
@@ -2010,56 +2008,6 @@ canvas {
   padding: 4px 0;
 }
 
-/* Quality Preset Pills */
-.gcp-presets {
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-}
-
-.gcp-preset-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 4px 8px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-secondary);
-  font-size: 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  flex: 1;
-  min-width: 0;
-}
-
-.gcp-preset-btn:hover:not(:disabled) {
-  background: var(--border);
-  color: var(--text-primary);
-}
-
-.gcp-preset-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.gcp-preset-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.gcp-preset-label {
-  font-weight: 600;
-  font-size: 10px;
-}
-
-.gcp-preset-scale {
-  font-size: 9px;
-  opacity: 0.7;
-}
-
 /* Grid Dimension Inputs */
 .gcp-dimensions {
   display: flex;
@@ -2133,61 +2081,6 @@ canvas {
   cursor: not-allowed;
 }
 
-/* Summary Stats */
-.gcp-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-}
-
-.gcp-stat {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 3px 6px;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-}
-
-.gcp-stat-label {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.gcp-stat-value {
-  font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-primary);
-}
-
-/* Memory Bar */
-.gcp-memory-bar-container {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.gcp-memory-bar-label {
-  font-size: 9px;
-  color: var(--text-muted);
-}
-
-.gcp-memory-bar-track {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.gcp-memory-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
 /* Validation Messages */
 .gcp-errors,
 .gcp-warnings {
@@ -2232,4 +2125,198 @@ canvas {
 
 .gcp-case-info-label {
   font-weight: 500;
+}
+
+/* ==========================================================================
+   Grid Presets (2x2 layout)
+   ========================================================================== */
+
+.gcp-presets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.gcp-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.gcp-preset:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.gcp-preset.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.gcp-preset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gcp-preset-name {
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.gcp-preset-desc {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* ==========================================================================
+   Compact Stats (cells + aspect only)
+   ========================================================================== */
+
+.gcp-stats-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+/* ==========================================================================
+   Validated Input
+   ========================================================================== */
+
+.validated-input-wrapper {
+  position: relative;
+}
+
+.validated-input-label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.validated-input-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tree-num-input.invalid {
+  border-color: var(--danger);
+  background: rgba(244, 67, 54, 0.08);
+}
+
+.tree-num-unit {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.input-tooltip {
+  position: absolute;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-primary);
+  z-index: 100;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ==========================================================================
+   Obstacle Tree
+   ========================================================================== */
+
+.obstacle-tree {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-section-header {
+  padding: 5px 12px 3px 28px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.obstacle-icon {
+  width: 14px;
+  text-align: center;
+  color: var(--accent);
+}
+
+.obstacle-summary {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ==========================================================================
+   Context Menu
+   ========================================================================== */
+
+.context-menu {
+  position: fixed;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 0;
+  z-index: 200;
+  min-width: 120px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.context-menu-item:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.context-menu-item.danger {
+  color: var(--danger);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* ==========================================================================
+   Sidebar + Content overflow fixes
+   ========================================================================== */
+
+.sidebar {
+  overflow-x: hidden;
+}
+
+.content {
+  overflow: hidden;
 }
