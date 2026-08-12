@@ -402,6 +402,7 @@ body {
   background: var(--bg-canvas);
   overflow: hidden;
   min-height: 0;
+  height: 100%;
 }
 
 /* View Mode Tabs */
@@ -450,6 +451,7 @@ body {
   padding: 8px 16px;
   min-height: 0;
   overflow: hidden;
+  height: 100%;
 }
 
 .visualization h2 {
@@ -660,6 +662,7 @@ canvas {
   flex: 1;
   min-height: 200px;
   overflow: hidden;
+  height: 100%;
 }
 
 .flow-canvas-container canvas {
