@@ -62,7 +62,7 @@ def main():
         if obs is not None:
             mask = np.ma.masked_where(~obs, np.ones_like(obs, float))
             ax.imshow(mask, origin="lower", cmap="gray_r", vmin=0, vmax=1,
-                     alpha=1.0, interpolation="nearest")
+                     alpha=1.0, interpolation="bilinear")
         cbar = fig.colorbar(im, ax=ax, shrink=0.82, pad=0.02)
         cbar.set_label("Velocity Magnitude (m/s)", color="black")
         save(os.path.join(IMG_DIR, f"re{re}_contour.png"), fig)
@@ -81,7 +81,7 @@ def main():
         if obs is not None:
             mask = np.ma.masked_where(~obs, np.ones_like(obs, float))
             ax.imshow(mask, origin="lower", cmap="gray_r", vmin=0, vmax=1,
-                     alpha=1.0, interpolation="nearest")
+                     alpha=1.0, interpolation="bilinear")
         cbar = fig.colorbar(sp.lines, ax=ax, shrink=0.82, pad=0.02)
         cbar.set_label("Velocity Magnitude (m/s)", color="black")
         save(os.path.join(IMG_DIR, f"re{re}_streamlines.png"), fig)

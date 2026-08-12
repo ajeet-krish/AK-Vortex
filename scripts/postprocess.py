@@ -105,7 +105,7 @@ def parse_json_frame(path: str) -> dict:
     nx = int(data.get('nx', 0))
     ny = int(data.get('ny', 0))
 
-    return {
+    result = {
         'nx': nx, 'ny': ny,
         'u': np.array(data.get('u', data.get('velocity', []))).reshape(ny, nx),
         'v': np.array(data.get('v', [])).reshape(ny, nx),
@@ -115,6 +115,13 @@ def parse_json_frame(path: str) -> dict:
         'obstacle': np.array(data.get('obstacle', [])).reshape(ny, nx),
         'velocity': np.array(data.get('velocity', [])).reshape(ny, nx),
     }
+
+    # Preserve obstacle_meta (circles/rectangles/polygons from C++ solver)
+    obstacle_meta = data.get('obstacle_meta')
+    if obstacle_meta:
+        result['obstacle_meta'] = obstacle_meta
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -323,11 +330,91 @@ def _draw_polygon_patch(ax, vertices, nx, ny):
                    linewidth=0.8, zorder=5)
     ax.add_patch(poly)
 
+def _read_obstacle_meta(frame_data):
+    """Extract geometry list from obstacle_meta in frame data.
+
+    Returns a list of dicts with keys matching the C++ solver output:
+      circles:    [{'cx', 'cy', 'r'}, ...]
+      rectangles: [{'x0', 'y0', 'w', 'h'}, ...]
+      polygons:   [{'vertices': [[x,y], ...]}, ...]
+
+    Returns None if no usable geometry is found.
+    """
+    meta = frame_data.get('obstacle_meta')
+    if not meta or not isinstance(meta, dict):
+        return None
+
+    geometry = []
+
+    for c in meta.get('circles', []):
+        geometry.append({
+            'type': 'circle',
+            'cx': float(c['cx']),
+            'cy': float(c['cy']),
+            'r': float(c['r']),
+        })
+
+    for r in meta.get('rectangles', []):
+        geometry.append({
+            'type': 'rectangle',
+            'x0': float(r['x0']),
+            'y0': float(r['y0']),
+            'w': float(r['w']),
+            'h': float(r['h']),
+        })
+
+    for p in meta.get('polygons', []):
+        geometry.append({
+            'type': 'polygon',
+            'vertices': p['vertices'],
+        })
+
+    return geometry if geometry else None
+
+
+def _extract_obstacle_contour(obstacle_mask, nx, ny):
+    """Extract smooth obstacle boundary from binary mask using contour.
+
+    Fallback when obstacle_meta is not available. Uses matplotlib contour
+    to extract a smooth boundary from the binary obstacle mask, producing
+    a vector PathPatch instead of a blocky pixel overlay.
+    """
+    from matplotlib.path import Path
+    from matplotlib.patches import PathPatch
+
+    fig_tmp, ax_tmp = plt.subplots()
+    obs_float = obstacle_mask.astype(float)
+    cs = ax_tmp.contour(obs_float, levels=[0.5])
+    plt.close(fig_tmp)
+
+    paths = []
+    for collection in cs.collections:
+        for p in collection.get_paths():
+            vertices = p.vertices
+            codes = p.codes
+            if codes is not None:
+                paths.append(Path(vertices, codes))
+            else:
+                paths.append(Path(vertices))
+
+    if not paths:
+        return None
+
+    combined = paths[0]
+    for p in paths[1:]:
+        combined = Path.make_compound_path(combined, p)
+
+    return PathPatch(combined, facecolor=OBSTACLE_COLOR, edgecolor='white',
+                     linewidth=0.8, zorder=5)
+
+
 def _overlay_obstacles(ax, obstacle_mask, nx=None, ny=None, geometry=None):
     """Draw obstacle regions with vector-geometry patches for crisp rendering.
-    
-    If geometry is provided, uses vector patches (Circle, Rectangle, Polygon).
-    Otherwise falls back to pixel mask overlay.
+
+    Priority:
+      1. obstacle_meta geometry (exact circles/rectangles/polygons)
+      2. Contour-based smooth boundary extraction from binary mask
+      3. Ultimate fallback: pixel mask overlay
     """
     if geometry:
         # Use vector-geometry patches for crisp rendering
@@ -342,11 +429,16 @@ def _overlay_obstacles(ax, obstacle_mask, nx=None, ny=None, geometry=None):
             elif gtype == 'polygon':
                 _draw_polygon_patch(ax, geom['vertices'], nx or 800, ny or 300)
     elif obstacle_mask is not None and obstacle_mask.size > 0:
-        # Fallback: pixel mask overlay
-        obs = np.ma.masked_where(~obstacle_mask, np.ones_like(obstacle_mask, dtype=float))
-        ax.imshow(obs, origin='lower', cmap='gray_r', aspect='auto',
-                  vmin=0, vmax=1, alpha=1.0,
-                  interpolation='nearest')
+        # Try contour-based smooth boundary first
+        patch = _extract_obstacle_contour(obstacle_mask, nx or 800, ny or 300)
+        if patch:
+            ax.add_patch(patch)
+        else:
+            # Ultimate fallback: pixel mask overlay
+            obs = np.ma.masked_where(~obstacle_mask, np.ones_like(obstacle_mask, dtype=float))
+            ax.imshow(obs, origin='lower', cmap='gray_r', aspect='auto',
+                      vmin=0, vmax=1, alpha=1.0,
+                      interpolation='nearest')
 
 
 # ---------------------------------------------------------------------------
@@ -419,6 +511,8 @@ def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field=
     if v.ndim == 1:
         v = v.reshape(data['ny'], data['nx'])
 
+    geometry = _read_obstacle_meta(data)
+
     field_label = 'Pressure' if field == 'rho' else 'Velocity Magnitude'
     vmax_val = max(vel.max(), 0.01)
     vmin_val = vel.min() if field == 'rho' else 0
@@ -426,11 +520,11 @@ def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field=
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 5))
     fig.patch.set_facecolor('white')
 
-    im = render_contour(ax1, vel, cmap_contour, vmin_val, vmax_val, obs, dpi=dpi)
+    im = render_contour(ax1, vel, cmap_contour, vmin_val, vmax_val, obs, geometry=geometry, dpi=dpi)
     cbar1 = plt.colorbar(im, ax=ax1, shrink=0.8)
     cbar1.set_label('Velocity Magnitude (m/s)', color='black')
 
-    sp, smag = render_streamlines(ax2, u, v, cmap_stream, obs)
+    sp, smag = render_streamlines(ax2, u, v, cmap_stream, obs, geometry=geometry)
     if sp and smag.size > 0:
         cbar2 = plt.colorbar(sp.lines, ax=ax2, shrink=0.8)
         cbar2.set_label('Velocity Magnitude (m/s)', color='black')
@@ -456,6 +550,8 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     if v.ndim == 1:
         v = v.reshape(data['ny'], data['nx'])
 
+    geometry = _read_obstacle_meta(data)
+
     field_label = 'Pressure' if field == 'rho' else 'Velocity Magnitude'
     vmax_val = max(vel.max(), 0.01)
     vmin_val = vel.min() if field == 'rho' else 0
@@ -464,7 +560,7 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     ny_data, nx_data = vel.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, vel, cmap_contour, vmin_val, vmax_val, obs, dpi=dpi)
+    im = render_contour(ax, vel, cmap_contour, vmin_val, vmax_val, obs, geometry=geometry, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Velocity Magnitude (m/s)', color='black')
     plt.tight_layout(pad=0.5)
@@ -478,7 +574,7 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     ny_data, nx_data = u.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
-    sp, smag = render_streamlines(ax, u, v, cmap_stream, obs)
+    sp, smag = render_streamlines(ax, u, v, cmap_stream, obs, geometry=geometry)
     if sp and smag.size > 0:
         cbar = plt.colorbar(sp.lines, ax=ax, shrink=0.8)
         cbar.set_label('Velocity Magnitude (m/s)', color='black')
@@ -507,6 +603,8 @@ def render_video_overlay(data, output_dir, frame, cmap, field='velocity', dpi=30
     if v.ndim == 1:
         v = v.reshape(data['ny'], data['nx'])
 
+    geometry = _read_obstacle_meta(data)
+
     vmax_val = max(vel.max(), 0.01)
     vmin_val = 0
 
@@ -526,7 +624,7 @@ def render_video_overlay(data, output_dir, frame, cmap, field='velocity', dpi=30
 
     levels = np.linspace(vmin_val, vmax_val, 256)
     im = ax.contourf(x, y, vel_masked, levels=levels, cmap=cmap, origin='lower')
-    _overlay_obstacles(ax, obs)
+    _overlay_obstacles(ax, obs, nx, ny, geometry)
 
     yg, xg = np.mgrid[0:ny, 0:nx]
     step = max(1, nx // 50)
@@ -676,13 +774,15 @@ def save_vorticity_png(data, output_dir, frame, dpi=300):
     if obs.ndim == 1 and obs.size > 0:
         obs = obs.reshape(data['ny'], data['nx'])
 
+    geometry = _read_obstacle_meta(data)
+
     # Symmetric limits around 0
     vmax = max(abs(omega.max()), abs(omega.min()), 1e-6)
 
     ny_data, nx_data = omega.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, omega, 'RdBu', -vmax, vmax, obs, dpi=dpi)
+    im = render_contour(ax, omega, 'RdBu', -vmax, vmax, obs, geometry=geometry, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Vorticity (1/s)', color='black')
     plt.tight_layout(pad=0.5)
@@ -793,6 +893,8 @@ def save_cp_png(data, output_dir, frame, meta=None, dpi=300):
     else:
         obs = np.zeros_like(rho, dtype=bool)
 
+    geometry = _read_obstacle_meta(data)
+
     # Reference values from meta or defaults
     if meta:
         u_inf = float(meta.get('u_inflow', meta.get('u_ref', 0.1)))
@@ -827,7 +929,7 @@ def save_cp_png(data, output_dir, frame, meta=None, dpi=300):
     ny, nx = cp_clip.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny / nx)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, cp_clip, 'RdBu', -cp_abs, cp_abs, obs, dpi=dpi)
+    im = render_contour(ax, cp_clip, 'RdBu', -cp_abs, cp_abs, obs, geometry=geometry, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Pressure Coefficient Cp', color='black')
     plt.tight_layout(pad=0.5)

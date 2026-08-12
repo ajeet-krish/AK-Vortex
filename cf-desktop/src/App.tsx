@@ -35,6 +35,8 @@ function App() {
   // Responsive canvas sizing
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 400 });
+  const frameDataRef = useRef(sim.frameData);
+  frameDataRef.current = sim.frameData;
 
   const currentStep = sim.frames.length > 0 ? sim.frames[sim.frameIndex] : 0;
 
@@ -115,22 +117,29 @@ function App() {
 
       if (w < 100 || h < 100) return;
 
-      if (sim.frameData && sim.frameData.ny > 0 && sim.frameData.nx > 0) {
-        const aspect = sim.frameData.nx / sim.frameData.ny;
+      const fd = frameDataRef.current;
+      if (fd && fd.ny > 0 && fd.nx > 0) {
+        const aspect = fd.nx / fd.ny;
         let cw = w;
         let ch = cw / aspect;
         if (ch > h) {
           ch = h;
           cw = ch * aspect;
         }
-        setCanvasSize({
-          width: Math.floor(cw),
-          height: Math.floor(ch),
+        setCanvasSize((prev) => {
+          const next = { width: Math.floor(cw), height: Math.floor(ch) };
+          if (prev.width === next.width && prev.height === next.height) {
+            return prev;
+          }
+          return next;
         });
       } else {
-        setCanvasSize({
-          width: Math.floor(w),
-          height: Math.floor(h),
+        setCanvasSize((prev) => {
+          const next = { width: Math.floor(w), height: Math.floor(h) };
+          if (prev.width === next.width && prev.height === next.height) {
+            return prev;
+          }
+          return next;
         });
       }
     };
@@ -138,7 +147,7 @@ function App() {
     computeSize();
     window.addEventListener('resize', computeSize);
     return () => window.removeEventListener('resize', computeSize);
-  }, [sim.frameData]);
+  }, []);
 
   const handleExportPng = useCallback(async () => {
     const canvas = document.querySelector('.flow-canvas-container canvas') as HTMLCanvasElement | null;

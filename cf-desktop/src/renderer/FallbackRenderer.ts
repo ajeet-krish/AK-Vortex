@@ -181,8 +181,11 @@ export class FallbackRenderer {
    */
   resize(width: number, height: number): void {
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = width * dpr;
-    this.canvas.height = height * dpr;
+    const newW = Math.round(width * dpr);
+    const newH = Math.round(height * dpr);
+    if (this.canvas.width === newW && this.canvas.height === newH) return;
+    this.canvas.width = newW;
+    this.canvas.height = newH;
   }
 
   /**

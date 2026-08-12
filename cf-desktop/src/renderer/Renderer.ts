@@ -268,9 +268,12 @@ export class Renderer {
   resize(width: number, height: number): void {
     const canvas = this.ctx.gl.canvas as HTMLCanvasElement;
     const dpr = window.devicePixelRatio || 1;
+    const newW = Math.round(width * dpr);
+    const newH = Math.round(height * dpr);
+    if (canvas.width === newW && canvas.height === newH) return;
     // Backing store = CSS size * DPR for retina-sharp rendering
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.width = newW;
+    canvas.height = newH;
     // CSS size is set by FlowCanvas (style.width/height)
   }
 

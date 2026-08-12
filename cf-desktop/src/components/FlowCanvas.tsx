@@ -220,9 +220,12 @@ export default function FlowCanvas({
             // FallbackRenderer was already created in the init effect with its own canvas
             fallbackRef.current?.uploadFrameData(frameData);
         } else {
-            rendererRef.current?.uploadFrameData(frameData);
+            // In batch mode, obstacles are in the TEXTURE_2D_ARRAY (channel 4)
+            if (!batchFrames) {
+                rendererRef.current?.uploadFrameData(frameData);
+            }
         }
-    }, [frameData, useFallback]);
+    }, [frameData, useFallback, batchFrames]);
 
     // Upload quiver data to GPU (no-op for Canvas2D fallback)
     useEffect(() => {
@@ -270,7 +273,7 @@ export default function FlowCanvas({
 
         // Single-frame mode (legacy path)
         renderer.render(config, frameData);
-    }, [frameData, field, showQuiver, effectiveRange, cmap, useFallback, batchFrames, frameIndex]);
+    }, [frameData, field, showQuiver, effectiveRange, cmap, useFallback, batchFrames, frameIndex, canvasSize]);
 
     // Mouse probe: convert canvas pixel to grid coordinate (accounting for Y flip)
     const handleMouseMove = useCallback(
