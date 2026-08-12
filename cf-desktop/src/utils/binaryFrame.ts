@@ -110,6 +110,87 @@ export function parseBinaryFrame(buffer: ArrayBuffer): FrameData {
 }
 
 /**
+ * Parse a binary frame buffer into raw channel data without computing velocity magnitude.
+ * Used by the batch upload path where velocity is computed on the GPU.
+ *
+ * Binary format (little-endian):
+ *   [0..3]   magic        uint32  0x4C424D31 ("LBM1")
+ *   [4..7]   version      uint32  (reserved, currently 0)
+ *   [8..11]  nx           uint32  grid width
+ *   [12..15] ny           uint32  grid height
+ *   [16..19] nChannels    uint32  number of float32 channels (5)
+ *   [20..23] dtypeFlag    uint32  0 = float32, 1 = float16
+ *   [24..]   data         float32[nChannels * nx * ny]
+ *
+ * Channel order: [u, v, p, omega, obstacle]
+ */
+export function parseBinaryFrameRaw(buffer: ArrayBuffer): {
+  nx: number;
+  ny: number;
+  u: Float32Array;
+  v: Float32Array;
+  p: Float32Array;
+  omega: Float32Array;
+  obstacle: Float32Array;
+} {
+  const dv = new DataView(buffer);
+
+  const magic = dv.getUint32(0, true);
+  const version = dv.getUint32(4, true);
+  const nx = dv.getUint32(8, true);
+  const ny = dv.getUint32(12, true);
+  const nChannels = dv.getUint32(16, true);
+  const dtypeFlag = dv.getUint32(20, true);
+
+  if (magic !== BINARY_MAGIC) {
+    throw new Error(
+      `Bad binary frame magic: 0x${magic.toString(16)} (expected 0x${BINARY_MAGIC.toString(16)})`
+    );
+  }
+  if (version !== 1) {
+    throw new Error(
+      `Unsupported binary frame version: ${version} (expected 1)`
+    );
+  }
+  if (dtypeFlag !== 0) {
+    throw new Error(
+      `Unsupported dtype_flag=${dtypeFlag} (expected 0=float32)`
+    );
+  }
+  if (nChannels < 5) {
+    throw new Error(
+      `Expected at least 5 channels, got ${nChannels}`
+    );
+  }
+
+  const MAX_DIM = 4096;
+  if (nx > MAX_DIM || ny > MAX_DIM) {
+    throw new Error(
+      `Binary frame dimensions too large: ${nx}x${ny} (max ${MAX_DIM}x${MAX_DIM})`
+    );
+  }
+
+  const expectedSize = 24 + nChannels * nx * ny * 4;
+  if (buffer.byteLength < expectedSize) {
+    throw new Error(
+      `Binary frame truncated: expected ${expectedSize} bytes, got ${buffer.byteLength}`
+    );
+  }
+
+  const n = nx * ny;
+  const f32 = new Float32Array(buffer, 24);
+
+  // Zero-copy views into the underlying buffer (no allocation per channel)
+  const u = new Float32Array(f32.buffer, f32.byteOffset + 0 * n * 4, n);
+  const v = new Float32Array(f32.buffer, f32.byteOffset + 1 * n * 4, n);
+  const p = new Float32Array(f32.buffer, f32.byteOffset + 2 * n * 4, n);
+  const omega = new Float32Array(f32.buffer, f32.byteOffset + 3 * n * 4, n);
+  const obstacle = new Float32Array(f32.buffer, f32.byteOffset + 4 * n * 4, n);
+
+  return { nx, ny, u, v, p, omega, obstacle };
+}
+
+/**
  * Wrap a JSON-serialized frame (number[] fields) into a FrameData with
  * Float32Array fields. Used as the fallback when binary frames are unavailable.
  */

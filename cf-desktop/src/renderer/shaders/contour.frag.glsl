@@ -1,8 +1,12 @@
 #version 300 es
 precision highp float;
+precision highp sampler2DArray;
+
 in vec2 v_uv;
 out vec4 fragColor;
-uniform sampler2D u_fieldTex;
+
+uniform sampler2DArray u_fieldTex;
+uniform int u_frameIndex;
 uniform float u_min;
 uniform float u_max;
 uniform vec2 u_gridSize;
@@ -46,8 +50,37 @@ vec3 rdbu(float t) {
 void main() {
     vec2 cellSize = 1.0 / u_gridSize;
     // Flip Y to match projection matrix (Y-flip in Viewport.getProjectionMatrix)
-    vec2 cell = (floor(vec2(v_uv.x, 1.0 - v_uv.y) * u_gridSize) + 0.5) * cellSize;
-    float val = texture(u_fieldTex, cell).r;
+    vec2 flippedUV = vec2(v_uv.x, 1.0 - v_uv.y);
+    vec2 cell = (floor(flippedUV * u_gridSize) + 0.5) * cellSize;
+
+    // Sample all channels from the array texture
+    // Channel offsets: u=0, v=1, p=2, omega=3, obstacle=4
+    // Channel stride: 5 (u, v, p, omega, obstacle) - must match C++ nChannels
+    int baseLayer = u_frameIndex * 5;
+    float u_val = texture(u_fieldTex, vec3(cell, float(baseLayer + 0))).r;
+    float v_val = texture(u_fieldTex, vec3(cell, float(baseLayer + 1))).r;
+    float p_val = texture(u_fieldTex, vec3(cell, float(baseLayer + 2))).r;
+    float omega_val = texture(u_fieldTex, vec3(cell, float(baseLayer + 3))).r;
+    float obs_val = texture(u_fieldTex, vec3(cell, float(baseLayer + 4))).r;
+
+    // Obstacle masking (check before field selection)
+    if (obs_val > 0.5) {
+        fragColor = vec4(0.12, 0.12, 0.16, 1.0);
+        return;
+    }
+
+    // Velocity magnitude computed on GPU (replaces CPU loop)
+    float velocity = sqrt(u_val * u_val + v_val * v_val);
+
+    // Select field based on u_cmapType
+    float val;
+    if (u_cmapType == 0) val = velocity;
+    else if (u_cmapType == 1) val = p_val;
+    else val = omega_val;
+
+    // NaN/Inf guard (replaces CPU sanitization loop)
+    if (!isfinite(val)) val = 0.0;
+
     float range = u_max - u_min;
     float t = clamp((val - u_min) / max(range, 1e-10), 0.0, 1.0);
 

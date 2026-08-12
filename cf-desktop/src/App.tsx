@@ -96,6 +96,17 @@ function App() {
     wasRunningRef.current = sim.running;
   }, [sim.running, sim.frames.length, viz]);
 
+  // Load all frames into GPU texture array when simulation completes or output dir changes
+  useEffect(() => {
+    if (sim.running || !sim.outputDir || sim.frames.length === 0) return;
+    // Only load if batchFrames is not already set for this output dir
+    if (sim.batchFrames) return;
+
+    sim.loadAllFrames().catch((e) => {
+      console.warn('[App] Batch frame load failed, falling back to single-frame mode:', e);
+    });
+  }, [sim.running, sim.outputDir, sim.frames.length, sim.batchFrames, sim.loadAllFrames]);
+
   // Responsive canvas: compute from window dimensions directly
   useEffect(() => {
     const computeSize = () => {
@@ -481,6 +492,8 @@ function App() {
                     canvasSize={canvasSize}
                     colorRange={viz.useManualRange ? viz.colorRange : null}
                     onProbe={viz.setProbe}
+                    batchFrames={sim.batchFrames}
+                    frameIndex={sim.frameIndex}
                   />
                   <ColorScaleBar
                     min={viz.colorRange.min}

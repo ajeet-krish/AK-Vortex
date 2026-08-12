@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Renderer, type RenderConfig } from '../renderer/Renderer';
 import { FallbackRenderer, type FallbackRenderConfig } from '../renderer/FallbackRenderer';
 import type { ColormapName } from '../renderer/ColormapTexture';
-import type { FrameData, ProbeInfo } from '../types';
+import type { FrameData, FrameBatchData, ProbeInfo } from '../types';
 import { sampleField } from '../utils/streamline';
 
 /** Loop-based range computation (avoids call-stack overflow on large arrays). */
@@ -28,6 +28,10 @@ interface FlowCanvasProps {
     canvasSize: { width: number; height: number };
     colorRange?: { min: number; max: number } | null;
     onProbe?: (info: ProbeInfo | null) => void;
+    /** Pre-loaded batch frames for TEXTURE_2D_ARRAY rendering. */
+    batchFrames?: FrameBatchData | null;
+    /** Current frame index for batch rendering. */
+    frameIndex?: number;
 }
 
 export default function FlowCanvas({
@@ -38,17 +42,37 @@ export default function FlowCanvas({
     canvasSize,
     colorRange,
     onProbe,
+    batchFrames,
+    frameIndex,
 }: FlowCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rendererRef = useRef<Renderer | null>(null);
     const fallbackRef = useRef<FallbackRenderer | null>(null);
     const [useFallback, setUseFallback] = useState(false);
     const [showDiagnostics, setShowDiagnostics] = useState(false);
+    const batchUploadedRef = useRef(false);
 
     // Precompute field ranges for diagnostic overlay (avoids Math.min/max spread on large arrays)
     const diagURange = useMemo(() => computeRange(frameData.u), [frameData]);
     const diagVRange = useMemo(() => computeRange(frameData.v), [frameData]);
     const diagVelRange = useMemo(() => computeRange(frameData.velocity), [frameData]);
+
+    // Compute batch velocity max for color range
+    const batchVelMax = useMemo(() => {
+        if (!batchFrames) return 0;
+        let maxVal = 0;
+        const n = batchFrames.nx * batchFrames.ny;
+        for (let f = 0; f < batchFrames.nFrames; f++) {
+            const base = f * batchFrames.nChannels * n;
+            for (let i = 0; i < n; i++) {
+                const ux = batchFrames.layers[base + i];
+                const vy = batchFrames.layers[base + n + i];
+                const sp = ux * ux + vy * vy;
+                if (sp > maxVal) maxVal = sp;
+            }
+        }
+        return Math.sqrt(maxVal);
+    }, [batchFrames]);
 
     // Initialize WebGL renderer, fall back to Canvas2D on failure
     useEffect(() => {
@@ -86,21 +110,48 @@ export default function FlowCanvas({
         canvas.style.height = `${canvasSize.height}px`;
     }, [canvasSize, useFallback]);
 
+    // Upload batch frames to GPU (one-time operation per batch change)
+    useEffect(() => {
+        if (useFallback) return;
+        const renderer = rendererRef.current;
+        if (!batchFrames || !renderer) {
+            batchUploadedRef.current = false;
+            return;
+        }
+
+        renderer.uploadAllFrames(
+            batchFrames.layers,
+            batchFrames.nx,
+            batchFrames.ny,
+            batchFrames.nFrames,
+            batchFrames.nChannels,
+        );
+        batchUploadedRef.current = true;
+        console.log(`[FlowCanvas] Batch uploaded ${batchFrames.nFrames} frames to GPU`);
+    }, [batchFrames, useFallback]);
+
     // Compute color range (NaN-safe, symmetric for pressure)
     const effectiveRange = useMemo(() => {
         if (colorRange) {
             return colorRange;
         }
 
+        // Batch mode: use batchVelMax for velocity, or compute from last frameData for other fields
+        if (batchFrames) {
+            if (field === 'velocity') {
+                const headroom = batchVelMax > 0 ? batchVelMax * 1.05 : 1;
+                return { min: 0, max: headroom };
+            }
+            // For pressure/vorticity in batch mode, fall through to frameData computation below
+        }
+
         let range: { min: number; max: number };
 
         if (field === 'velocity') {
             let maxVal = 0;
-            let finiteCount = 0;
             for (const val of frameData.velocity) {
                 if (Number.isFinite(val) && val > maxVal) {
                     maxVal = val;
-                    finiteCount++;
                 }
             }
             // Add 5% headroom so max value doesn't clip at pure red
@@ -109,12 +160,10 @@ export default function FlowCanvas({
         } else if (field === 'pressure') {
             let minVal = Infinity;
             let maxVal = -Infinity;
-            let finiteCount = 0;
             for (const val of frameData.p) {
                 if (!Number.isFinite(val)) continue;
                 if (val < minVal) minVal = val;
                 if (val > maxVal) maxVal = val;
-                finiteCount++;
             }
             if (!Number.isFinite(minVal) || !Number.isFinite(maxVal) || minVal === maxVal) {
                 range = { min: -1, max: 1 };
@@ -124,12 +173,10 @@ export default function FlowCanvas({
             }
         } else {
             let maxAbs = 0;
-            let finiteCount = 0;
             for (const val of frameData.omega) {
                 if (Number.isFinite(val)) {
                     const abs = Math.abs(val);
                     if (abs > maxAbs) maxAbs = abs;
-                    finiteCount++;
                 }
             }
             const headroom = maxAbs > 0 ? maxAbs * 1.05 : 1;
@@ -137,7 +184,7 @@ export default function FlowCanvas({
         }
 
         return range;
-    }, [field, frameData, colorRange]);
+    }, [field, frameData, colorRange, batchFrames, batchVelMax]);
 
     // Choose colormap based on field
     const cmap: ColormapName = field === 'vorticity' ? 'rdbu' : field === 'pressure' ? 'coolwarm' : 'jet';
@@ -192,8 +239,15 @@ export default function FlowCanvas({
             cmap,
         };
 
+        // Batch mode: render from pre-uploaded texture array
+        if (batchFrames && batchUploadedRef.current && frameIndex !== undefined) {
+            renderer.renderFrame(config, frameIndex);
+            return;
+        }
+
+        // Single-frame mode (legacy path)
         renderer.render(config, frameData);
-    }, [frameData, field, showQuiver, effectiveRange, cmap, useFallback]);
+    }, [frameData, field, showQuiver, effectiveRange, cmap, useFallback, batchFrames, frameIndex]);
 
     // Mouse probe: convert canvas pixel to grid coordinate (accounting for Y flip)
     const handleMouseMove = useCallback(
@@ -304,6 +358,7 @@ export default function FlowCanvas({
                     <div>vel: [{diagVelRange.min.toFixed(6)}, {diagVelRange.max.toFixed(6)}]</div>
                     <div>Canvas: {canvasSize.width}x{canvasSize.height} (DPR: {window.devicePixelRatio})</div>
                     <div>Renderer: {useFallback ? 'Canvas2D (fallback)' : 'WebGL2'}</div>
+                    <div>Mode: {batchFrames ? `Batch (${batchFrames.nFrames} frames)` : 'Single frame'}</div>
                     <div>Colormap: {cmap}</div>
                 </div>
             )}

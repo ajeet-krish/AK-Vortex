@@ -4,6 +4,7 @@ import { Viewport } from './Viewport';
 import { ContourPass } from './passes/ContourPass';
 import { ObstaclePass } from './passes/ObstaclePass';
 import { QuiverPass } from './passes/QuiverPass';
+import { FrameCache } from './FrameCache';
 import { GLDiagnostics } from './GLDiagnostics';
 import { validateFrameData, logDiagnostics } from '../utils/dataValidator';
 import type { FrameData } from '../types';
@@ -25,6 +26,7 @@ export class Renderer {
   private contourPass: ContourPass;
   private obstaclePass: ObstaclePass;
   private quiverPass: QuiverPass;
+  private frameCache: FrameCache;
   private glDiagnostics: GLDiagnostics;
   private nx = 0;
   private ny = 0;
@@ -38,12 +40,46 @@ export class Renderer {
     this.contourPass = new ContourPass(this.ctx.gl);
     this.obstaclePass = new ObstaclePass(this.ctx.gl);
     this.quiverPass = new QuiverPass(this.ctx.gl);
+    this.frameCache = new FrameCache(this.ctx.gl);
     this.glDiagnostics = new GLDiagnostics(this.ctx.gl);
     this.glDiagnostics.startContextLossMonitor();
     this.glDiagnostics.logHealth();
   }
 
+  /**
+   * Upload all frames as TEXTURE_2D_ARRAY (one-time batch operation).
+   * After this call, frame switching is a uniform change -- no GPU uploads.
+   */
+  uploadAllFrames(
+    layers: Float32Array,
+    nx: number,
+    ny: number,
+    nFrames: number,
+    nChannels: number,
+  ): void {
+    this.nx = nx;
+    this.ny = ny;
+    this.frameCache.uploadAll(layers, nx, ny, nFrames, nChannels);
+
+    // Reposition viewport to center on new grid
+    this.viewport.setState({
+      centerX: nx / 2,
+      centerY: ny / 2,
+      zoom: this.viewport.getState().zoom,
+    });
+  }
+
+  /**
+   * Upload frame metadata and obstacle data (called for both batch and single-frame modes).
+   * In batch mode this is called once; in single-frame mode this is called per frame.
+   */
   uploadFrameData(frame: FrameData): void {
+    this.nx = frame.nx;
+    this.ny = frame.ny;
+
+    // Upload obstacle texture (once, not per-frame in batch mode)
+    this.obstaclePass.uploadObstacle(frame.obstacle, frame.nx, frame.ny);
+
     // Reposition viewport to center on new grid without re-creating
     // (avoids re-attaching mouse/wheel listeners)
     this.viewport.setState({
@@ -51,18 +87,15 @@ export class Renderer {
       centerY: frame.ny / 2,
       zoom: this.viewport.getState().zoom,
     });
-
-    // Upload obstacle texture
-    this.obstaclePass.uploadObstacle(frame.obstacle, frame.nx, frame.ny);
   }
 
   uploadQuiver(
     u: Float32Array,
     v: Float32Array,
     obstacle: Float32Array,
-    step?: number,
+    _step?: number,
   ): void {
-    this.quiverPass.uploadQuiver(u, v, obstacle, this.nx, this.ny, step);
+    this.quiverPass.uploadQuiver(u, v, obstacle, this.nx, this.ny, _step);
     // Compute max velocity magnitude for arrow scaling and coloring
     let maxSpeed = 0;
     for (let i = 0; i < u.length; i++) {
@@ -73,6 +106,69 @@ export class Renderer {
     this.quiverVmax = maxSpeed;
   }
 
+  /**
+   * Render a frame by index from the pre-uploaded TEXTURE_2D_ARRAY.
+   * The frame cache must be ready (uploadAllFrames called previously).
+   */
+  renderFrame(
+    config: RenderConfig,
+    frameIndex: number,
+  ): void {
+    if (!this.frameCache.isReady()) return;
+
+    const gl = this.ctx.gl;
+    const cw = gl.canvas.width;
+    const ch = gl.canvas.height;
+    gl.viewport(0, 0, cw, ch);
+    gl.clearColor(0.08, 0.09, 0.12, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    this.cmap.upload(config.cmap);
+    const proj = this.viewport.getProjectionMatrix();
+
+    // Map field type to analytic colormap index: 0=jet, 1=coolwarm, 2=rdbu
+    let cmapType = 0;
+    if (config.field === 'pressure') cmapType = 1;
+    else if (config.field === 'vorticity') cmapType = 2;
+
+    // Bind the array texture; frame index is set by ContourPass.render()
+    this.frameCache.bind(0);
+
+    // 1. Contour (opaque background)
+    this.contourPass.render(
+      proj,
+      cmapType,
+      config.colorRange.min,
+      config.colorRange.max,
+      this.nx,
+      this.ny,
+      config.debugMode ?? 0,
+      frameIndex,
+    );
+
+    this.glDiagnostics.checkGLError('contour render');
+
+    // 2. Obstacles (semi-transparent overlay)
+    if (config.showObstacles) {
+      this.obstaclePass.render(proj, this.nx, this.ny);
+    }
+
+    // 3. Quiver (instanced arrow glyphs)
+    if (config.showQuiver) {
+      this.quiverPass.render(
+        proj,
+        this.cmap,
+        this.nx,
+        this.ny,
+        this.quiverVmax,
+      );
+    }
+  }
+
+  /**
+   * Render a single frame (legacy path for non-batch mode).
+   * Uploads field data to a temporary texture and renders.
+   */
   render(config: RenderConfig, frameData: FrameData): void {
     // Ensure dimensions are current (uploadFrameData may not have run yet)
     this.nx = frameData.nx;
@@ -109,13 +205,25 @@ export class Renderer {
       sanitizedData[i] = Number.isFinite(v) ? v : 0;
     }
 
-    // 1. Contour (opaque background)
     // Map field type to analytic colormap index: 0=jet, 1=coolwarm, 2=rdbu
     let cmapType = 0;
     if (config.field === 'pressure') cmapType = 1;
     else if (config.field === 'vorticity') cmapType = 2;
 
-    this.contourPass.uploadField(sanitizedData, this.nx, this.ny);
+    // Build 5-channel interleaved array for legacy path (shader reads u,v,p,omega,obstacle)
+    const n = this.nx * this.ny;
+    const legacyLayers = new Float32Array(5 * n);
+    // Channel 0: selected field (velocity/pressure/vorticity)
+    legacyLayers.set(sanitizedData, 0);
+    // Channels 1-3: zeros (not available in legacy mode)
+    // Channel 4: obstacle
+    if (frameData.obstacle) {
+      legacyLayers.set(frameData.obstacle, 4 * n);
+    }
+
+    this.frameCache.uploadAll(legacyLayers, this.nx, this.ny, 1, 5);
+    this.frameCache.bind(0);
+
     this.contourPass.render(
       proj,
       cmapType,
@@ -124,10 +232,11 @@ export class Renderer {
       this.nx,
       this.ny,
       config.debugMode ?? 0,
+      0,
     );
 
     // Diagnostic: check GL error after contour render
-    this.glDiagnostics.checkGLError("contour render");
+    this.glDiagnostics.checkGLError('contour render');
 
     // Diagnostic: validate frame data only when grid dimensions change (not every frame)
     if (this.nx > 0 && this.ny > 0) {
@@ -169,10 +278,15 @@ export class Renderer {
     return this.viewport;
   }
 
+  getFrameCache(): FrameCache {
+    return this.frameCache;
+  }
+
   destroy(): void {
     this.contourPass.destroy();
     this.obstaclePass.destroy();
     this.quiverPass.destroy();
+    this.frameCache.destroy();
     this.cmap.destroy();
     this.viewport.destroy();
   }

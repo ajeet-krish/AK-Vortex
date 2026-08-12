@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { SimConfig, FrameData, GridConfig, SystemInfo } from '../types';
+import type { SimConfig, FrameData, GridConfig, SystemInfo, FrameBatchData } from '../types';
 import type { Shape } from '../components/GeometryEditor';
-import { parseBinaryFrame, wrapFrameData } from '../utils/binaryFrame';
+import { parseBinaryFrame, parseBinaryFrameRaw, wrapFrameData } from '../utils/binaryFrame';
 import { getDefaultGridConfig } from '../config/gridPresets';
 import { getSystemInfo } from '../utils/systemInfo';
 
@@ -12,6 +12,8 @@ export interface SimProgress {
     total: number;
     status: string;
 }
+
+const MAX_BATCH_FRAMES = 500;
 
 const CASE_DEFAULTS: Record<string, { nx: number; ny: number }> = {
     cylinder: { nx: 800, ny: 300 },
@@ -33,6 +35,8 @@ export interface SimulationState {
     frameIndex: number;
     setFrameIndex: React.Dispatch<React.SetStateAction<number>>;
     frameData: FrameData | null;
+    batchFrames: FrameBatchData | null;
+    loadAllFrames: () => Promise<FrameBatchData | null>;
     runSimulation: () => Promise<void>;
     cancelSimulation: () => Promise<void>;
     resetSimulation: () => void;
@@ -65,6 +69,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     const [frames, setFrames] = useState<number[]>([]);
     const [frameIndex, setFrameIndex] = useState(0);
     const [frameData, setFrameData] = useState<FrameData | null>(null);
+    const [batchFrames, setBatchFrames] = useState<FrameBatchData | null>(null);
     const [solverLog, setSolverLog] = useState<string[]>([]);
 
     const outputDirRef = useRef(outputDir);
@@ -84,13 +89,44 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         }));
     }, [gridConfig.nx, gridConfig.ny]);
 
-    // Auto-load frame when frameIndex changes (binary-first, JSON fallback)
+    // Auto-load frame when frameIndex changes (batch-first, then binary, then JSON fallback)
     useEffect(() => {
         if (frames.length === 0 || !outputDir) return;
         const step = frames[frameIndex];
         if (step === undefined) return;
 
         let cancelled = false;
+
+        // Batch path: frame data is already in batchFrames.layers
+        if (batchFrames && frameIndex < batchFrames.nFrames) {
+            const n = batchFrames.nx * batchFrames.ny;
+            const base = frameIndex * batchFrames.nChannels * n;
+            const u = batchFrames.layers.subarray(base + 0 * n, base + 1 * n);
+            const v = batchFrames.layers.subarray(base + 1 * n, base + 2 * n);
+            const p = batchFrames.layers.subarray(base + 2 * n, base + 3 * n);
+            const omega = batchFrames.layers.subarray(base + 3 * n, base + 4 * n);
+            const obstacle = batchFrames.layers.subarray(base + 4 * n, base + 5 * n);
+            const velocity = new Float32Array(n);
+            for (let k = 0; k < n; k++) {
+                velocity[k] = Math.sqrt(u[k] * u[k] + v[k] * v[k]);
+            }
+            const rho = new Float32Array(n);
+            rho.fill(1.0);
+            if (!cancelled) {
+                setFrameData({
+                    nx: batchFrames.nx,
+                    ny: batchFrames.ny,
+                    velocity,
+                    u: new Float32Array(u),
+                    v: new Float32Array(v),
+                    rho,
+                    p: new Float32Array(p),
+                    omega: new Float32Array(omega),
+                    obstacle: new Float32Array(obstacle),
+                });
+            }
+            return () => { cancelled = true; };
+        }
 
         // Try binary frame first (faster, single network read)
         invoke<number[]>("read_frame_binary", { path: outputDir, step })
@@ -113,7 +149,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
             });
 
         return () => { cancelled = true; };
-    }, [frameIndex, frames, outputDir]);
+    }, [frameIndex, frames, outputDir, batchFrames]);
 
     // Subscribe to incremental solver-log events while running
     useEffect(() => {
@@ -217,6 +253,84 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         }
     }, [frames, outputDir, frameIndex, frameData]);
 
+    // Clear stale batch data when frames list changes (new sim or directory load)
+    useEffect(() => {
+        setBatchFrames(null);
+    }, [frames]);
+
+    /**
+     * Load all frames via Tauri IPC, parse to interleaved layers, and return
+     * FrameBatchData for upload to the GPU texture array.
+     *
+     * Call this once after simulation completes (or when opening an existing
+     * output directory) to enable zero-copy frame switching.
+     */
+    const loadAllFrames = useCallback(async (): Promise<FrameBatchData | null> => {
+        if (!outputDir || frames.length === 0) return null;
+
+        const framesToLoad = frames.length > MAX_BATCH_FRAMES
+          ? frames.slice(0, MAX_BATCH_FRAMES)
+          : frames;
+        if (frames.length > MAX_BATCH_FRAMES) {
+          console.warn(
+            `[useSimulation] Frame count ${frames.length} exceeds limit ${MAX_BATCH_FRAMES}, loading first ${MAX_BATCH_FRAMES}`
+          );
+        }
+
+        console.log(`[useSimulation] Loading ${framesToLoad.length} frames from ${outputDir}`);
+
+        const allRaw: Array<{
+            nx: number; ny: number;
+            u: Float32Array; v: Float32Array;
+            p: Float32Array; omega: Float32Array;
+            obstacle: Float32Array;
+        }> = [];
+
+        for (const step of framesToLoad) {
+            try {
+                const bytes = await invoke<number[]>("read_frame_binary", {
+                    path: outputDir,
+                    step,
+                });
+                const buf = new Uint8Array(bytes).buffer;
+                allRaw.push(parseBinaryFrameRaw(buf));
+            } catch {
+                console.warn(`[useSimulation] Failed to load frame step ${step}, skipping`);
+            }
+        }
+
+        if (allRaw.length === 0) return null;
+
+        const nx = allRaw[0].nx;
+        const ny = allRaw[0].ny;
+        const nChannels = 5;
+        const nFrames = allRaw.length;
+        const pixelsPerFrame = nChannels * nx * ny;
+
+        // Build interleaved layer array: [u0, v0, p0, omega0, obs0, u1, ...]
+        const layers = new Float32Array(nFrames * pixelsPerFrame);
+        for (let f = 0; f < nFrames; f++) {
+            const src = allRaw[f];
+            const n = nx * ny;
+            const base = f * pixelsPerFrame;
+            layers.set(src.u, base + 0 * n);
+            layers.set(src.v, base + 1 * n);
+            layers.set(src.p, base + 2 * n);
+            layers.set(src.omega, base + 3 * n);
+            layers.set(src.obstacle, base + 4 * n);
+        }
+
+        const result: FrameBatchData = { layers, nx, ny, nFrames, nChannels };
+        setBatchFrames(result);
+
+        const memMB = (layers.byteLength / (1024 * 1024)).toFixed(1);
+        console.log(
+            `[useSimulation] Batch loaded ${nFrames} frames (${nx}x${ny}, ${memMB} MB)`
+        );
+
+        return result;
+    }, [outputDir, frames]);
+
     const runSimulation = useCallback(async () => {
         setRunning(true);
         setCanCancel(true);
@@ -311,6 +425,8 @@ export function useSimulation(shapes: Shape[]): SimulationState {
         frameIndex,
         setFrameIndex,
         frameData,
+        batchFrames,
+        loadAllFrames,
         runSimulation,
         cancelSimulation,
         resetSimulation,

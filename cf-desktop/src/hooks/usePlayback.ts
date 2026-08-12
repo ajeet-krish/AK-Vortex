@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface PlaybackState {
     playing: boolean;
@@ -6,6 +6,7 @@ export interface PlaybackState {
     setPlaybackSpeed: React.Dispatch<React.SetStateAction<number>>;
     togglePlay: () => void;
     stopPlayback: () => void;
+    frameIndexRef: React.MutableRefObject<number>;
 }
 
 export function usePlayback(
@@ -13,36 +14,48 @@ export function usePlayback(
     setFrameIndex: React.Dispatch<React.SetStateAction<number>>
 ): PlaybackState {
     const [playing, setPlaying] = useState(false);
-    const [playbackSpeed, setPlaybackSpeed] = useState(200);
+    const [playbackSpeed, setPlaybackSpeed] = useState(200); // ms per frame
+    const frameIndexRef = useRef(0);
+    const lastTimeRef = useRef(0);
+    const animFrameRef = useRef<number>(0);
 
-    // Auto-advance timer
+    // requestAnimationFrame loop (replaces setInterval for smoother animation)
     useEffect(() => {
         if (!playing || frameCount === 0) return;
 
-        const timer = setInterval(() => {
-            setFrameIndex((prev) => {
-                const next = prev + 1;
-                if (next >= frameCount) {
-                    return 0; // Loop back to start
-                }
-                return next;
-            });
-        }, playbackSpeed);
+        const animate = (time: number) => {
+            if (lastTimeRef.current === 0) {
+                lastTimeRef.current = time;
+            }
 
-        return () => clearInterval(timer);
+            const elapsed = time - lastTimeRef.current;
+            if (elapsed >= playbackSpeed) {
+                lastTimeRef.current = time;
+                setFrameIndex((prev) => {
+                    const next = prev + 1;
+                    frameIndexRef.current = next >= frameCount ? 0 : next;
+                    return frameIndexRef.current;
+                });
+            }
+
+            animFrameRef.current = requestAnimationFrame(animate);
+        };
+
+        animFrameRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            cancelAnimationFrame(animFrameRef.current);
+            lastTimeRef.current = 0;
+        };
     }, [playing, playbackSpeed, frameCount, setFrameIndex]);
 
     const togglePlay = useCallback(() => {
-        if (playing) {
-            setPlaying(false);
-        } else {
-            setPlaying(true);
-        }
-    }, [playing]);
+        setPlaying((prev) => !prev);
+    }, []);
 
     const stopPlayback = useCallback(() => {
         setPlaying(false);
     }, []);
 
-    return { playing, playbackSpeed, setPlaybackSpeed, togglePlay, stopPlayback };
+    return { playing, playbackSpeed, setPlaybackSpeed, togglePlay, stopPlayback, frameIndexRef };
 }

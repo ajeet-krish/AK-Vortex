@@ -73,6 +73,20 @@ export interface SystemInfo {
   devicePixelRatio: number;
 }
 
+export interface FieldRange {
+  min: number;
+  max: number;
+  maxAbs: number;
+}
+
+export interface FrameBatchData {
+  layers: Float32Array;
+  nx: number;
+  ny: number;
+  nFrames: number;
+  nChannels: number;
+}
+
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
