@@ -16,7 +16,7 @@ Usage:
     python3 scripts/postprocess.py output/ribs_re100 --field pressure
 """
 
-import os, sys, json, re, argparse, subprocess
+import os, sys, json, re, struct, argparse, subprocess
 from pathlib import Path
 import numpy as np
 
@@ -34,6 +34,87 @@ try:
     HAS_SCIPY = True
 except ImportError:
     HAS_SCIPY = False
+
+
+# ---------------------------------------------------------------------------
+# Binary frame reader
+# ---------------------------------------------------------------------------
+MAGIC_BIN = 0x4C424D31
+
+def parse_bin_frame(path: str) -> dict:
+    """Read a binary frame file and return field data.
+
+    Binary format (little-endian) from export_web_data.py:
+      [0..3]   magic        uint32  0x4C424D31 ("LBM1")
+      [4..7]   n_frames     uint32  number of frames (for multi-frame files)
+      [8..11]  nx           uint32  grid width
+      [12..15] ny           uint32  grid height
+      [16..19] nChannels    uint32  number of float32 channels (5)
+      [20..23] dtypeFlag    uint32  0 = float32, 1 = float16
+      [24..]   data         float16[nFrames * nChannels * nx * ny]
+
+    Channel order: [u, v, p, omega, obstacle]
+
+    For single-frame files (n_frames=1), reads one frame.
+    For multi-frame files, reads the first frame.
+    """
+    with open(path, 'rb') as f:
+        header = f.read(24)
+        magic, n_frames, nx, ny, n_channels, dtype_flag = struct.unpack('<6I', header)
+
+        if magic != MAGIC_BIN:
+            raise ValueError(f"Bad magic: 0x{magic:08x}")
+
+        n = nx * ny
+        if dtype_flag == 0:
+            # float32
+            data = np.frombuffer(f.read(n_channels * n * 4), dtype=np.float32)
+        elif dtype_flag == 1:
+            # float16 stored as uint16
+            raw16 = np.frombuffer(f.read(n_channels * n * 2), dtype=np.uint16)
+            data = raw16.view(np.float16).astype(np.float32)
+        else:
+            raise ValueError(f"Unsupported dtype: {dtype_flag}")
+
+        # Split into channels (first frame only)
+        u = data[0*n:1*n].reshape(ny, nx)
+        v = data[1*n:2*n].reshape(ny, nx)
+        p = data[2*n:3*n].reshape(ny, nx)
+        omega = data[3*n:4*n].reshape(ny, nx)
+        obstacle = data[4*n:5*n].reshape(ny, nx)
+
+        # Compute velocity magnitude
+        velocity = np.sqrt(u**2 + v**2)
+
+        # Compute density (incompressible: rho ~ 1.0)
+        rho = np.ones_like(u)
+
+        return {
+            'nx': nx, 'ny': ny,
+            'u': u, 'v': v, 'rho': rho, 'p': p,
+            'omega': omega, 'obstacle': obstacle,
+            'velocity': velocity,
+        }
+
+
+def parse_json_frame(path: str) -> dict:
+    """Read a JSON frame file and return field data."""
+    with open(path) as f:
+        data = json.load(f)
+
+    nx = int(data.get('nx', 0))
+    ny = int(data.get('ny', 0))
+
+    return {
+        'nx': nx, 'ny': ny,
+        'u': np.array(data.get('u', data.get('velocity', []))).reshape(ny, nx),
+        'v': np.array(data.get('v', [])).reshape(ny, nx),
+        'rho': np.array(data.get('rho', [])).reshape(ny, nx),
+        'p': np.array(data.get('p', [])).reshape(ny, nx),
+        'omega': np.array(data.get('omega', [])).reshape(ny, nx),
+        'obstacle': np.array(data.get('obstacle', [])).reshape(ny, nx),
+        'velocity': np.array(data.get('velocity', [])).reshape(ny, nx),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -149,35 +230,45 @@ def _load_meta(output_dir):
 
 
 def _list_frames(output_dir):
+    """List frame files, preferring binary over JSON when both exist."""
     frames_dir = os.path.join(output_dir, 'frames')
     if not os.path.isdir(frames_dir):
         return []
-    files = list(Path(frames_dir).glob('frame_*.json'))
-    def _num_key(p):
+
+    # Collect both JSON and binary frames
+    json_files = list(Path(frames_dir).glob('frame_*.json'))
+    bin_files = list(Path(frames_dir).glob('frame_*.bin'))
+
+    # Build a dict: step -> path (prefer binary)
+    frames = {}
+    for p in json_files:
         m = re.search(r'frame_(\d+)', p.name)
-        return int(m.group(1)) if m else 0
-    files.sort(key=_num_key)
-    return files
+        if m:
+            step = int(m.group(1))
+            frames[step] = p
+    for p in bin_files:
+        m = re.search(r'frame_(\d+)', p.name)
+        if m:
+            step = int(m.group(1))
+            frames[step] = p  # binary overrides JSON
+
+    result = sorted(frames.values(), key=lambda p: int(re.search(r'frame_(\d+)', p.name).group(1)))
+    return result
 
 
 def _load_frame(path):
-    with open(path) as f:
-        raw = json.load(f)
-    raw['u'] = np.array(raw.get('u', raw.get('velocity', [])))
-    raw['v'] = np.array(raw.get('v', []))
-    raw['velocity'] = np.array(raw.get('velocity', []))
-    raw['rho'] = np.array(raw.get('rho', []))
-    raw['obstacle'] = np.array(raw.get('obstacle', []), dtype=bool)
-    raw['omega'] = np.array(raw.get('omega', []))
-    raw['nx'] = int(raw.get('nx', 0))
-    raw['ny'] = int(raw.get('ny', 0))
-    return raw
+    """Load a frame from either binary or JSON format, preferring binary."""
+    path_str = str(path)
+    if path_str.endswith('.bin'):
+        return parse_bin_frame(path_str)
+    else:
+        return parse_json_frame(path_str)
 
 
 def _load_frame_safe(path):
     try:
         return _load_frame(path)
-    except (json.JSONDecodeError, KeyError, ValueError):
+    except (json.JSONDecodeError, KeyError, ValueError, struct.error):
         return None
 
 
@@ -261,11 +352,37 @@ def _overlay_obstacles(ax, obstacle_mask, nx=None, ny=None, geometry=None):
 # ---------------------------------------------------------------------------
 # PNG rendering
 # ---------------------------------------------------------------------------
-def render_contour(ax, vel, cmap, vmin, vmax, obstacle=None, geometry=None):
-    im = ax.imshow(vel, origin='lower', cmap=cmap, aspect='equal',
-                   vmin=vmin, vmax=vmax, interpolation='bilinear')
-    ax.set_box_aspect(vel.shape[0] / vel.shape[1])
-    _overlay_obstacles(ax, obstacle, vel.shape[1], vel.shape[0], geometry)
+def render_contour(ax, vel, cmap, vmin, vmax, obstacle=None, geometry=None, dpi=300):
+    """Render field data using contourf for smooth, high-quality contours.
+
+    Uses 256 contour levels for smooth color transitions, with optional
+    thin contour lines for visual definition. Obstacle regions are masked.
+    """
+    ny, nx = vel.shape
+
+    # Create coordinate arrays
+    x = np.linspace(0, nx, nx)
+    y = np.linspace(0, ny, ny)
+
+    # Mask obstacle regions
+    if obstacle is not None and obstacle.size > 0:
+        obs_bool = obstacle > 0.5 if obstacle.dtype != bool else obstacle
+        field_masked = np.ma.masked_where(obs_bool, vel)
+    else:
+        field_masked = vel
+
+    # Generate smooth contour levels
+    levels = np.linspace(vmin, vmax, 256)
+
+    # Use contourf for smooth contours
+    im = ax.contourf(x, y, field_masked, levels=levels, cmap=cmap, origin='lower')
+
+    # Add thin contour lines for visual definition (every 10th level)
+    ax.contour(x, y, field_masked, levels=levels[::10], colors='black',
+               linewidths=0.1, alpha=0.3)
+
+    ax.set_box_aspect(ny / nx)
+    _overlay_obstacles(ax, obstacle, nx, ny, geometry)
     ax.axis('off')
     ax.set_facecolor('white')
     return im
@@ -288,7 +405,7 @@ def render_streamlines(ax, u, v, cmap, obstacle=None, geometry=None, density=1.0
     return sp, vel_mag
 
 
-def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field='velocity'):
+def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field='velocity', dpi=300):
     vel = np.array(data[field])
     u = np.array(data['u'])
     v = np.array(data['v'])
@@ -309,7 +426,7 @@ def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field=
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 5))
     fig.patch.set_facecolor('white')
 
-    im = render_contour(ax1, vel, cmap_contour, vmin_val, vmax_val, obs)
+    im = render_contour(ax1, vel, cmap_contour, vmin_val, vmax_val, obs, dpi=dpi)
     cbar1 = plt.colorbar(im, ax=ax1, shrink=0.8)
     cbar1.set_label('Velocity Magnitude (m/s)', color='black')
 
@@ -320,12 +437,12 @@ def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field=
 
     plt.tight_layout()
     path = os.path.join(output_dir, f'frame_{int(frame):04d}.png')
-    plt.savefig(path, dpi=120, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
     print(f"  Saved {path}")
 
 
-def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='velocity'):
+def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='velocity', dpi=300):
     vel = np.array(data[field])
     u = np.array(data['u'])
     v = np.array(data['v'])
@@ -347,13 +464,13 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     ny_data, nx_data = vel.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, vel, cmap_contour, vmin_val, vmax_val, obs)
+    im = render_contour(ax, vel, cmap_contour, vmin_val, vmax_val, obs, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Velocity Magnitude (m/s)', color='black')
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'contour_{int(frame):04d}.png')
-    plt.savefig(path, dpi=120, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
     print(f"  Saved {path}")
 
@@ -368,7 +485,7 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'streamlines_{int(frame):04d}.png')
-    plt.savefig(path, dpi=120, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
     print(f"  Saved {path}")
 
@@ -376,7 +493,7 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
 # ---------------------------------------------------------------------------
 # Video overlay rendering (contour + streamlines on same axes)
 # ---------------------------------------------------------------------------
-def render_video_overlay(data, output_dir, frame, cmap, field='velocity'):
+def render_video_overlay(data, output_dir, frame, cmap, field='velocity', dpi=300):
     vel = np.array(data[field])
     u = np.array(data['u'])
     v = np.array(data['v'])
@@ -393,16 +510,26 @@ def render_video_overlay(data, output_dir, frame, cmap, field='velocity'):
     vmax_val = max(vel.max(), 0.01)
     vmin_val = 0
 
+    ny, nx = vel.shape
+    x = np.linspace(0, nx, nx)
+    y = np.linspace(0, ny, ny)
+
     fig, ax = plt.subplots(1, 1, figsize=(10, 5))
     fig.patch.set_facecolor('white')
 
-    im = ax.imshow(vel, origin='lower', cmap=cmap, aspect='auto',
-                   vmin=vmin_val, vmax=vmax_val, interpolation='bilinear')
+    # Mask obstacle regions for contourf
+    if obs is not None and obs.size > 0:
+        obs_bool = obs > 0.5 if obs.dtype != bool else obs
+        vel_masked = np.ma.masked_where(obs_bool, vel)
+    else:
+        vel_masked = vel
+
+    levels = np.linspace(vmin_val, vmax_val, 256)
+    im = ax.contourf(x, y, vel_masked, levels=levels, cmap=cmap, origin='lower')
     _overlay_obstacles(ax, obs)
 
-    ny, nx_grid = u.shape
-    yg, xg = np.mgrid[0:ny, 0:nx_grid]
-    step = max(1, nx_grid // 50)
+    yg, xg = np.mgrid[0:ny, 0:nx]
+    step = max(1, nx // 50)
     vel_mag = np.sqrt(u[::step, ::step]**2 + v[::step, ::step]**2)
     ax.streamplot(xg[::step, ::step], yg[::step, ::step],
                   u[::step, ::step], v[::step, ::step],
@@ -418,7 +545,7 @@ def render_video_overlay(data, output_dir, frame, cmap, field='velocity'):
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'vid_{int(frame):04d}.png')
-    plt.savefig(path, dpi=120, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
 
 
@@ -538,7 +665,7 @@ def compute_strouhal(output_dir):
 # ---------------------------------------------------------------------------
 # Vorticity rendering (RdBu symmetric colormap)
 # ---------------------------------------------------------------------------
-def save_vorticity_png(data, output_dir, frame):
+def save_vorticity_png(data, output_dir, frame, dpi=300):
     omega = np.array(data.get('omega', []))
     obs = np.array(data.get('obstacle', []))
     if omega.ndim == 0 or omega.size == 0:
@@ -555,18 +682,18 @@ def save_vorticity_png(data, output_dir, frame):
     ny_data, nx_data = omega.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny_data / nx_data)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, omega, 'RdBu', -vmax, vmax, obs)
+    im = render_contour(ax, omega, 'RdBu', -vmax, vmax, obs, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Vorticity (1/s)', color='black')
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'vorticity_{int(frame):04d}.png')
-    plt.savefig(path, dpi=120, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
     print(f"  Saved {path}")
 
 
-def save_mesh_png(data, output_dir, frame, meta=None):
+def save_mesh_png(data, output_dir, frame, meta=None, dpi=300):
     """Render the computational grid: cell edges + obstacle boundaries.
 
     Draws a wireframe of the lattice grid with:
@@ -644,12 +771,12 @@ def save_mesh_png(data, output_dir, frame, meta=None):
 
     plt.tight_layout(pad=0.5)
     path = os.path.join(output_dir, f'mesh_{int(frame):04d}.png')
-    plt.savefig(path, dpi=150, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
     print(f"  Saved {path}")
 
 
-def save_cp_png(data, output_dir, frame, meta=None):
+def save_cp_png(data, output_dir, frame, meta=None, dpi=300):
     """Pressure coefficient Cp = (p - p_ref) / (0.5 * rho_inf * U_inf^2)
     Obstacle cells (rho=0) are masked as NaN and rendered transparent.
     Color range auto-scaled to fluid cell percentile range.
@@ -700,13 +827,13 @@ def save_cp_png(data, output_dir, frame, meta=None):
     ny, nx = cp_clip.shape
     fig, ax = plt.subplots(1, 1, figsize=(10, max(3, 10 * ny / nx)))
     fig.patch.set_facecolor('white')
-    im = render_contour(ax, cp_clip, 'RdBu', -cp_abs, cp_abs, obs)
+    im = render_contour(ax, cp_clip, 'RdBu', -cp_abs, cp_abs, obs, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
     cbar.set_label('Pressure Coefficient Cp', color='black')
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'cp_{int(frame):04d}.png')
-    plt.savefig(path, dpi=120, facecolor='white', edgecolor='none', bbox_inches='tight')
+    plt.savefig(path, dpi=dpi, facecolor='white', edgecolor='none', bbox_inches='tight')
     plt.close()
     print(f"  Saved {path}")
 
@@ -738,6 +865,8 @@ def main():
                         help='Render overlay video (contour + streamlines on same frame)')
     parser.add_argument('--mesh', action='store_true',
                         help='Render computational grid (cell edges + obstacle boundaries)')
+    parser.add_argument('--dpi', type=int, default=300,
+                        help='Output DPI (default: 300, options: 60, 120, 300, 600)')
     args = parser.parse_args()
 
     input_dir = args.input_dir
@@ -770,17 +899,17 @@ def main():
             if not HAS_MPL:
                 print("matplotlib not installed, skipping PNG output")
             elif args.mesh:
-                save_mesh_png(data, input_dir, frame_num, meta)
+                save_mesh_png(data, input_dir, frame_num, meta, dpi=args.dpi)
             elif args.cp:
-                save_cp_png(data, input_dir, frame_num, meta)
+                save_cp_png(data, input_dir, frame_num, meta, dpi=args.dpi)
             elif args.vorticity:
-                save_vorticity_png(data, input_dir, frame_num)
+                save_vorticity_png(data, input_dir, frame_num, dpi=args.dpi)
             elif args.video:
                 pass  # rendered in video section below
             elif args.split:
-                save_png_split(data, input_dir, frame_num, cmap_primary, cmap_stream, field_key)
+                save_png_split(data, input_dir, frame_num, cmap_primary, cmap_stream, field_key, dpi=args.dpi)
             else:
-                save_png_combined(data, input_dir, frame_num, cmap_primary, cmap_stream, field_key)
+                save_png_combined(data, input_dir, frame_num, cmap_primary, cmap_stream, field_key, dpi=args.dpi)
     else:
         print(f"No frame JSON files found in {input_dir}/frames/")
 
@@ -792,7 +921,7 @@ def main():
             frame_num = int(frame_match.group(1)) if frame_match else 0
             data = _load_frame(str(vtk_path))
             if HAS_MPL:
-                render_video_overlay(data, input_dir, frame_num, cmap_primary, field_key)
+                render_video_overlay(data, input_dir, frame_num, cmap_primary, field_key, dpi=args.dpi)
         make_video(input_dir)
 
     if args.strouhal:

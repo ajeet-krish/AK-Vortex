@@ -168,18 +168,84 @@ def write_binary(path, frames, nx, ny, n_channels):
 
 
 def _frame_files(frame_dir):
-    files = [
-        f for f in os.listdir(frame_dir)
-        if f.startswith("frame_") and f.endswith(".json")
-    ]
+    """List frame files, preferring binary over JSON when both exist."""
+    # Collect both JSON and binary frames
+    json_files = [f for f in os.listdir(frame_dir)
+                  if f.startswith("frame_") and f.endswith(".json")]
+    bin_files = [f for f in os.listdir(frame_dir)
+                 if f.startswith("frame_") and f.endswith(".bin")]
 
-    def step_of(fn):
+    # Build a dict: step -> filename (prefer binary)
+    frames = {}
+    for fn in json_files:
         s = fn[len("frame_"):]
         s = s[: s.index(".")]
-        return int(s)
+        step = int(s)
+        frames[step] = fn
+    for fn in bin_files:
+        s = fn[len("frame_"):]
+        s = s[: s.index(".")]
+        step = int(s)
+        frames[step] = fn  # binary overrides JSON
 
-    files.sort(key=step_of)
-    return files
+    result = sorted(frames.values(), key=lambda fn: int(fn[len("frame_"):fn.index(".")]))
+    return result
+
+
+def parse_bin_frame(path: str) -> dict:
+    """Read a binary frame file and return field data.
+
+    Binary format (little-endian) from export_web_data.py:
+      [0..3]   magic        uint32  0x4C424D31 ("LBM1")
+      [4..7]   n_frames     uint32  number of frames (for multi-frame files)
+      [8..11]  nx           uint32  grid width
+      [12..15] ny           uint32  grid height
+      [16..19] nChannels    uint32  number of float32 channels (5)
+      [20..23] dtypeFlag    uint32  0 = float32, 1 = float16
+      [24..]   data         float16[nFrames * nChannels * nx * ny]
+
+    Channel order: [u, v, p, omega, obstacle]
+
+    For single-frame files (n_frames=1), reads one frame.
+    For multi-frame files, reads the first frame.
+    """
+    with open(path, 'rb') as f:
+        header = f.read(24)
+        magic, n_frames, nx, ny, n_channels, dtype_flag = struct.unpack('<6I', header)
+
+        if magic != MAGIC:
+            raise ValueError(f"Bad magic: 0x{magic:08x}")
+
+        n = nx * ny
+        if dtype_flag == 0:
+            # float32
+            data = np.frombuffer(f.read(n_channels * n * 4), dtype=np.float32)
+        elif dtype_flag == 1:
+            # float16 stored as uint16
+            raw16 = np.frombuffer(f.read(n_channels * n * 2), dtype=np.uint16)
+            data = raw16.view(np.float16).astype(np.float32)
+        else:
+            raise ValueError(f"Unsupported dtype: {dtype_flag}")
+
+        # Split into channels (first frame only)
+        u = data[0*n:1*n].reshape(ny, nx)
+        v = data[1*n:2*n].reshape(ny, nx)
+        p = data[2*n:3*n].reshape(ny, nx)
+        omega = data[3*n:4*n].reshape(ny, nx)
+        obstacle = data[4*n:5*n].reshape(ny, nx)
+
+        return {
+            'nx': int(nx), 'ny': int(ny),
+            'u': u, 'v': v, 'p': p,
+            'omega': omega, 'obstacle': obstacle,
+        }
+
+
+def parse_json_frame(path: str) -> dict:
+    """Read a JSON frame file and return field data."""
+    with open(path) as f:
+        data = json.load(f)
+    return data
 
 
 def export_lbm_case(case_name, cfg):
@@ -196,17 +262,18 @@ def export_lbm_case(case_name, cfg):
             print(f"  SKIP {case_name}/{label}: no frames")
             continue
 
-        # Load frames, skipping any that fail to parse (diverged runs may emit
-        # NaN/Infinity or truncated JSON that json.load rejects) and any
-        # all-zero velocity frames that are not the initial rest state (a source
-        # data bug in some cases, e.g. periodic hills wrote zeroed frames mid-run).
+        # Load frames, preferring binary over JSON
         loaded = []
         for fn in files:
+            fpath = os.path.join(frame_dir, fn)
             try:
-                with open(os.path.join(frame_dir, fn)) as fh:
-                    d = json.load(fh)
-            except (json.JSONDecodeError, ValueError):
+                if fn.endswith('.bin'):
+                    d = parse_bin_frame(fpath)
+                else:
+                    d = parse_json_frame(fpath)
+            except (json.JSONDecodeError, ValueError, struct.error):
                 continue
+
             u = d.get("u")
             v = d.get("v")
             if u is not None and v is not None and len(loaded) > 0:
