@@ -106,6 +106,9 @@ function App() {
       const availW = rect.width - 48;
       const availH = rect.height - 60;
 
+      // Skip if container is hidden (zero dimensions)
+      if (availW < 50 || availH < 50) return;
+
       if (sim.frameData && sim.frameData.ny > 0 && sim.frameData.nx > 0) {
         const aspect = sim.frameData.nx / sim.frameData.ny;
         let w = availW;
@@ -115,13 +118,13 @@ function App() {
           w = h * aspect;
         }
         setCanvasSize({
-          width: Math.max(100, Math.floor(w)),
-          height: Math.max(100, Math.floor(h)),
+          width: Math.floor(w),
+          height: Math.floor(h),
         });
       } else {
         setCanvasSize({
-          width: Math.max(100, availW),
-          height: Math.max(100, availH),
+          width: Math.floor(availW),
+          height: Math.floor(availH),
         });
       }
     };
