@@ -74,40 +74,65 @@ export default function FlowCanvas({
         return Math.sqrt(maxVal);
     }, [batchFrames]);
 
+    // Container ref: the parent div that holds whichever canvas is active
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // Initialize WebGL renderer, fall back to Canvas2D on failure
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        const container = containerRef.current;
+        if (!canvas || !container) return;
 
         try {
             rendererRef.current = new Renderer(canvas);
             setUseFallback(false);
         } catch (e) {
             console.warn('WebGL initialization failed, using Canvas2D fallback:', e);
-            setUseFallback(true);
+            // Create a fresh Canvas2D renderer (its own canvas element)
+            try {
+                const fb = new FallbackRenderer();
+                fallbackRef.current = fb;
+                // Swap: hide WebGL canvas, insert the 2D canvas into the container
+                canvas.style.display = 'none';
+                const fbCanvas = fb.getElement();
+                fbCanvas.style.display = 'block';
+                fbCanvas.style.width = canvas.style.width;
+                fbCanvas.style.height = canvas.style.height;
+                container.appendChild(fbCanvas);
+                setUseFallback(true);
+            } catch (fbErr) {
+                console.error('Canvas2D fallback also failed:', fbErr);
+            }
         }
 
         return () => {
             rendererRef.current?.destroy();
             rendererRef.current = null;
-            fallbackRef.current?.destroy();
-            fallbackRef.current = null;
+            if (fallbackRef.current) {
+                const fbCanvas = fallbackRef.current.getElement();
+                fbCanvas.parentElement?.removeChild(fbCanvas);
+                fallbackRef.current.destroy();
+                fallbackRef.current = null;
+            }
         };
     }, []);
 
     // Handle canvas resize (DPR-aware for retina-sharp rendering)
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
         if (useFallback) {
-            fallbackRef.current?.resize(canvasSize.width, canvasSize.height);
+            // Resize the fallback's own canvas
+            const fbCanvas = fallbackRef.current?.getElement();
+            if (fbCanvas) {
+                fbCanvas.width = canvasSize.width * (window.devicePixelRatio || 1);
+                fbCanvas.height = canvasSize.height * (window.devicePixelRatio || 1);
+                fbCanvas.style.width = `${canvasSize.width}px`;
+                fbCanvas.style.height = `${canvasSize.height}px`;
+            }
         } else {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
             rendererRef.current?.resize(canvasSize.width, canvasSize.height);
         }
-        // CSS dimensions (what the user sees)
-        canvas.style.width = `${canvasSize.width}px`;
-        canvas.style.height = `${canvasSize.height}px`;
     }, [canvasSize, useFallback]);
 
     // Upload batch frames to GPU (one-time operation per batch change)
@@ -192,9 +217,7 @@ export default function FlowCanvas({
     // Upload frame data (obstacles uploaded internally by Renderer)
     useEffect(() => {
         if (useFallback) {
-            if (!fallbackRef.current && canvasRef.current) {
-                fallbackRef.current = new FallbackRenderer(canvasRef.current);
-            }
+            // FallbackRenderer was already created in the init effect with its own canvas
             fallbackRef.current?.uploadFrameData(frameData);
         } else {
             rendererRef.current?.uploadFrameData(frameData);
@@ -325,7 +348,7 @@ export default function FlowCanvas({
     }
 
     return (
-        <div className="flow-canvas-container" style={{ position: 'relative' }}>
+        <div className="flow-canvas-container" ref={containerRef} style={{ position: 'relative' }}>
             <canvas
                 ref={canvasRef}
                 style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }}

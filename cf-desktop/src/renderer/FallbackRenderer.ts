@@ -32,12 +32,26 @@ export class FallbackRenderer {
   private offscreenNx = 0;
   private offscreenNy = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  /**
+   * Create a FallbackRenderer with its own canvas element.
+   * A single canvas cannot have both a WebGL2 and a Canvas2D context, so the
+   * fallback creates a fresh <canvas> and exposes it via `getElement()`. The
+   * caller (FlowCanvas) is responsible for swapping this element into the DOM.
+   */
+  constructor(_existingCanvas?: HTMLCanvasElement) {
+    // Always create a brand-new canvas to avoid the "context already acquired" error.
+    // If a canvas with a WebGL context is passed in, we ignore it.
+    const canvas = document.createElement('canvas');
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to get Canvas2D context');
     this.ctx = ctx;
-    console.log('[FallbackRenderer] Canvas2D fallback initialized');
+    console.log('[FallbackRenderer] Canvas2D fallback initialized on fresh canvas');
+  }
+
+  /** Return the canvas element managed by this renderer (for DOM insertion). */
+  getElement(): HTMLCanvasElement {
+    return this.canvas;
   }
 
   /**
