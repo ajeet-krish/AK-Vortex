@@ -1865,14 +1865,11 @@ canvas {
    ========================================================================== */
 
 .playback-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 280px;
-  right: 0;
+  margin-left: 280px;
+  flex-shrink: 0;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
   padding: 8px 16px;
-  z-index: 25;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -943,7 +943,7 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
             case CaseType::URBAN_CANYON: return "buildings";
             case CaseType::DOWNWASH: return "buildings";
             case CaseType::ORIFICE_PLATE: return "orifice";
-            case CaseType::FLAT_PLATE: return "none";
+            case CaseType::FLAT_PLATE: return "polygon";
             case CaseType::SQUARE_CYLINDER: return "square";
             case CaseType::PERIODIC_HILLS: return "hill";
             case CaseType::CYLINDER_NEAR_WALL: return "cylinder_wall";
@@ -1018,6 +1018,21 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
                     << ",\"w\":" << bldg_w << ",\"h\":" << bldg_h << "}";
             }
             out << "]";
+            break;
+        }
+        case CaseType::FLAT_PLATE: {
+            if (sys.bb_geom.is_polygon && !sys.bb_geom.poly_vertices.empty()) {
+                out << ",\"polygons\":[{\"vertices\":[";
+                for (size_t vi = 0; vi < sys.bb_geom.poly_vertices.size(); ++vi) {
+                    if (vi > 0) out << ",";
+                    double vx = sys.bb_geom.poly_vertices[vi].first;
+                    double vy = sys.bb_geom.poly_vertices[vi].second;
+                    if (!std::isfinite(vx)) vx = 0.0;
+                    if (!std::isfinite(vy)) vy = 0.0;
+                    out << "[" << vx << "," << vy << "]";
+                }
+                out << "]}]";
+            }
             break;
         }
         default:

@@ -86,7 +86,7 @@ export class FrameCache {
       layers,
     );
 
-    // Restore previous flip state (ObstaclePass and ColormapTexture rely on it)
+    // Restore previous flip state (ColormapTexture relies on it)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
 
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);

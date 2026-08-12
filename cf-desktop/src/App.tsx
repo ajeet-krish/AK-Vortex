@@ -112,8 +112,24 @@ function App() {
   // Responsive canvas: compute from window dimensions directly
   useEffect(() => {
     const computeSize = () => {
-      const w = window.innerWidth - 280 - 48;
-      const h = window.innerHeight - 36 - 40 - 48 - 24;
+      const HEADER_HEIGHT = 36;
+      const STATUS_BAR_HEIGHT = 24;
+      const VIEW_TABS_HEIGHT = 30;
+      const SUB_TABS_HEIGHT = 30;
+      const INFO_BAR_HEIGHT = 39;
+      const H2_TITLE_HEIGHT = 20;
+      const PLAYBACK_BAR_HEIGHT = 40;
+      const HORIZONTAL_PADDING = 48;
+
+      const w = window.innerWidth - 280 - HORIZONTAL_PADDING;
+      const h = window.innerHeight
+        - HEADER_HEIGHT
+        - VIEW_TABS_HEIGHT
+        - SUB_TABS_HEIGHT
+        - INFO_BAR_HEIGHT
+        - H2_TITLE_HEIGHT
+        - PLAYBACK_BAR_HEIGHT
+        - STATUS_BAR_HEIGHT;
 
       if (w < 100 || h < 100) return;
 

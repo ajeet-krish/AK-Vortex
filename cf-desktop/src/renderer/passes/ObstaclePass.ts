@@ -38,8 +38,14 @@ export class ObstaclePass {
 
   uploadObstacle(data: Float32Array, nx: number, ny: number): void {
     const gl = this.gl;
+    const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+
     gl.bindTexture(gl.TEXTURE_2D, this.obsTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, nx, ny, 0, gl.RED, gl.FLOAT, data);
+
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
+
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
