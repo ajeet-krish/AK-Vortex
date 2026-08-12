@@ -1035,9 +1035,13 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
 // 24-byte header + 5 float32 channels (u, v, p, omega, obstacle)
 // ------------------------------------------------------------------
 inline void save_binary_frame(const LBMCapabilities& sys, int step, const std::string& output_dir) {
-    int ds = std::max(1, NX / 100);                // downsample factor (same as JSON)
+    int target_width = 500;
+    int ds = std::max(1, NX / target_width);        // downsample to ~500px width (full-res for small grids)
     int nx_ds = (NX + ds - 1) / ds;                // ceil division
     int ny_ds = (NY + ds - 1) / ds;
+
+    std::cerr << "[LBM] Binary frame: " << NX << "x" << NY << " -> "
+              << nx_ds << "x" << ny_ds << " (ds=" << ds << ")" << std::endl;
 
     std::string dir = output_dir + "/frames";
     std::filesystem::create_directories(dir);
@@ -1066,14 +1070,14 @@ inline void save_binary_frame(const LBMCapabilities& sys, int step, const std::s
     std::vector<float> rho_arr(n_ds, 0.0f);
     std::vector<float> omega_arr(n_ds, 0.0f);
     std::vector<float> obst_arr(n_ds, 0.0f);
-    std::vector<bool> is_obstacle(n_ds, false);
+    std::vector<uint8_t> is_obstacle(n_ds, 0);
 
     int idx2 = 0;
     for (int y = 0; y < NY; y += ds) {
         for (int x = 0; x < NX; x += ds) {
             int idx = node_index(x, y);
             if (sys.obstacle[idx]) {
-                is_obstacle[idx2] = true;
+                is_obstacle[idx2] = 1;
                 obst_arr[idx2] = 1.0f;
                 ++idx2;
                 continue;
@@ -1140,7 +1144,7 @@ inline void save_binary_frame(const LBMCapabilities& sys, int step, const std::s
 // ------------------------------------------------------------------
 inline void save_json_frame_thermal(LBMCapabilities& sys, int step,
                                      const std::string& output_dir, double T_wall) {
-    int ds = std::max(1, NX / 100);                // downsample factor
+    int ds = std::max(1, NX / 500);                // downsample factor (match save_binary_frame)
     int nx_ds = (NX + ds - 1) / ds;                // ceil division
     int ny_ds = (NY + ds - 1) / ds;
 

@@ -41,6 +41,28 @@ export class ContourPass {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, nx, ny, 0, gl.RED, gl.FLOAT, data);
+
+    // Check for GL errors after texture upload
+    const err = gl.getError();
+    if (err !== gl.NO_ERROR) {
+      console.error(
+        `[ContourPass] GL error after texImage2D: 0x${err.toString(16)} for ${nx}x${ny} texture`
+      );
+    }
+
+    // Log data range for diagnostics
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < data.length; i++) {
+      if (Number.isFinite(data[i])) {
+        if (data[i] < min) min = data[i];
+        if (data[i] > max) max = data[i];
+      }
+    }
+    console.log(
+      `[ContourPass] Uploaded ${nx}x${ny} texture, data range: [${min.toFixed(6)}, ${max.toFixed(6)}]`
+    );
+
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -54,6 +76,7 @@ export class ContourPass {
     max: number,
     nx: number,
     ny: number,
+    debugMode = 0,
   ): void {
     const gl = this.gl;
     this.program.use();
@@ -61,6 +84,7 @@ export class ContourPass {
     this.program.setFloat('u_max', max);
     this.program.setVec2('u_gridSize', nx, ny);
     this.program.setInt('u_cmapType', _cmapType);
+    this.program.setInt('u_debugMode', debugMode);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fieldTexture);

@@ -80,6 +80,27 @@ export function parseBinaryFrame(buffer: ArrayBuffer): FrameData {
     velocity[k] = Math.sqrt(u[k] * u[k] + v[k] * v[k]);
   }
 
+  // Diagnostic: log field ranges after parsing
+  const fieldRanges = [
+    { name: "u", data: u },
+    { name: "v", data: v },
+    { name: "velocity", data: velocity },
+    { name: "p", data: p },
+    { name: "obstacle", data: obstacle },
+  ];
+  console.log(`[BinaryFrame] Parsed ${nx}x${ny} frame:`);
+  for (const f of fieldRanges) {
+    let fMin = Infinity;
+    let fMax = -Infinity;
+    for (let i = 0; i < f.data.length; i++) {
+      if (Number.isFinite(f.data[i])) {
+        if (f.data[i] < fMin) fMin = f.data[i];
+        if (f.data[i] > fMax) fMax = f.data[i];
+      }
+    }
+    console.log(`  ${f.name}: [${fMin.toFixed(6)}, ${fMax.toFixed(6)}]`);
+  }
+
   // Incompressible LBM: rho is approximately 1.0 everywhere.
   // The binary format does not store rho, so fill with constant 1.0.
   const rho = new Float32Array(n);

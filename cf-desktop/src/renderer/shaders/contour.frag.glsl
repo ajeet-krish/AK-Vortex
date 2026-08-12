@@ -7,6 +7,7 @@ uniform float u_min;
 uniform float u_max;
 uniform vec2 u_gridSize;
 uniform int u_cmapType; // 0=jet, 1=coolwarm, 2=rdbu
+uniform int u_debugMode; // 0=normal, 1=raw data, 2=normalized t
 
 // Analytic jet colormap: blue -> cyan -> green -> yellow -> red
 vec3 jet(float t) {
@@ -49,6 +50,18 @@ void main() {
     float val = texture(u_fieldTex, cell).r;
     float range = u_max - u_min;
     float t = clamp((val - u_min) / max(range, 1e-10), 0.0, 1.0);
+
+    // Debug visualization modes
+    if (u_debugMode == 1) {
+      // Raw data as grayscale (scaled to visible range)
+      fragColor = vec4(vec3(clamp(val * 10.0, 0.0, 1.0)), 1.0);
+      return;
+    }
+    if (u_debugMode == 2) {
+      // Normalized t as grayscale
+      fragColor = vec4(vec3(t), 1.0);
+      return;
+    }
 
     vec3 color;
     if (u_cmapType == 0) color = jet(t);

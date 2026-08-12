@@ -4,6 +4,8 @@ import { Viewport } from './Viewport';
 import { ContourPass } from './passes/ContourPass';
 import { ObstaclePass } from './passes/ObstaclePass';
 import { QuiverPass } from './passes/QuiverPass';
+import { GLDiagnostics } from './GLDiagnostics';
+import { validateFrameData, logDiagnostics } from '../utils/dataValidator';
 import type { FrameData } from '../types';
 
 export interface RenderConfig {
@@ -12,6 +14,8 @@ export interface RenderConfig {
   showQuiver: boolean;
   colorRange: { min: number; max: number };
   cmap: ColormapName;
+  /** Debug visualization: 0=normal, 1=raw data grayscale, 2=normalized t grayscale */
+  debugMode?: number;
 }
 
 export class Renderer {
@@ -21,9 +25,11 @@ export class Renderer {
   private contourPass: ContourPass;
   private obstaclePass: ObstaclePass;
   private quiverPass: QuiverPass;
+  private glDiagnostics: GLDiagnostics;
   private nx = 0;
   private ny = 0;
   private quiverVmax = 1;
+  private _lastDiagFrame = '';
 
   constructor(canvas: HTMLCanvasElement) {
     this.ctx = createGLContext(canvas);
@@ -32,6 +38,9 @@ export class Renderer {
     this.contourPass = new ContourPass(this.ctx.gl);
     this.obstaclePass = new ObstaclePass(this.ctx.gl);
     this.quiverPass = new QuiverPass(this.ctx.gl);
+    this.glDiagnostics = new GLDiagnostics(this.ctx.gl);
+    this.glDiagnostics.startContextLossMonitor();
+    this.glDiagnostics.logHealth();
   }
 
   uploadFrameData(frame: FrameData): void {
@@ -114,14 +123,21 @@ export class Renderer {
       config.colorRange.max,
       this.nx,
       this.ny,
+      config.debugMode ?? 0,
     );
-    
-    // Debug: check GL error after contour render
-    const errAfter = gl.getError();
-    if (errAfter !== gl.NO_ERROR) {
-        console.error('[Renderer] GL error after contour:', errAfter);
+
+    // Diagnostic: check GL error after contour render
+    this.glDiagnostics.checkGLError("contour render");
+
+    // Diagnostic: validate frame data only when grid dimensions change (not every frame)
+    if (this.nx > 0 && this.ny > 0) {
+      const frameKey = `${this.nx}x${this.ny}`;
+      if (this._lastDiagFrame !== frameKey) {
+        this._lastDiagFrame = frameKey;
+        const diag = validateFrameData(frameData);
+        logDiagnostics(diag);
+      }
     }
-    console.log(`[Renderer] Contour rendered: nx=${this.nx}, ny=${this.ny}, range=[${config.colorRange.min.toFixed(4)}, ${config.colorRange.max.toFixed(4)}], cmap=${cmapType}`);
 
     // 2. Obstacles (semi-transparent overlay)
     if (config.showObstacles) {
