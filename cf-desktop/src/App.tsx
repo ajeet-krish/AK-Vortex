@@ -96,43 +96,38 @@ function App() {
     wasRunningRef.current = sim.running;
   }, [sim.running, sim.frames.length, viz]);
 
-  // Responsive canvas: measure container and compute display size
+  // Responsive canvas: compute from window dimensions directly
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
     const computeSize = () => {
-      const rect = container.getBoundingClientRect();
-      const availW = rect.width - 48;
-      const availH = rect.height - 60;
+      // Use window dimensions directly, not container
+      const w = window.innerWidth - 280 - 48;  // subtract sidebar + padding
+      const h = window.innerHeight - 36 - 40 - 48 - 24;  // subtract header + tabs + padding + status
 
-      // Skip if container is hidden (zero dimensions)
-      if (availW < 50 || availH < 50) return;
+      if (w < 100 || h < 100) return;
 
       if (sim.frameData && sim.frameData.ny > 0 && sim.frameData.nx > 0) {
         const aspect = sim.frameData.nx / sim.frameData.ny;
-        let w = availW;
-        let h = w / aspect;
-        if (h > availH) {
-          h = availH;
-          w = h * aspect;
+        let cw = w;
+        let ch = cw / aspect;
+        if (ch > h) {
+          ch = h;
+          cw = ch * aspect;
         }
         setCanvasSize({
-          width: Math.floor(w),
-          height: Math.floor(h),
+          width: Math.floor(cw),
+          height: Math.floor(ch),
         });
       } else {
         setCanvasSize({
-          width: Math.floor(availW),
-          height: Math.floor(availH),
+          width: Math.floor(w),
+          height: Math.floor(h),
         });
       }
     };
 
     computeSize();
-    const observer = new ResizeObserver(computeSize);
-    observer.observe(container);
-    return () => observer.disconnect();
+    window.addEventListener('resize', computeSize);
+    return () => window.removeEventListener('resize', computeSize);
   }, [sim.frameData]);
 
   const handleExportPng = useCallback(async () => {
