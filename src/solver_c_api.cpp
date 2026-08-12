@@ -599,6 +599,208 @@ int lbm_solve_geometry(
 }
 
 // ==========================================================================
+// Rotating Cylinder with Ladd (1994) Moving Boundary
+// Simulates Magnus effect: cylinder spins, generating lift via tangential
+// wall velocity.  omega_ratio is the dimensionless spin ratio
+//   S = u_surface / u_inflow = omega * R / u_inflow
+// ==========================================================================
+int lbm_solve_rotating_cylinder(
+    int nx, int ny,
+    double re, double u_inflow,
+    double omega_ratio,
+    int max_steps, int save_interval,
+    const char* output_dir
+) {
+    reset_solver_state();
+    NX = nx;
+    NY = ny;
+    g_case = CaseType::ROTATING_CYLINDER;
+
+    int radius = std::max(10, NY / 10);
+    int cx_cyl = NX / 4;
+    int cy_cyl = NY / 2;
+    double D = 2.0 * radius;
+    double nu = u_inflow * D / re;
+    double tau = 0.5 + 3.0 * nu;
+    if (tau < 0.55) g_use_les = true;
+
+    // Create output directory
+    std::string out_dir(output_dir);
+    std::filesystem::create_directories(out_dir + "/frames");
+
+    // Initialize system
+    LBMCapabilities system;
+
+    // Place cylinder (sets bb_geom.cx/cy/radius + obstacle mask)
+    place_cylinder(system, cx_cyl, cy_cyl, radius);
+
+    // Ladd moving boundary setup
+    system.bb_geom.has_moving_wall = true;
+    system.bb_geom.omega = omega_ratio * u_inflow / radius;
+    system.bb_geom.rot_cx = static_cast<double>(cx_cyl);
+    system.bb_geom.rot_cy = static_cast<double>(cy_cyl);
+
+    // Initialize with uniform inflow equilibrium
+    for (int n = 0; n < NX * NY; ++n) {
+        double* f_node = &system.f[n * 9];
+        for (int i = 0; i < 9; ++i) {
+            f_node[i] = compute_equilibrium(i, 1.0, u_inflow, 0.0);
+        }
+    }
+
+    // Perturbation downstream of cylinder to trigger vortex shedding
+    std::mt19937 rng(42);
+    std::uniform_real_distribution<double> pert_dist(-1e-4, 1e-4);
+    for (int x = cx_cyl + 5; x < std::min(NX, cx_cyl + 60); ++x) {
+        for (int y = 0; y < NY; ++y) {
+            int n = node_index(x, y);
+            if (system.obstacle[n]) continue;
+            double* f_node = &system.f[n * 9];
+            double v_pert = pert_dist(rng);
+            double rho, u, v;
+            compute_macros(f_node, rho, u, v);
+            for (int i = 0; i < 9; ++i) {
+                f_node[i] = compute_equilibrium(i, rho, u, v + v_pert);
+            }
+        }
+    }
+
+    // Save metadata
+    save_meta_json(out_dir, re, tau, u_inflow, D, "rotating_cylinder", NX, NY);
+
+    // Run simulation
+    for (int step = 0; step <= max_steps; ++step) {
+        if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
+            return step;
+        }
+
+        execute_time_step(system, tau, u_inflow);
+
+        // Save forces
+        double fx_total = 0.0, fy_total = 0.0;
+        for (int n = 0; n < NX * NY; ++n) {
+            fx_total += system.fx_body[n];
+            fy_total += system.fy_body[n];
+        }
+        save_forces_jsonl(out_dir, step, fx_total, fy_total);
+
+        // Save frames
+        if (step % save_interval == 0) {
+            save_json_frame(system, step, out_dir);
+            save_binary_frame(system, step, out_dir);
+            if (g_frame_callback) {
+                g_frame_callback(step);
+            }
+        }
+    }
+
+    return 0;
+}
+
+// ==========================================================================
+// Urban City Grid with Configurable Inlet Direction
+// 7 buildings (4 horizontal + 3 vertical) in a street-network layout.
+//   inlet_dir = 0: East  (flow from left to right)
+//   inlet_dir = 1: South (flow from bottom to top)
+//   inlet_dir = 2: West  (flow from right to left)
+// ==========================================================================
+int lbm_solve_citygrid(
+    int nx, int ny,
+    double re, double u_inflow,
+    int inlet_dir,
+    int max_steps, int save_interval,
+    const char* output_dir
+) {
+    reset_solver_state();
+    NX = nx;
+    NY = ny;
+    g_case = CaseType::URBAN_CITYGRID;
+    g_inlet_dir = inlet_dir;
+
+    // Characteristic length: building width (street canyon scale)
+    int bldg_w = NX / 10;
+    int bldg_h = 2 * bldg_w;
+    int street_w = 2 * bldg_w;
+    double D = static_cast<double>(bldg_h);
+    double nu = u_inflow * D / re;
+    double tau = 0.5 + 3.0 * nu;
+    if (tau < 0.55) g_use_les = true;
+
+    // Create output directory
+    std::string out_dir(output_dir);
+    std::filesystem::create_directories(out_dir + "/frames");
+
+    // Initialize system
+    LBMCapabilities system;
+
+    // Place 4 horizontal buildings (long in x)
+    int y_start = NY / 6;
+    int y_spacing = NY / 5;
+    for (int i = 0; i < 4; ++i) {
+        int x0 = NX / 6 + i * (bldg_h + street_w / 2);
+        int y0 = y_start + i * y_spacing;
+        for (int y = std::max(0, y0); y < std::min(NY, y0 + bldg_w); ++y) {
+            for (int x = std::max(0, x0); x < std::min(NX, x0 + bldg_h); ++x) {
+                system.obstacle[node_index(x, y)] = true;
+            }
+        }
+    }
+
+    // Place 3 vertical buildings (long in y)
+    int x_start = NX / 3;
+    int x_spacing = NX / 4;
+    for (int i = 0; i < 3; ++i) {
+        int x0 = x_start + i * x_spacing;
+        int y0 = NY / 4 + i * (bldg_w + street_w / 3);
+        for (int y = std::max(0, y0); y < std::min(NY, y0 + bldg_h); ++y) {
+            for (int x = std::max(0, x0); x < std::min(NX, x0 + bldg_w); ++x) {
+                system.obstacle[node_index(x, y)] = true;
+            }
+        }
+    }
+
+    // Initialize with uniform inflow equilibrium
+    for (int n = 0; n < NX * NY; ++n) {
+        double* f_node = &system.f[n * 9];
+        for (int i = 0; i < 9; ++i) {
+            f_node[i] = compute_equilibrium(i, 1.0, u_inflow, 0.0);
+        }
+    }
+
+    // Save metadata
+    std::string case_label = "citygrid";
+    save_meta_json(out_dir, re, tau, u_inflow, D, case_label, NX, NY);
+
+    // Run simulation
+    for (int step = 0; step <= max_steps; ++step) {
+        if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
+            return step;
+        }
+
+        execute_time_step(system, tau, u_inflow);
+
+        // Save forces
+        double fx_total = 0.0, fy_total = 0.0;
+        for (int n = 0; n < NX * NY; ++n) {
+            fx_total += system.fx_body[n];
+            fy_total += system.fy_body[n];
+        }
+        save_forces_jsonl(out_dir, step, fx_total, fy_total);
+
+        // Save frames
+        if (step % save_interval == 0) {
+            save_json_frame(system, step, out_dir);
+            save_binary_frame(system, step, out_dir);
+            if (g_frame_callback) {
+                g_frame_callback(step);
+            }
+        }
+    }
+
+    return 0;
+}
+
+// ==========================================================================
 // VTK Export: Write frame data as VTK Structured Points for ParaView
 // ==========================================================================
 

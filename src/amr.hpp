@@ -573,7 +573,7 @@ struct AMRGrid {
             } else if (g_case == CaseType::STEP) {
                 enforce_step_inflow_on_block(base, NY / 3, NY - 1 - NY / 3, u_inflow);
                 enforce_outflow_on_block(base);
-            } else if (g_case != CaseType::RIBS) {
+            } else {
                 enforce_inflow_on_block(base, u_inflow);
                 enforce_outflow_on_block(base);
             }
@@ -596,12 +596,7 @@ struct AMRGrid {
                             if (ny_ < 0) ny_ += base.ny;
                             if (ny_ >= base.ny) ny_ -= base.ny;
                         }
-                        if (g_case == CaseType::RIBS) {
-                            if (nx_ < 0) nx_ += base.nx;
-                            if (nx_ >= base.nx) nx_ -= base.nx;
-                        } else {
-                            if (nx_ < 0 || nx_ >= base.nx) continue;
-                        }
+                        if (nx_ < 0 || nx_ >= base.nx) continue;
                         int ti = base.idx(nx_, ny_);
                         if (base.obstacle[ti]) {
                             int bb = bounce_back[d];

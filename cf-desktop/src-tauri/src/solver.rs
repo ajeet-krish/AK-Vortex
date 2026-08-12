@@ -26,6 +26,28 @@ extern "C" {
         geometry_json: *const c_char,
     ) -> c_int;
 
+    fn lbm_solve_rotating_cylinder(
+        nx: c_int,
+        ny: c_int,
+        re: c_double,
+        u_inflow: c_double,
+        omega_ratio: c_double,
+        max_steps: c_int,
+        save_interval: c_int,
+        output_dir: *const c_char,
+    ) -> c_int;
+
+    fn lbm_solve_citygrid(
+        nx: c_int,
+        ny: c_int,
+        re: c_double,
+        u_inflow: c_double,
+        inlet_dir: c_int,
+        max_steps: c_int,
+        save_interval: c_int,
+        output_dir: *const c_char,
+    ) -> c_int;
+
     fn reset_solver_state();
 
     fn lbm_write_vtk(
@@ -178,6 +200,44 @@ pub fn run_gci(
         let result = lbm_run_gci(
             nx_base, ny_base, re, u_inflow, max_steps, save_interval,
             refinement_ratio, c_output.as_ptr(), c_geom.as_ptr(),
+        );
+        Ok(result)
+    }
+}
+
+pub fn run_rotating_cylinder(
+    nx: i32, ny: i32,
+    re: f64, u_inflow: f64,
+    omega_ratio: f64,
+    max_steps: i32, save_interval: i32,
+    output_dir: &str,
+) -> Result<i32, String> {
+    let c_output = CString::new(output_dir.to_string()).map_err(|e| e.to_string())?;
+
+    unsafe {
+        let result = lbm_solve_rotating_cylinder(
+            nx, ny, re, u_inflow, omega_ratio,
+            max_steps, save_interval,
+            c_output.as_ptr(),
+        );
+        Ok(result)
+    }
+}
+
+pub fn run_citygrid(
+    nx: i32, ny: i32,
+    re: f64, u_inflow: f64,
+    inlet_dir: i32,
+    max_steps: i32, save_interval: i32,
+    output_dir: &str,
+) -> Result<i32, String> {
+    let c_output = CString::new(output_dir.to_string()).map_err(|e| e.to_string())?;
+
+    unsafe {
+        let result = lbm_solve_citygrid(
+            nx, ny, re, u_inflow, inlet_dir,
+            max_steps, save_interval,
+            c_output.as_ptr(),
         );
         Ok(result)
     }

@@ -109,27 +109,43 @@ function App() {
     });
   }, [sim.running, sim.outputDir, sim.frames.length, sim.batchFrames, sim.loadAllFrames]);
 
-  // Responsive canvas: compute from window dimensions directly
-  useEffect(() => {
-    const computeSize = () => {
-      const HEADER_HEIGHT = 36;
-      const STATUS_BAR_HEIGHT = 24;
-      const VIEW_TABS_HEIGHT = 30;
-      const SUB_TABS_HEIGHT = 30;
-      const INFO_BAR_HEIGHT = 39;
-      const H2_TITLE_HEIGHT = 20;
-      const PLAYBACK_BAR_HEIGHT = 40;
-      const HORIZONTAL_PADDING = 48;
+  // Responsive canvas: measure the content container directly via ResizeObserver.
+  // The playback bar and status bar are flex siblings of .main-layout, so their
+  // heights are already accounted for in contentEl's bounding rect via flex
+  // layout.  We also observe .playback-bar directly so that when it
+  // appears / disappears the canvas re-sizes promptly.
+  const contentRef = useRef<HTMLElement>(null);
 
-      const w = window.innerWidth - 280 - HORIZONTAL_PADDING;
-      const h = window.innerHeight
-        - HEADER_HEIGHT
-        - VIEW_TABS_HEIGHT
-        - SUB_TABS_HEIGHT
-        - INFO_BAR_HEIGHT
-        - H2_TITLE_HEIGHT
-        - PLAYBACK_BAR_HEIGHT
-        - STATUS_BAR_HEIGHT;
+  useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    const HORIZONTAL_PADDING = 48;
+
+    const computeSize = () => {
+      const rect = contentEl.getBoundingClientRect();
+      const w = rect.width - HORIZONTAL_PADDING;
+
+      // Subtract heights of non-canvas children inside .content
+      let h = rect.height;
+      const viewTabs = contentEl.querySelector('.view-mode-tabs');
+      const subTabs = contentEl.querySelector('.sub-view-tabs');
+      const infoBar = contentEl.querySelector('.info-bar');
+      const vizEl = contentEl.querySelector('.visualization');
+      const h2 = contentEl.querySelector('.visualization h2');
+
+      if (viewTabs) h -= viewTabs.getBoundingClientRect().height;
+      if (subTabs) h -= subTabs.getBoundingClientRect().height;
+      if (infoBar) h -= infoBar.getBoundingClientRect().height;
+      if (h2) h -= h2.getBoundingClientRect().height;
+
+      // Subtract .visualization padding (8px top + 8px bottom)
+      if (vizEl) {
+        const vs = getComputedStyle(vizEl);
+        h -= (parseFloat(vs.paddingTop) || 8) + (parseFloat(vs.paddingBottom) || 8);
+      } else {
+        h -= 16;
+      }
 
       if (w < 100 || h < 100) return;
 
@@ -160,9 +176,22 @@ function App() {
       }
     };
 
+    const observer = new ResizeObserver(() => computeSize());
+    observer.observe(contentEl);
+
+    // Also observe the playback bar so canvas re-sizes when it appears / disappears.
+    // The playback bar is outside .content but inside the same flex column, so its
+    // visibility change shrinks / grows contentEl.  A secondary observer ensures the
+    // callback fires even if the browser hasn't finished layout by the time the
+    // primary observer settles.
+    const playbackBar = document.querySelector('.playback-bar') as HTMLElement | null;
+    if (playbackBar) {
+      observer.observe(playbackBar);
+    }
+
     computeSize();
-    window.addEventListener('resize', computeSize);
-    return () => window.removeEventListener('resize', computeSize);
+
+    return () => observer.disconnect();
   }, []);
 
   const handleExportPng = useCallback(async () => {
@@ -434,7 +463,7 @@ function App() {
           />
         </aside>
 
-        <main className="content">
+        <main className="content" ref={contentRef}>
           <ErrorBoundary fallbackTitle="Visualization error" onReset={() => {
             viz.setViewMode('domain');
           }}>

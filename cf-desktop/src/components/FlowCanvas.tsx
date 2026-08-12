@@ -5,19 +5,6 @@ import type { ColormapName } from '../renderer/ColormapTexture';
 import type { FrameData, FrameBatchData, ProbeInfo } from '../types';
 import { sampleField } from '../utils/streamline';
 
-/** Loop-based range computation (avoids call-stack overflow on large arrays). */
-const computeRange = (arr: Float32Array): { min: number; max: number } => {
-    let lo = Infinity;
-    let hi = -Infinity;
-    for (let i = 0; i < arr.length; i++) {
-        if (Number.isFinite(arr[i])) {
-            if (arr[i] < lo) lo = arr[i];
-            if (arr[i] > hi) hi = arr[i];
-        }
-    }
-    return { min: lo, max: hi };
-};
-
 export type { ProbeInfo } from '../types';
 
 interface FlowCanvasProps {
@@ -49,13 +36,7 @@ export default function FlowCanvas({
     const rendererRef = useRef<Renderer | null>(null);
     const fallbackRef = useRef<FallbackRenderer | null>(null);
     const [useFallback, setUseFallback] = useState(false);
-    const [showDiagnostics, setShowDiagnostics] = useState(false);
     const batchUploadedRef = useRef(false);
-
-    // Precompute field ranges for diagnostic overlay (avoids Math.min/max spread on large arrays)
-    const diagURange = useMemo(() => computeRange(frameData.u), [frameData]);
-    const diagVRange = useMemo(() => computeRange(frameData.v), [frameData]);
-    const diagVelRange = useMemo(() => computeRange(frameData.velocity), [frameData]);
 
     // Compute batch velocity max for color range
     const batchVelMax = useMemo(() => {
@@ -132,6 +113,11 @@ export default function FlowCanvas({
             const canvas = canvasRef.current;
             if (!canvas) return;
             rendererRef.current?.resize(canvasSize.width, canvasSize.height);
+            // Sync CSS dimensions with backing store so the canvas element
+            // does not rely on flex-stretch to size itself (which can exceed
+            // the computed aspect-ratio-constrained dimensions).
+            canvas.style.width = `${canvasSize.width}px`;
+            canvas.style.height = `${canvasSize.height}px`;
         }
     }, [canvasSize, useFallback]);
 
@@ -333,77 +319,25 @@ export default function FlowCanvas({
         onProbe?.(null);
     }, [onProbe]);
 
-    // Toggle diagnostic overlay with Ctrl+D
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                setShowDiagnostics((prev) => !prev);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
     // Guard: skip render when grid has zero size
     if (frameData.nx === 0 || frameData.ny === 0) {
         return <div className="flow-canvas-container" />;
     }
 
     return (
-        <div className="flow-canvas-container" ref={containerRef} style={{ position: 'relative' }}>
+        <div className="flow-canvas-container" ref={containerRef}>
             <canvas
                 ref={canvasRef}
-                style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }}
+                style={{
+                    width: `${canvasSize.width}px`,
+                    height: `${canvasSize.height}px`,
+                    display: 'block',
+                    cursor: 'crosshair',
+                }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
             />
-            {showDiagnostics && (
-                <div style={{
-                    position: 'absolute',
-                    top: 8,
-                    left: 8,
-                    background: 'rgba(0,0,0,0.85)',
-                    color: '#0f0',
-                    padding: 12,
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    zIndex: 100,
-                    borderRadius: 4,
-                    maxHeight: 240,
-                    overflow: 'auto',
-                    lineHeight: 1.5,
-                    pointerEvents: 'none',
-                }}>
-                    <div style={{ color: '#0ff', marginBottom: 4 }}>Diagnostics (Ctrl+D)</div>
-                    <div>Grid: {frameData.nx}x{frameData.ny}</div>
-                    <div>Field: {field}</div>
-                    <div>Range: [{effectiveRange.min.toFixed(6)}, {effectiveRange.max.toFixed(6)}]</div>
-                    <div>u: [{diagURange.min.toFixed(6)}, {diagURange.max.toFixed(6)}]</div>
-                    <div>v: [{diagVRange.min.toFixed(6)}, {diagVRange.max.toFixed(6)}]</div>
-                    <div>vel: [{diagVelRange.min.toFixed(6)}, {diagVelRange.max.toFixed(6)}]</div>
-                    <div>Canvas: {canvasSize.width}x{canvasSize.height} (DPR: {window.devicePixelRatio})</div>
-                    <div>Renderer: {useFallback ? 'Canvas2D (fallback)' : 'WebGL2'}</div>
-                    <div>Mode: {batchFrames ? `Batch (${batchFrames.nFrames} frames)` : 'Single frame'}</div>
-                    <div>Colormap: {cmap}</div>
-                </div>
-            )}
-            {useFallback && (
-                <div style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    right: 8,
-                    background: 'rgba(0,0,0,0.7)',
-                    color: '#f0ad4e',
-                    padding: '4px 8px',
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    borderRadius: 3,
-                    pointerEvents: 'none',
-                }}>
-                    Canvas2D fallback
-                </div>
-            )}
+
         </div>
     );
 }

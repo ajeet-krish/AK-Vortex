@@ -196,15 +196,6 @@ export default function FeatureTree({
 
     return (
         <div className="feature-tree">
-            {/* ---- Root node ---- */}
-            <div className="tree-root">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <rect x="1" y="1" width="12" height="12" rx="2" fill="#0078d4" opacity="0.2" stroke="#0078d4" strokeWidth="0.8" />
-                    <text x="7" y="10" textAnchor="middle" fill="#0078d4" fontSize="7" fontWeight="600">L2</text>
-                </svg>
-                <span className="tree-root-label">AK-Vortex</span>
-            </div>
-
             {/* ============================================================ */}
             {/*  GEOMETRY                                                     */}
             {/* ============================================================ */}

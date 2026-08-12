@@ -506,29 +506,6 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
                 }
             }
         }
-    } else if (g_case == CaseType::RIBS || g_case == CaseType::PERIODIC_HILLS) {
-        #pragma omp parallel for collapse(2)
-        for (int y = 0; y < NY; ++y) {
-            for (int x = 0; x < NX; ++x) {
-                int node_idx = node_index(x, y);
-                if (sys.obstacle[node_idx]) continue;
-                double* f_node = &sys.f[node_idx * 9];
-                for (int i = 0; i < 9; ++i) {
-                    int next_x = x + cx[i];
-                    int next_y = y + cy[i];
-                    if (next_x < 0) next_x += NX;
-                    if (next_x >= NX) next_x -= NX;
-                    if (next_y < 0) next_y += NY;
-                    if (next_y >= NY) next_y -= NY;
-                    int target_node = node_index(next_x, next_y);
-                    if (sys.obstacle[target_node]) {
-                        sys.f_next[node_idx * 9 + bounce_back[i]] = f_node[i];
-                    } else {
-                        sys.f_next[target_node * 9 + i] = f_node[i];
-                    }
-                }
-            }
-        }
     } else if (g_case == CaseType::URBAN_CITYGRID) {
         // No periodic wrapping -- all boundaries are solid walls or BCs.
         // BCs (enforce_inflow/enforce_outflow) are applied after streaming.
@@ -639,15 +616,8 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
                     int next_x = x + cx[i];
                     int next_y = y + cy[i];
                     // Handle periodic / outflow wrapping (same as momentum)
-                    if (g_case == CaseType::RIBS || g_case == CaseType::PERIODIC_HILLS) {
-                        if (next_x < 0) next_x += NX;
-                        if (next_x >= NX) next_x -= NX;
-                        if (next_y < 0) next_y += NY;
-                        if (next_y >= NY) next_y -= NY;
-                    } else {
-                        if (next_y < 0) next_y += NY;
-                        if (next_y >= NY) next_y -= NY;
-                    }
+                    if (next_y < 0) next_y += NY;
+                    if (next_y >= NY) next_y -= NY;
                     if (next_x < 0 || next_x >= NX || next_y < 0 || next_y >= NY) {
                         // Outflow / wall: adiabatic bounce-back for temperature
                         sys.g_thermal_next[node_idx * 9 + bounce_back[i]] = g_node[i];
@@ -756,11 +726,10 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
             enforce_west_inflow(sys, u_inflow);
             enforce_east_outflow(sys);
         }
-    } else if (g_case != CaseType::RIBS && g_case != CaseType::PERIODIC_HILLS) {
+    } else {
         enforce_inflow(sys, u_inflow);
         enforce_outflow(sys);
     }
-    // RIBS and PERIODIC_HILLS have periodic x -- no BC enforcement needed
 
     // --- Force extraction (all non-cavity cases) ---
     if (g_case != CaseType::CAVITY) {
@@ -773,17 +742,9 @@ inline void execute_time_step(LBMCapabilities& sys, double tau, double u_inflow)
                 for (int i = 0; i < 9; ++i) {
                     int nx = x + cx[i];
                     int ny = y + cy[i];
-                    if (g_case == CaseType::RIBS || g_case == CaseType::PERIODIC_HILLS) {
-                        // Periodic in x (and y) for ribbed channel / periodic hills
-                        if (ny < 0) ny += NY;
-                        if (ny >= NY) ny -= NY;
-                        if (nx < 0) nx += NX;
-                        if (nx >= NX) nx -= NX;
-                    } else {
-                        if (ny < 0) ny += NY;
-                        if (ny >= NY) ny -= NY;
-                        if (nx < 0 || nx >= NX) continue;
-                    }
+                    if (ny < 0) ny += NY;
+                    if (ny >= NY) ny -= NY;
+                    if (nx < 0 || nx >= NX) continue;
 
                     int target_idx = node_index(nx, ny);
                     if (sys.obstacle[target_idx]) {
@@ -939,13 +900,7 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
             case CaseType::CYLINDER: return "circle";
             case CaseType::CAVITY: return "none";
             case CaseType::STEP: return "rectangle";
-            case CaseType::RIBS: return "ribbed";
-            case CaseType::URBAN_CANYON: return "buildings";
-            case CaseType::DOWNWASH: return "buildings";
             case CaseType::ORIFICE_PLATE: return "orifice";
-            case CaseType::FLAT_PLATE: return "polygon";
-            case CaseType::SQUARE_CYLINDER: return "square";
-            case CaseType::PERIODIC_HILLS: return "hill";
             case CaseType::CYLINDER_NEAR_WALL: return "cylinder_wall";
             case CaseType::SIDE_BY_SIDE: return "two_circles";
             case CaseType::ROTATING_CYLINDER: return "circle";
@@ -1018,21 +973,6 @@ inline void save_json_frame(const LBMCapabilities& sys, int step, const std::str
                     << ",\"w\":" << bldg_w << ",\"h\":" << bldg_h << "}";
             }
             out << "]";
-            break;
-        }
-        case CaseType::FLAT_PLATE: {
-            if (sys.bb_geom.is_polygon && !sys.bb_geom.poly_vertices.empty()) {
-                out << ",\"polygons\":[{\"vertices\":[";
-                for (size_t vi = 0; vi < sys.bb_geom.poly_vertices.size(); ++vi) {
-                    if (vi > 0) out << ",";
-                    double vx = sys.bb_geom.poly_vertices[vi].first;
-                    double vy = sys.bb_geom.poly_vertices[vi].second;
-                    if (!std::isfinite(vx)) vx = 0.0;
-                    if (!std::isfinite(vy)) vy = 0.0;
-                    out << "[" << vx << "," << vy << "]";
-                }
-                out << "]}]";
-            }
             break;
         }
         default:

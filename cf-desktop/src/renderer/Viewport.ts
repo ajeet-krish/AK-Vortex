@@ -32,8 +32,9 @@ export class Viewport {
     const halfH = (ch / 2) / zoom;
     const left = centerX - halfW;
     const right = centerX + halfW;
-    const bottom = centerY + halfH;  // flip Y
-    const top = centerY - halfH;
+    // Y-up: bottom of viewport = lower grid y, top = higher grid y
+    const bottom = centerY - halfH;
+    const top = centerY + halfH;
 
     // Orthographic projection (3x3 for 2D)
     return new Float32Array([
@@ -49,7 +50,8 @@ export class Viewport {
     const ch = this.canvas.height;
     return {
       gx: centerX + (cx - cw / 2) / zoom,
-      gy: centerY + (cy - ch / 2) / zoom,
+      // Y-up: canvas top (cy=0) maps to higher grid y (top of simulation)
+      gy: centerY - (cy - ch / 2) / zoom,
     };
   }
 
@@ -59,7 +61,8 @@ export class Viewport {
     const ch = this.canvas.height;
     return {
       cx: (gx - centerX) * zoom + cw / 2,
-      cy: (gy - centerY) * zoom + ch / 2,
+      // Y-up: higher grid y maps to above center (lower canvas y)
+      cy: -(gy - centerY) * zoom + ch / 2,
     };
   }
 

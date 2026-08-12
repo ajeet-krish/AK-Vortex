@@ -12,13 +12,6 @@ endif()
 find_package(OpenMP REQUIRED)
 
 # ------------------------------------------------------------------
-# Main solver executable (cylinder flow)
-# ------------------------------------------------------------------
-add_executable(LBM_Engine src/main.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_Engine PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
 # Lid-driven cavity executable
 # ------------------------------------------------------------------
 add_executable(LBM_Cavity src/cavity.cpp src/lbm.hpp src/lbm_types.hpp)
@@ -31,27 +24,6 @@ target_link_libraries(LBM_Cavity PRIVATE OpenMP::OpenMP_CXX)
 add_executable(LBM_Step src/step.cpp src/lbm.hpp src/lbm_types.hpp)
 target_include_directories(LBM_Step PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(LBM_Step PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Urban canyon flow executable
-# ------------------------------------------------------------------
-add_executable(LBM_UrbanCanyon src/urban_canyon.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_UrbanCanyon PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_UrbanCanyon PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Building downwash executable
-# ------------------------------------------------------------------
-add_executable(LBM_Downwash src/downwash.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_Downwash PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_Downwash PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Flat plate boundary layer (primary validation case)
-# ------------------------------------------------------------------
-add_executable(LBM_FlatPlate src/flat_plate.cpp src/lbm.hpp src/lbm_types.hpp src/geometry.hpp)
-target_include_directories(LBM_FlatPlate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_FlatPlate PRIVATE OpenMP::OpenMP_CXX)
 
 # ------------------------------------------------------------------
 # AMR test executable (cylinder with adaptive mesh refinement)
@@ -76,14 +48,13 @@ add_executable(LBM_Tests src/lbm_test.cpp src/lbm.hpp src/lbm_types.hpp)
 target_include_directories(LBM_Tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(LBM_Tests PRIVATE GTest::gtest_main OpenMP::OpenMP_CXX)
 
+add_executable(BodyFittedGrid_Tests src/body_fitted_grid_test.cpp src/body_fitted_grid.hpp src/geometry.hpp src/lbm_types.hpp)
+target_include_directories(BodyFittedGrid_Tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(BodyFittedGrid_Tests PRIVATE GTest::gtest_main OpenMP::OpenMP_CXX)
+
 # ------------------------------------------------------------------
 # Custom targets
 # ------------------------------------------------------------------
-add_custom_target(sim
-  COMMAND LBM_Engine
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-
 add_custom_target(cavity
   COMMAND LBM_Cavity
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -94,63 +65,8 @@ add_custom_target(step
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
-add_custom_target(urban
-  COMMAND LBM_UrbanCanyon
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-
-add_custom_target(downwash
-  COMMAND LBM_Downwash
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-
 add_custom_target(amr
   COMMAND LBM_AMR
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-
-add_custom_target(flat_plate
-  COMMAND LBM_FlatPlate
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-
-# ------------------------------------------------------------------
-# Cylinder near a wall (ground effect)
-# ------------------------------------------------------------------
-add_executable(LBM_CylinderNearWall src/cylinder_near_wall.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_CylinderNearWall PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_CylinderNearWall PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Side-by-side cylinders (interference)
-# ------------------------------------------------------------------
-add_executable(LBM_SideBySide src/side_by_side_cylinders.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_SideBySide PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_SideBySide PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Rotating cylinder (Magnus effect)
-# ------------------------------------------------------------------
-add_executable(LBM_RotatingCylinder src/rotating_cylinder.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_RotatingCylinder PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_RotatingCylinder PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Multi-stage orifice plate (staggered)
-# ------------------------------------------------------------------
-add_executable(LBM_OrificePlate src/orifice_plate.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_OrificePlate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_OrificePlate PRIVATE OpenMP::OpenMP_CXX)
-
-# ------------------------------------------------------------------
-# Urban city grid (7 buildings, 3 inlet configs)
-# ------------------------------------------------------------------
-add_executable(LBM_UrbanCityGrid src/urban_citygrid.cpp src/lbm.hpp src/lbm_types.hpp)
-target_include_directories(LBM_UrbanCityGrid PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(LBM_UrbanCityGrid PRIVATE OpenMP::OpenMP_CXX)
-
-add_custom_target(orifice
-  COMMAND LBM_OrificePlate
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
@@ -171,6 +87,7 @@ add_library(lbm_solver_shared SHARED
     src/ibm.hpp
     src/wall_functions.hpp
     src/scalar_transport.hpp
+    src/body_fitted_grid.hpp
 )
 target_include_directories(lbm_solver_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(lbm_solver_shared PRIVATE OpenMP::OpenMP_CXX)

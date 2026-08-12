@@ -46,6 +46,26 @@ int lbm_run_gci(
     const char* geometry_json
 );
 
+// Rotating cylinder with Ladd (1994) moving boundary.
+// omega_ratio is the dimensionless spin ratio S = u_surface / u_inflow.
+int lbm_solve_rotating_cylinder(
+    int nx, int ny,
+    double re, double u_inflow,
+    double omega_ratio,
+    int max_steps, int save_interval,
+    const char* output_dir
+);
+
+// Urban city grid with configurable inlet direction.
+// inlet_dir: 0=East (left-to-right), 1=South (bottom-to-top), 2=West (right-to-left).
+int lbm_solve_citygrid(
+    int nx, int ny,
+    double re, double u_inflow,
+    int inlet_dir,
+    int max_steps, int save_interval,
+    const char* output_dir
+);
+
 void lbm_set_cancel_flag(bool cancel);
 
 void lbm_save_binary_frame(void* system, int step, const char* output_dir);

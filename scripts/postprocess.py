@@ -264,10 +264,27 @@ def _list_frames(output_dir):
 
 
 def _load_frame(path):
-    """Load a frame from either binary or JSON format, preferring binary."""
+    """Load a frame from either binary or JSON format, preferring binary.
+
+    Binary frames do not contain obstacle_meta (circles/rectangles/polygons).
+    When loading a binary frame, the corresponding JSON frame is read to
+    extract obstacle_meta so that vector-geometry overlays render correctly.
+    """
     path_str = str(path)
     if path_str.endswith('.bin'):
-        return parse_bin_frame(path_str)
+        result = parse_bin_frame(path_str)
+        # Merge obstacle_meta from the corresponding JSON frame
+        json_path = path_str[:-4] + '.json'  # .bin -> .json
+        if os.path.exists(json_path):
+            try:
+                with open(json_path) as f:
+                    json_data = json.load(f)
+                obstacle_meta = json_data.get('obstacle_meta')
+                if obstacle_meta:
+                    result['obstacle_meta'] = obstacle_meta
+            except (json.JSONDecodeError, KeyError, OSError):
+                pass
+        return result
     else:
         return parse_json_frame(path_str)
 

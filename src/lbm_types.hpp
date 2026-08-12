@@ -17,9 +17,8 @@ inline int NY = 600;
 constexpr int NUM_DIRECTIONS = 9;
 
 // Simulation case type
-enum class CaseType { CYLINDER, CAVITY, STEP, RIBS, URBAN_CANYON, DOWNWASH,
-                      SQUARE_CYLINDER, FLAT_PLATE, SPORTS_BALL,
-                      PERIODIC_HILLS, CYLINDER_NEAR_WALL, SIDE_BY_SIDE,
+enum class CaseType { CYLINDER, CAVITY, STEP,
+                      CYLINDER_NEAR_WALL, SIDE_BY_SIDE,
                       ROTATING_CYLINDER, ORIFICE_PLATE, URBAN_CITYGRID };
 
 // Collision operator type

@@ -49,9 +49,11 @@ vec3 rdbu(float t) {
 
 void main() {
     vec2 cellSize = 1.0 / u_gridSize;
-    // Flip Y to match projection matrix (Y-flip in Viewport.getProjectionMatrix)
-    vec2 flippedUV = vec2(v_uv.x, 1.0 - v_uv.y);
-    vec2 cell = (floor(flippedUV * u_gridSize) + 0.5) * cellSize;
+    // Y-up convention: v_uv.y=0 maps to sim y=0 (bottom of domain),
+    // v_uv.y=1 maps to sim y=NY (top of domain).  No flip needed because
+    // the vertex shader outputs clip-space positions directly (no projection
+    // matrix applied) and the texture is uploaded with UNPACK_FLIP_Y=false.
+    vec2 cell = (floor(v_uv * u_gridSize) + 0.5) * cellSize;
 
     // Sample all channels from the array texture
     // Channel offsets: u=0, v=1, p=2, omega=3, obstacle=4
