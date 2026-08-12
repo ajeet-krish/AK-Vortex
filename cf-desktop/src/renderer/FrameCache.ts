@@ -129,6 +129,11 @@ export class FrameCache {
     return this.texture !== null && this._frameCount > 0;
   }
 
+  /** Expose the raw WebGLTexture for deck.gl layer consumption. */
+  getTexture(): WebGLTexture | null {
+    return this.texture;
+  }
+
   get frameCount(): number {
     return this._frameCount;
   }
