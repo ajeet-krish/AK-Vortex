@@ -195,7 +195,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
     }, [running]);
 
     // Eagerly load frame data when frames list changes (fixes black screen on Results tab)
-    // This ensures frameData is available immediately when the user switches to Results
+    // This ensures frame data is available immediately when the user switches to Results
     useEffect(() => {
         if (frames.length === 0 || !outputDir) return;
         // If frameData is null and we have frames, load the current frameIndex

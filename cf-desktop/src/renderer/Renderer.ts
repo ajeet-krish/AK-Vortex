@@ -107,13 +107,6 @@ export class Renderer {
     else if (config.field === 'vorticity') cmapType = 2;
 
     this.contourPass.uploadField(sanitizedData, this.nx, this.ny);
-    
-    // Debug: verify GL state before contour render
-    const err = gl.getError();
-    if (err !== gl.NO_ERROR) {
-        console.error('[Renderer] GL error before contour:', err);
-    }
-    
     this.contourPass.render(
       proj,
       cmapType,

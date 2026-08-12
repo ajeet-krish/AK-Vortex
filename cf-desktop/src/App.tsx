@@ -99,9 +99,8 @@ function App() {
   // Responsive canvas: compute from window dimensions directly
   useEffect(() => {
     const computeSize = () => {
-      // Use window dimensions directly, not container
-      const w = window.innerWidth - 280 - 48;  // subtract sidebar + padding
-      const h = window.innerHeight - 36 - 40 - 48 - 24;  // subtract header + tabs + padding + status
+      const w = window.innerWidth - 280 - 48;
+      const h = window.innerHeight - 36 - 40 - 48 - 24;
 
       if (w < 100 || h < 100) return;
 
