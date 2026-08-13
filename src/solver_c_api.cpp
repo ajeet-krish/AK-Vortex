@@ -1,6 +1,7 @@
 #include "solver_c_api.h"
 #include "lbm.hpp"
 #include "geometry.hpp"
+#include "body_fitted_grid.hpp"
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -495,7 +496,8 @@ int lbm_solve_geometry(
     double re, double u_inflow,
     int max_steps, int save_interval,
     const char* output_dir,
-    const char* geometry_json
+    const char* geometry_json,
+    const char* mesh_shape
 ) {
     // Reset global state from any previous run
     reset_solver_state();
@@ -569,8 +571,49 @@ int lbm_solve_geometry(
     // Initialize system
     LBMCapabilities system;
 
-    // Mark obstacles from geometry
-    mark_obstacles_from_shapes(system, shapes);
+    // Mark obstacles from geometry, using body-fitted grid when requested
+    std::string mesh(mesh_shape ? mesh_shape : "cartesian");
+
+    if (mesh == "o_grid" && !shapes.empty()) {
+        // Find first circle shape and generate O-grid around it
+        for (const auto& shape : shapes) {
+            if (shape.type == "circle") {
+                BodyFittedGrid grid;
+                double outer = std::min(NX, NY) * 0.4;
+                grid.build_o_grid(shape.x, shape.y, shape.radius, outer, 64, 20);
+                grid.map_to_cartesian(NX, NY, system.obstacle);
+                // Set bounce-back geometry for the circle
+                system.bb_geom.cx = shape.x;
+                system.bb_geom.cy = shape.y;
+                system.bb_geom.radius = shape.radius;
+                break;
+            }
+        }
+    } else if (mesh == "c_grid" && !shapes.empty()) {
+        // Find first polygon shape (airfoil) and generate C-grid around it
+        for (const auto& shape : shapes) {
+            if (shape.type == "polygon" && shape.points.size() >= 3) {
+                BodyFittedGrid grid;
+                // Extract polygon points
+                std::vector<std::pair<double, double>> airfoil;
+                for (const auto& pt : shape.points) {
+                    airfoil.push_back({pt.first, pt.second});
+                }
+                double chord = 80.0;  // default, or compute from bounding box
+                double wake = 3.0 * chord;
+                double far_field = std::min(NX, NY) * 0.4;
+                grid.build_c_grid(airfoil, chord, wake, far_field, 80, 30, 0.0);
+                grid.map_to_cartesian(NX, NY, system.obstacle);
+                // Set polygon bounce-back
+                system.bb_geom.is_polygon = true;
+                system.bb_geom.poly_vertices = airfoil;
+                break;
+            }
+        }
+    } else {
+        // Default Cartesian path
+        mark_obstacles_from_shapes(system, shapes);
+    }
 
     // Initialize with uniform inflow equilibrium
     for (int n = 0; n < NX * NY; ++n) {
@@ -968,7 +1011,7 @@ extern "C" int lbm_run_sweep(
         double nu = u_inflow * 60.0 / re;
         double tau = 0.5 + 3.0 * nu;
 
-        lbm_solve_geometry(nx, ny, re, u_inflow, max_steps, save_interval, re_dir.c_str(), geometry_json);
+        lbm_solve_geometry(nx, ny, re, u_inflow, max_steps, save_interval, re_dir.c_str(), geometry_json, NULL);
 
         // Read last frame to get max velocity
         double max_vel = 0.0;
@@ -1034,7 +1077,8 @@ extern "C" int lbm_run_gci(
             grids[i][0], grids[i][1],
             re, u_inflow,
             max_steps, save_interval,
-            grid_dir.c_str(), geometry_json
+            grid_dir.c_str(), geometry_json,
+            NULL
         );
 
         // Extract max velocity from last frame

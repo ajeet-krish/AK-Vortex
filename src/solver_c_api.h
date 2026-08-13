@@ -19,7 +19,8 @@ int lbm_solve_geometry(
     double re, double u_inflow,
     int max_steps, int save_interval,
     const char* output_dir,
-    const char* geometry_json
+    const char* geometry_json,
+    const char* mesh_shape  // "cartesian" (default/NULL), "c_grid", "o_grid"
 );
 
 int lbm_write_vtk(

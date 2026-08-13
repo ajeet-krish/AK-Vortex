@@ -229,6 +229,7 @@ pub fn run_geometry_simulation(
     max_steps: i32,
     save_interval: i32,
     geometry_json: String,
+    mesh_shape: Option<String>,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
     let app_data = app.path()
@@ -290,11 +291,12 @@ pub fn run_geometry_simulation(
 
     let out_dir_clone = output_dir.clone();
     let geom_clone = geometry_json.clone();
+    let mesh_clone = mesh_shape.unwrap_or_else(|| "cartesian".to_string());
     let app_clone = app.clone();
     let handle = thread::spawn(move || {
         let result = solver::run_geometry_solver(
             nx, ny, re, u_inflow, max_steps, save_interval,
-            &out_dir_clone, &geom_clone,
+            &out_dir_clone, &geom_clone, &mesh_clone,
         );
         match result {
             Ok(_) => {
