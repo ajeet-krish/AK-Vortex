@@ -363,6 +363,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
                     maxSteps: config.maxSteps,
                     saveInterval: config.saveInterval,
                     geometryJson,
+                    meshShape: gridConfig.meshShape,
                 });
             } else {
                 setSimProgress({ step: 0, total: config.maxSteps, status: 'Setting up simulation...' });
@@ -385,7 +386,7 @@ export function useSimulation(shapes: Shape[]): SimulationState {
             setCanCancel(false);
             alert(`Simulation failed: ${e}`);
         }
-    }, [config, shapes]);
+    }, [config, shapes, gridConfig]);
 
     const cancelSimulation = useCallback(async () => {
         try {

@@ -10,6 +10,7 @@
 import { useMemo, useCallback } from 'react';
 import type {
   QualityLevel,
+  MeshShape,
   GridConfig,
   SystemInfo,
   ValidationResult,
@@ -18,6 +19,7 @@ import type {
 import {
   GRID_PRESETS,
   CASE_GRID_DEFAULTS,
+  MESH_SHAPE_OPTIONS,
   computeGridForPreset,
   computeNyFromNx,
   computeNxFromNy,
@@ -25,6 +27,8 @@ import {
   GRID_MAX,
 } from '../config/gridPresets';
 import { validateGrid } from '../config/gridValidation';
+
+import type { Shape } from './GeometryEditor';
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -38,6 +42,8 @@ interface GridConfigPanelProps {
   saveInterval: number;
   systemInfo: SystemInfo | null;
   disabled: boolean;
+  /** Placed geometry shapes (custom case only) */
+  shapes: Shape[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -52,6 +58,7 @@ export default function GridConfigPanel({
   saveInterval,
   systemInfo,
   disabled,
+  shapes,
 }: GridConfigPanelProps) {
   const defaults: CaseGridDefaults =
     CASE_GRID_DEFAULTS[caseType] ?? CASE_GRID_DEFAULTS.custom;
@@ -118,6 +125,18 @@ export default function GridConfigPanel({
     onGridConfigChange({ ...gridConfig, ny, lockAspectRatio: newLock });
   }, [caseType, gridConfig, onGridConfigChange]);
 
+  // --- Mesh shape selection ---
+  const handleMeshShapeChange = useCallback(
+    (meshShape: MeshShape) => {
+      console.log(`[GridConfigPanel] Mesh shape changed to: ${meshShape}`);
+      onGridConfigChange({ ...gridConfig, meshShape });
+    },
+    [gridConfig, onGridConfigChange],
+  );
+
+  // Show mesh shape selector only for custom geometry cases with shapes placed
+  const showMeshShape = caseType === 'custom' && shapes.length > 0;
+
   const totalNodes = gridConfig.nx * gridConfig.ny;
   const totalNodesDisplay =
     totalNodes >= 1_000_000
@@ -143,6 +162,27 @@ export default function GridConfigPanel({
           </button>
         ))}
       </div>
+
+      {/* ---- Mesh Shape (custom geometry only) ---- */}
+      {showMeshShape && (
+        <div className="gcp-mesh-shape">
+          <label className="gcp-mesh-label">Mesh topology</label>
+          <div className="gcp-mesh-options">
+            {MESH_SHAPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`gcp-mesh-btn ${gridConfig.meshShape === opt.value ? 'active' : ''}`}
+                onClick={() => handleMeshShapeChange(opt.value)}
+                disabled={disabled}
+                title={opt.description}
+              >
+                <span className="gcp-mesh-btn-label">{opt.label}</span>
+                <span className="gcp-mesh-btn-desc">{opt.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ---- Grid Dimensions ---- */}
       <div className="gcp-dims-row">

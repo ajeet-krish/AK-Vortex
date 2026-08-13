@@ -209,6 +209,7 @@ export default function FeatureTree({
                         saveInterval={config.saveInterval}
                         systemInfo={systemInfo}
                         disabled={running}
+                        shapes={shapes}
                     />
                 </TreeItem>
             </TreeSection>

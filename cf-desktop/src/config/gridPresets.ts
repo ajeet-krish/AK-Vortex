@@ -6,7 +6,7 @@
  * characteristic length for physical dimension mapping.
  */
 
-import type { GridPreset, CaseGridDefaults, QualityLevel, GridConfig } from '../types';
+import type { GridPreset, CaseGridDefaults, QualityLevel, GridConfig, MeshShape } from '../types';
 
 /* ------------------------------------------------------------------ */
 /*  Quality Presets                                                     */
@@ -31,6 +31,7 @@ export const CASE_GRID_DEFAULTS: Record<string, CaseGridDefaults> = {
     aspectRatio: 800 / 300,  // ~2.67:1
     characteristicLengthCells: 60,  // D = 60 cells at base resolution
     characteristicLabel: 'Diameter (D)',
+    defaultMeshShape: 'o_grid',
   },
   cavity: {
     baseNx: 512,
@@ -38,6 +39,7 @@ export const CASE_GRID_DEFAULTS: Record<string, CaseGridDefaults> = {
     aspectRatio: 1.0,  // square
     characteristicLengthCells: 512,  // L = full width
     characteristicLabel: 'Cavity width (L)',
+    defaultMeshShape: 'cartesian',
   },
   step: {
     baseNx: 800,
@@ -45,6 +47,7 @@ export const CASE_GRID_DEFAULTS: Record<string, CaseGridDefaults> = {
     aspectRatio: 800 / 300,  // ~2.67:1
     characteristicLengthCells: 150,  // step height h = NY/2 = 150
     characteristicLabel: 'Step height (h)',
+    defaultMeshShape: 'cartesian',
   },
   custom: {
     baseNx: 800,
@@ -52,8 +55,37 @@ export const CASE_GRID_DEFAULTS: Record<string, CaseGridDefaults> = {
     aspectRatio: null,  // unconstrained
     characteristicLengthCells: 100,
     characteristicLabel: 'Reference length',
+    defaultMeshShape: 'cartesian',
   },
 };
+
+/* ------------------------------------------------------------------ */
+/*  Mesh Shape Options                                                  */
+/* ------------------------------------------------------------------ */
+
+export interface MeshShapeOption {
+  value: MeshShape;
+  label: string;
+  description: string;
+}
+
+export const MESH_SHAPE_OPTIONS: MeshShapeOption[] = [
+  {
+    value: 'cartesian',
+    label: 'Cartesian',
+    description: 'Rectangular grid',
+  },
+  {
+    value: 'c_grid',
+    label: 'C-grid',
+    description: 'Wraps around airfoil shapes',
+  },
+  {
+    value: 'o_grid',
+    label: 'O-grid',
+    description: 'Wraps around cylindrical shapes',
+  },
+];
 
 /* ------------------------------------------------------------------ */
 /*  Grid Computation                                                   */
@@ -136,10 +168,12 @@ export function computeResolution(
  */
 export function getDefaultGridConfig(caseType: string): GridConfig {
   const { nx, ny } = computeGridForPreset(caseType, 'standard');
+  const defaults = CASE_GRID_DEFAULTS[caseType] ?? CASE_GRID_DEFAULTS.custom;
   return {
     nx,
     ny,
     quality: 'standard',
     lockAspectRatio: true,
+    meshShape: defaults.defaultMeshShape,
   };
 }

@@ -38,6 +38,9 @@ export interface ProbeInfo {
 
 export type QualityLevel = 'draft' | 'standard' | 'high' | 'ultra' | 'custom';
 
+/** Mesh topology for body-fitted grids around obstacles. */
+export type MeshShape = 'cartesian' | 'c_grid' | 'o_grid';
+
 export interface GridPreset {
   name: QualityLevel;
   label: string;
@@ -56,6 +59,8 @@ export interface CaseGridDefaults {
   characteristicLengthCells: number;
   /** Human-readable characteristic length name */
   characteristicLabel: string;
+  /** Default mesh topology for this case type */
+  defaultMeshShape: MeshShape;
 }
 
 export interface GridConfig {
@@ -64,6 +69,8 @@ export interface GridConfig {
   quality: QualityLevel;
   /** Whether aspect ratio is locked to case default */
   lockAspectRatio: boolean;
+  /** Mesh topology: cartesian (rectangular), c_grid (wraps airfoils), or o_grid (wraps cylinders) */
+  meshShape: MeshShape;
 }
 
 export interface SystemInfo {
