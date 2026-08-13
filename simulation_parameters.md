@@ -104,7 +104,7 @@ removed from the build. Case sections below are retained for reference/archival.
 | u_inflow | 0.10 | Fixed |
 | BC | Ladd (1994) | Moving boundary bounce-back |
 
-### Orifice Plate (orifice_plate.cpp -- LBM_OrificePlate) [ARCHIVED - entry point removed]
+### Orifice Plate (orifice_plate.cpp -- LBM_OrificePlate) [ACTIVE]
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|

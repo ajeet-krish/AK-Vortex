@@ -128,7 +128,9 @@ export default function GridConfigPanel({
   // --- Mesh shape selection ---
   const handleMeshShapeChange = useCallback(
     (meshShape: MeshShape) => {
-      console.log(`[GridConfigPanel] Mesh shape changed to: ${meshShape}`);
+      if (import.meta.env.DEV) {
+        console.log(`[GridConfigPanel] Mesh shape changed to: ${meshShape}`);
+      }
       onGridConfigChange({ ...gridConfig, meshShape });
     },
     [gridConfig, onGridConfigChange],

@@ -69,7 +69,14 @@ struct BodyFittedGrid {
     std::vector<std::pair<double,double>> body_surface;
 
     // Index helper
-    int idx(int i, int j) const { return j * n_xi + i; }
+    int idx(int i, int j) const {
+#ifndef NDEBUG
+        if (i < 0 || i >= n_xi || j < 0 || j >= n_eta) {
+            return -1;
+        }
+#endif
+        return j * n_xi + i;
+    }
 
     // ------------------------------------------------------------------
     // Hyperbolic tangent stretching function

@@ -26,6 +26,7 @@ extern "C" void lbm_register_frame_callback(lbm_frame_callback_t cb) {
 }
 
 extern "C" void lbm_save_binary_frame(void* system, int step, const char* output_dir) {
+    if (!system) return;
     auto* sys = static_cast<LBMCapabilities*>(system);
     save_binary_frame(*sys, step, std::string(output_dir));
 }
@@ -358,6 +359,8 @@ int lbm_solve_c(
     const char* output_dir,
     const char* case_type
 ) {
+    if (nx < 32 || nx > 4096 || ny < 32 || ny > 4096) return -1;
+
     // Reset global state from any previous run
     reset_solver_state();
 
@@ -499,6 +502,8 @@ int lbm_solve_geometry(
     const char* geometry_json,
     const char* mesh_shape
 ) {
+    if (nx < 32 || nx > 4096 || ny < 32 || ny > 4096) return -1;
+
     // Reset global state from any previous run
     reset_solver_state();
 
