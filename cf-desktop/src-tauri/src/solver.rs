@@ -104,6 +104,20 @@ pub fn register_frame_callback(cb: Option<FrameCallback>) {
     }
 }
 
+/// Map the C solver return code to a Result.
+/// - 0            -> success
+/// - c > 0        -> cancelled at step c
+/// - -2           -> simulation diverged (NaN/Inf detected)
+/// - other < 0    -> generic solver error
+fn map_result(code: i32) -> Result<i32, String> {
+    match code {
+        0 => Ok(0),
+        c if c > 0 => Ok(c),
+        -2 => Err("simulation diverged (NaN/Inf detected)".to_string()),
+        c => Err(format!("solver returned error code {}", c)),
+    }
+}
+
 pub struct SolverConfig {
     pub nx: i32,
     pub ny: i32,
@@ -132,7 +146,7 @@ pub fn run_solver(config: &SolverConfig) -> Result<i32, String> {
             c_output_dir.as_ptr(),
             c_case_type.as_ptr(),
         );
-        Ok(result)
+        map_result(result)
     }
 }
 
@@ -151,7 +165,7 @@ pub fn run_geometry_solver(
             nx, ny, re, u_inflow, max_steps, save_interval,
             c_output_dir.as_ptr(), c_geometry.as_ptr(),
         );
-        Ok(result)
+        map_result(result)
     }
 }
 
@@ -182,7 +196,7 @@ pub fn run_sweep(
             nx, ny, re_min, re_max, re_steps, u_inflow, max_steps, save_interval,
             c_output.as_ptr(), c_geom.as_ptr(),
         );
-        Ok(result)
+        map_result(result)
     }
 }
 
@@ -201,7 +215,7 @@ pub fn run_gci(
             nx_base, ny_base, re, u_inflow, max_steps, save_interval,
             refinement_ratio, c_output.as_ptr(), c_geom.as_ptr(),
         );
-        Ok(result)
+        map_result(result)
     }
 }
 
@@ -220,7 +234,7 @@ pub fn run_rotating_cylinder(
             max_steps, save_interval,
             c_output.as_ptr(),
         );
-        Ok(result)
+        map_result(result)
     }
 }
 
@@ -239,6 +253,6 @@ pub fn run_citygrid(
             max_steps, save_interval,
             c_output.as_ptr(),
         );
-        Ok(result)
+        map_result(result)
     }
 }

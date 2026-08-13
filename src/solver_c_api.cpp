@@ -29,6 +29,33 @@ extern "C" void lbm_save_binary_frame(void* system, int step, const char* output
     save_binary_frame(*sys, step, std::string(output_dir));
 }
 
+// ---------------------------------------------------------------------------
+// Divergence detection: sample the distribution functions for NaN/Inf.
+// A diverged simulation silently produces NaN, which is then sanitized to
+// zero velocity in save_binary_frame. This check catches that early and
+// reports it clearly instead of writing an all-zero (blank) field.
+// ---------------------------------------------------------------------------
+static bool check_divergence(const LBMCapabilities& sys, int step) {
+    int n_nodes = NX * NY;
+    // Check every fluid node. A single NaN/Inf in any distribution means the
+    // simulation has diverged. Runs every 100 steps, so the O(N) cost is a
+    // small fraction of the collision+streaming work.
+    for (int n = 0; n < n_nodes; ++n) {
+        if (sys.obstacle[n]) continue;
+        const double* f_node = &sys.f[n * 9];
+        for (int i = 0; i < 9; ++i) {
+            double val = f_node[i];
+            if (std::isnan(val) || std::isinf(val)) {
+                std::cerr << "[LBM] DIVERGENCE detected at step " << step
+                          << " (node " << n << ", direction " << i
+                          << "): NaN/Inf in distribution function" << std::endl;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 // ==========================================================================
 // Reset all C++ global solver state between runs
 // ==========================================================================
@@ -434,6 +461,12 @@ int lbm_solve_c(
             return step;
         }
 
+        // Divergence check: abort with a clear error instead of writing
+        // an all-zero (blank) field when NaN/Inf appears in the distributions.
+        if (step % 100 == 0 && check_divergence(system, step)) {
+            return -2;  // divergence error code
+        }
+
         execute_time_step(system, tau, u_inflow);
 
         // Save forces
@@ -575,6 +608,12 @@ int lbm_solve_geometry(
             return step;
         }
 
+        // Divergence check: abort with a clear error instead of writing
+        // an all-zero (blank) field when NaN/Inf appears in the distributions.
+        if (step % 100 == 0 && check_divergence(system, step)) {
+            return -2;  // divergence error code
+        }
+
         execute_time_step(system, tau, u_inflow);
 
         // Save forces
@@ -672,6 +711,12 @@ int lbm_solve_rotating_cylinder(
     for (int step = 0; step <= max_steps; ++step) {
         if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
             return step;
+        }
+
+        // Divergence check: abort with a clear error instead of writing
+        // an all-zero (blank) field when NaN/Inf appears in the distributions.
+        if (step % 100 == 0 && check_divergence(system, step)) {
+            return -2;  // divergence error code
         }
 
         execute_time_step(system, tau, u_inflow);
@@ -775,6 +820,12 @@ int lbm_solve_citygrid(
     for (int step = 0; step <= max_steps; ++step) {
         if (step % 100 == 0 && g_cancel_flag.load(std::memory_order_relaxed)) {
             return step;
+        }
+
+        // Divergence check: abort with a clear error instead of writing
+        // an all-zero (blank) field when NaN/Inf appears in the distributions.
+        if (step % 100 == 0 && check_divergence(system, step)) {
+            return -2;  // divergence error code
         }
 
         execute_time_step(system, tau, u_inflow);
