@@ -14,27 +14,36 @@ Build and deploy a cache-optimized D2Q9 Lattice Boltzmann Method CFD solver in C
 ## Target Audience
 Aerospace hiring managers at SpaceX, Firefly Aerospace, Lockheed Martin, Blue Origin, and similar. The site must communicate: HPC competency (C++, OpenMP, cache optimization), CFD fundamentals (MRT, Bouzidi, Smagorinsky LES, AMR), and engineering communication skills (interactive web presentation, per-case analysis narratives).
 
-## Current Status (2026-08-04)
+## Current Status (2026-08-13)
 
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 0 | Solver Improvement Plan (correctness + perf + cleanup) | Completed |
 | 1 | Smagorinsky LES turbulence model | Completed |
-| 2 | Block-structured AMR (adaptive mesh refinement) | **Completed** (restriction operator fixed: 2x2 averaging) |
+| 2 | Block-structured AMR (adaptive mesh refinement) | Completed |
 | 3 | Vorticity output + postprocessor | Completed |
-| 4 | Full simulation re-runs + new cases | **Completed** (23/23 sims passed all tiers) |
-| 4.1 | Fix plot aspect ratios (postprocess.py) | **Completed** (set_box_aspect(ny/nx), was already patched) |
-| 4.2 | Fix OpenMP perf (cached wall distance) | **Completed** (queue-based BFS, O(N) instead of O(N^2)) |
-| 4.3 | Fix urban citygrid zero-velocity bug | **Completed** (Zou-He BCs for south/west, streaming branch, conditional obstacles) |
-| 4.4 | Wall function integration into streaming | **Completed** (log-law slip bounce-back for high-Re flows) |
-| 4.5 | Thermal g_i initialization + isothermal BC | **Completed** (g_i = w_i*T, isothermal BC enforcement after streaming) |
-| 4.6 | FlowViewer field selector UI | **Completed** (createFieldSelector: velocity/pressure/vorticity buttons) |
-| 5 | Website updates for new features | Completed (2x2 grid layout on all case pages) |
+| 4 | Full simulation re-runs + new cases | Completed (23/23 sims passed) |
+| 5 | Website updates for new features | Completed |
 | 5.5 | Cavity page deep dive + PINN surrogate narrative | Completed |
-| 5.7 | Grid resolution upgrade + full re-run | Completed (tiered: 1600x600/1200x450/keep) |
+| 5.7 | Grid resolution upgrade + full re-run | Completed |
 | 6 | PINN surrogate suite (cavity steady + temporal) | Completed |
 | 6.9 | Model improvement roadmap (pressure-Poisson, Re range) | Pending |
-| **7** | **Website reorganization + image paths + obstacle viz + city grid** | **Completed** |
+| 7 | Website reorganization + image paths + obstacle viz + city grid | Completed |
+| 8 | Flow viewer performance (TEXTURE_2D_ARRAY, 60fps animation) | Completed |
+| 9 | C++ cleanup + body-fitted grid + orifice plate recovery | **Completed** |
+| 10 | Divergence detection + Python plot quality + mesh shape GUI | **Completed** |
+
+### Desktop App Status
+
+The Tauri desktop application is the primary access point for the solver. Three standalone executables remain as reference/testing cases:
+
+| Executable | Case | Purpose |
+|-----------|------|---------|
+| `LBM_Cavity` | Lid-driven cavity | Reference case, Ghia validation |
+| `LBM_Step` | Backward-facing step | Reference case, Armaly validation |
+| `LBM_OrificePlate` | Orifice plate | ISO 5167 loss coefficient |
+
+All other cases (cylinder, flat plate, urban canyon, etc.) are accessible through the desktop app's **custom geometry editor** with support for Cartesian, C-grid, and O-grid mesh topologies.
 
 ### Phase 7: Website Reorganization + Obstacle Visualization + Urban City Grid
 
@@ -568,21 +577,20 @@ ak-vortex/
     lbm.hpp                    # Core solver: MRT collide + LES, stream +
                                # Bouzidi BB, BCs, force extraction, JSON output
     geometry.hpp               # NACA 4-digit coords, polygon ops, point-in-polygon
+    body_fitted_grid.hpp       # C-grid and O-grid generation with coordinate transforms
     amr.hpp                    # AMRBlock, AMRGrid, refinement, regridding
     thermal.hpp                # Thermal DDF (double distribution function)
     ibm.hpp                    # Immersed boundary method (Lagrangian forcing)
     wall_functions.hpp         # Wall function bounce-back (log-law slip)
     scalar_transport.hpp       # Passive scalar transport (g_i distribution)
-    body_fitted_grid.hpp       # Body-fitted grid support
     solver_c_api.h             # C API header for solver interop
     solver_c_api.cpp           # C API implementation for solver interop
-    cavity.cpp                 # Lid-driven cavity entry point
-    step.cpp                   # Backward-facing step entry point
-    lbm_test.cpp               # Google Test suite
-    body_fitted_grid_test.cpp  # Body-fitted grid tests
+    cavity.cpp                 # Reference: lid-driven cavity (Ghia validation)
+    step.cpp                   # Reference: backward-facing step (Armaly validation)
+    orifice_plate.cpp          # Orifice plate (1p1h, 1p3h, 2p, 3p configs)
+    lbm_test.cpp               # Google Test suite (12 tests)
+    body_fitted_grid_test.cpp  # Body-fitted grid tests (14 tests)
     amr_test.cpp               # AMR tests
-    archive/                   # Superseded code
-      wasm_main.cpp, viewer.js, wasm_sim.js
 
   scripts/
     postprocess.py             # JSON -> PNG with --split, --cmap, --strouhal, --vorticity
