@@ -26,6 +26,13 @@ target_include_directories(LBM_Step PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(LBM_Step PRIVATE OpenMP::OpenMP_CXX)
 
 # ------------------------------------------------------------------
+# Orifice plate executable
+# ------------------------------------------------------------------
+add_executable(LBM_OrificePlate src/orifice_plate.cpp src/lbm.hpp src/lbm_types.hpp)
+target_include_directories(LBM_OrificePlate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(LBM_OrificePlate PRIVATE OpenMP::OpenMP_CXX)
+
+# ------------------------------------------------------------------
 # AMR test executable (cylinder with adaptive mesh refinement)
 # ------------------------------------------------------------------
 add_executable(LBM_AMR src/amr_test.cpp src/lbm.hpp src/lbm_types.hpp src/amr.hpp)
