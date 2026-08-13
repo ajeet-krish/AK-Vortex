@@ -11,61 +11,14 @@ PROJROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # is_normalized=False means forces.jsonl has raw Fx/Fy
 
 CONFIGS = [
-    # Cylinder (proper Cd/Cl)
-    ("output/cylinder/re100", "cylinder_re100", True),
-    ("output/cylinder/re200", "cylinder_re200", True),
-    # Flat plate (proper Cd/Cl)
-    ("output/flatplate/re500_aoa0", "flatplate_re500_aoa0", True),
-    ("output/flatplate/re1000_aoa-10", "flatplate_re1000_aoa-10", True),
-    ("output/flatplate/re1000_aoa-5", "flatplate_re1000_aoa-5", True),
-    ("output/flatplate/re1000_aoa0", "flatplate_re1000_aoa0", True),
-    ("output/flatplate/re1000_aoa5", "flatplate_re1000_aoa5", True),
-    ("output/flatplate/re1000_aoa10", "flatplate_re1000_aoa10", True),
-    ("output/flatplate/re1000_aoa15", "flatplate_re1000_aoa15", True),
-    ("output/flatplate/re2000_aoa0", "flatplate_re2000_aoa0", True),
+    # Cavity (proper Cd/Cl)
+    ("output/cavity/re100", "cavity_re100", True),
+    ("output/cavity/re400", "cavity_re400", True),
+    ("output/cavity/re1000", "cavity_re1000", True),
     # Step (raw Fx/Fy)
     ("output/step/re100", "step_re100", False),
     ("output/step/re200", "step_re200", False),
     ("output/step/re400", "step_re400", False),
-    # Square cylinder (proper Cd/Cl)
-    ("output/square_cylinder/re200", "square_cylinder_re200", True),
-    # Orifice plate (raw Fx/Fy)
-    ("output/orifice_plate/re100_1p1h", "orifice_1p1h", False),
-    ("output/orifice_plate/re100_1p3h", "orifice_1p3h", False),
-    ("output/orifice_plate/re100_2p", "orifice_2p", False),
-    ("output/orifice_plate/re100_3p", "orifice_3p", False),
-    # Periodic hills (raw Fx/Fy)
-    ("output/periodic_hills/re100", "phills_re100", False),
-    ("output/periodic_hills/re1000", "phills_re1000", False),
-    ("output/periodic_hills/re2800", "phills_re2800", False),
-    # Cylinder near wall (proper Cd/Cl)
-    ("output/cylinder_near_wall/re100_gap10", "cnw_gap10", True),
-    ("output/cylinder_near_wall/re100_gap20", "cnw_gap20", True),
-    ("output/cylinder_near_wall/re100_gap40", "cnw_gap40", True),
-    # Side-by-side (proper Cd/Cl)
-    ("output/side_by_side/re100_sd20", "sbs_sd20", True),
-    ("output/side_by_side/re100_sd30", "sbs_sd30", True),
-    ("output/side_by_side/re100_sd50", "sbs_sd50", True),
-    # Rotating cylinder (proper Cd/Cl)
-    ("output/rotating_cylinder/re100_w5", "rot_w5", True),
-    ("output/rotating_cylinder/re100_w10", "rot_w10", True),
-    ("output/rotating_cylinder/re100_w20", "rot_w20", True),
-    # Urban side (raw Fx/Fy)
-    ("output/urban/side/2p_ar0.3_re100", "urban_side_ar0.3", False),
-    ("output/urban/side/2p_ar0.5_re100", "urban_side_ar0.5", False),
-    ("output/urban/side/3p_ar0.6_re100", "urban_side_ar0.6_3b", False),
-    ("output/urban/side/2p_ar0.8_re100", "urban_side_ar0.8", False),
-    ("output/urban/topdown_v/re100", "urban_topdown_v", False),
-    ("output/urban/topdown_h/re100", "urban_topdown_h", False),
-    ("output/urban/downwash/re100", "urban_downwash", False),
-    # Urban city grid (passive scalar dispersion)
-    ("output/urban/city_grid/inlet_east", "city_grid_east", False),
-    ("output/urban/city_grid/inlet_south", "city_grid_south", False),
-    ("output/urban/city_grid/inlet_west", "city_grid_west", False),
-    # Ribs (raw Fx/Fy)
-    ("output/ribs/re50", "ribs_re50", False),
-    ("output/ribs/re100", "ribs_re100", False),
-    ("output/ribs/re200", "ribs_re200", False),
 ]
 
 

@@ -3,7 +3,7 @@
 # AK-Vortex: Run All Simulation Cases
 # ==============================================================
 # Orchestrates all Reynolds number sweeps for every case.
-# Runs cylinder, cavity, and all non-cylinder cases sequentially.
+# Runs cavity and step simulations sequentially.
 #
 # Usage:
 #   bash scripts/run_all_cases.sh
@@ -25,31 +25,24 @@ echo " AK-Vortex: Full Simulation Suite"
 echo "================================================"
 echo ""
 
-# --- Cylinder (default case) ---
-echo ">>> Cylinder Re=100 (30000 steps)"
-mkdir -p output/cylinder_re100
-./build/LBM_Engine 100 30000 2>&1 | tee output/cylinder_re100/run.log
+# --- Cavity ---
+echo ">>> Cavity Re=100 (512x512, 50000 steps)"
+mkdir -p output/cavity_re100
+./build/LBM_Cavity 100 512 50000 2>&1 | tee output/cavity_re100/run.log
 echo ""
 
-echo ">>> Cylinder Re=200 (40000 steps)"
-mkdir -p output/cylinder_re200
-./build/LBM_Engine 200 40000 2>&1 | tee output/cylinder_re200/run.log
+echo ">>> Cavity Re=400 (512x512, 50000 steps)"
+mkdir -p output/cavity_re400
+./build/LBM_Cavity 400 512 50000 2>&1 | tee output/cavity_re400/run.log
+echo ""
+
+echo ">>> Cavity Re=1000 (512x512, 50000 steps)"
+mkdir -p output/cavity_re1000
+./build/LBM_Cavity 1000 512 50000 2>&1 | tee output/cavity_re1000/run.log
 echo ""
 
 # --- Step ---
 bash scripts/run_step.sh
-
-# --- Ribs ---
-bash scripts/run_ribs.sh
-
-# --- Urban Canyon ---
-bash scripts/run_urban.sh
-
-# --- Downwash ---
-bash scripts/run_downwash.sh
-
-# --- Ahmed ---
-bash scripts/run_ahmed.sh
 
 echo ""
 echo "================================================"

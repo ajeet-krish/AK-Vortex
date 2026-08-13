@@ -569,24 +569,26 @@ ak-vortex/
                                # Bouzidi BB, BCs, force extraction, JSON output
     geometry.hpp               # NACA 4-digit coords, polygon ops, point-in-polygon
     amr.hpp                    # AMRBlock, AMRGrid, refinement, regridding
-    main.cpp                   # Cylinder flow entry point (+ auto-LES)
-    flat_plate.cpp             # Flat plate boundary layer (PRIMARY validation)
+    thermal.hpp                # Thermal DDF (double distribution function)
+    ibm.hpp                    # Immersed boundary method (Lagrangian forcing)
+    wall_functions.hpp         # Wall function bounce-back (log-law slip)
+    scalar_transport.hpp       # Passive scalar transport (g_i distribution)
+    body_fitted_grid.hpp       # Body-fitted grid support
+    solver_c_api.h             # C API header for solver interop
+    solver_c_api.cpp           # C API implementation for solver interop
     cavity.cpp                 # Lid-driven cavity entry point
     step.cpp                   # Backward-facing step entry point
-    square_cylinder.cpp          # Square cylinder (ERCOFTAC 043), sharp-edge separation
-    orifice_plate.cpp            # Orifice plate (single + multi-stage, staggered)
-    urban_canyon.cpp           # Urban canyon (--mode side|topdown), 3 buildings
-    downwash.cpp               # Building downwash entry point (scaled up buildings)
-    cylinder_near_wall.cpp     # Cylinder near wall (ground effect)
-    side_by_side_cylinders.cpp # Side-by-side cylinders (interference)
-    rotating_cylinder.cpp      # Rotating cylinder (Magnus effect)
-    lbm_test.cpp               # Google Test suite (12 tests)
+    lbm_test.cpp               # Google Test suite
+    body_fitted_grid_test.cpp  # Body-fitted grid tests
+    amr_test.cpp               # AMR tests
     archive/                   # Superseded code
       wasm_main.cpp, viewer.js, wasm_sim.js
 
   scripts/
     postprocess.py             # JSON -> PNG with --split, --cmap, --strouhal, --vorticity
-    run_*.sh                   # Batch sweep scripts
+    run_step.sh                # Step Re sweep (100, 200, 400)
+    run_all_cases.sh           # Run all simulations (cavity + step)
+    run_all_sims.py            # Python orchestrator for all sims
 
   .github/workflows/
     ci.yml                     # GitHub Actions: build + test on ubuntu + macos
@@ -887,24 +889,24 @@ produced. Check off as completed. Use `--use-les` where tau < 0.55.
 
 ### A. Re-validate existing cases with Mei bounce-back (Cd/St vs literature)
 
-- [ ] **Cylinder Re=100** -- `./build/LBM_Engine 100` (expect Cd~1.53, was 1.77 Bouzidi)
-- [ ] **Cylinder Re=200** -- `./build/LBM_Engine 200` (expect Cd~1.37, Cl amp~0.37)
-- [ ] **Flat plate AoA=0 Re=1000** -- `./build/LBM_FlatPlate 1000 0` (Cd~0.026, Blasius)
-- [ ] **Flat plate AoA=10 Re=1000** -- `./build/LBM_FlatPlate 1000 10` (Cl~1.1)
+Current build targets only:
+
 - [ ] **Cavity Re=100** -- `./build/LBM_Cavity 100` (Ghia u-profile)
 - [ ] **Cavity Re=400** -- `./build/LBM_Cavity 400`
 - [ ] **Step Re=100** -- `./build/LBM_Step 100` (Armaly Xr/H)
-- [ ] **Orifice 1p1h Re=100** -- `./build/LBM_OrificePlate 100 1p1h` (ISO 5167 K)
-- [ ] **Cylinder near wall Re=100 gap=20** -- `./build/LBM_CylinderNearWall 100 20`
-- [ ] **Side-by-side Re=100 S/D=3** -- `./build/LBM_SideBySide 100 3`
-- [ ] **Rotating cylinder Re=100 w=1.0** -- `./build/LBM_RotatingCylinder 100 1.0`
-- [ ] **Urban canyon side AR=0.5** -- `./build/LBM_UrbanCanyon --mode side --ar 0.5`
-- [ ] **Downwash Re=100** -- `./build/LBM_Downwash 100`
+
+Archived (entry points removed):
+
+- [ ] ~~Cylinder Re=100/200/1000~~ -- `LBM_Engine` removed
+- [ ] ~~Flat plate~~ -- `LBM_FlatPlate` removed
+- [ ] ~~Orifice, Cylinder near wall, Side-by-side, Rotating cylinder, Urban, Downwash~~ -- all removed
 
 ### B. Van Driest damping sanity (LES cases, confirm no regression)
 
-- [ ] **Cylinder Re=1000 fine grid (NX=2400 NY=900)** -- `./build/LBM_Engine 1000 40000 --use-les` (stable, Cd within 30% lit)
-- [ ] **Urban topdown horizontal Re=100 (LES)** -- `./build/LBM_UrbanCanyon --mode topdown --horizontal --use-les`
+Archived (entry points removed):
+
+- [ ] ~~Cylinder Re=1000 fine grid~~ -- `LBM_Engine` removed
+- [ ] ~~Urban topdown horizontal Re=100 (LES)~~ -- `LBM_UrbanCanyon` removed
 
 ### C. New thermal LBM cases (Upgrade 4)
 
@@ -926,7 +928,7 @@ produced. Check off as completed. Use `--use-les` where tau < 0.55.
 ### E. Wall function validation (Upgrade 2, after WFB integration)
 
 - [ ] **Channel flow Re_tau=180** -- NEW entry point `LBM_Channel` (log-law profile)
-- [ ] **Flat plate turbulent Re=1e5** -- `LBM_FlatPlate 100000 0 --use-wf` (Cf vs Blasius)
+- [ ] ~~Flat plate turbulent Re=1e5~~ -- `LBM_FlatPlate` removed
 - [ ] **Cylinder Re=1000 coarse grid (NX=400)** -- WFB vs resolved-y+ compare
 
 ### F. Post-processing / visualization updates
