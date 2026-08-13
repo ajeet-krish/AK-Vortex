@@ -68,8 +68,8 @@ export class FrameCache {
 
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
 
-    // Disable UNPACK_FLIP_Y for array textures to avoid per-layer flipping issues.
-    // The fragment shader handles Y-flip consistently via (1.0 - v_uv.y).
+    // Disable UNPACK_FLIP_Y for array textures. The fragment shader handles
+    // Y-flip via (1.0 - v_uv.y) to match Python's imshow(origin='lower').
     const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 

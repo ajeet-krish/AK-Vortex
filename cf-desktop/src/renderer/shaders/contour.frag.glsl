@@ -49,11 +49,10 @@ vec3 rdbu(float t) {
 
 void main() {
     vec2 cellSize = 1.0 / u_gridSize;
-    // Y-up convention: v_uv.y=0 maps to sim y=0 (bottom of domain),
-    // v_uv.y=1 maps to sim y=NY (top of domain).  No flip needed because
-    // the vertex shader outputs clip-space positions directly (no projection
-    // matrix applied) and the texture is uploaded with UNPACK_FLIP_Y=false.
-    vec2 cell = (floor(v_uv * u_gridSize) + 0.5) * cellSize;
+    // Flip Y so that v_uv.y=0 (screen bottom) maps to the LAST data row
+    // (top of the solver domain, which is stored first in the binary frame).
+    // This matches Python's imshow(origin='lower') convention.
+    vec2 cell = (floor(vec2(v_uv.x, 1.0 - v_uv.y) * u_gridSize) + 0.5) * cellSize;
 
     // Sample all channels from the array texture
     // Channel offsets: u=0, v=1, p=2, omega=3, obstacle=4
