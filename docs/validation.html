@@ -43,8 +43,8 @@
       <div class="hero__content">
         <h1 class="hero__title">Validation Cases</h1>
         <p class="hero__subtitle">
-          The solver is tested against a growing set of validation cases spanning external aerodynamics,
-          internal flows, urban microclimate, and multi-body interactions.
+          The solver is tested against 4 benchmark cases spanning external aerodynamics,
+          internal flows, and multi-body interactions.
         </p>
       </div>
     </section>
@@ -59,20 +59,10 @@
           designed to stress a specific capability of the solver, from smooth curved boundaries to
           turbulent separation. Every run produces velocity fields, quantitative validation against
           experimental or benchmark data, and a physical discussion of what the results mean.
+          4 benchmark cases total.
         </p>
 
         <div class="case-grid">
-
-          <a href="flat_plate.html" class="case-card">
-            <img class="case-thumb" src="assets/images/flatplate/simulations/re1000/aoa0/re1000_aoa0_contour.png"
-              alt="Flat plate velocity contour"
-              onerror="this.style.background='var(--surface)';this.alt='Flat Plate'">
-            <div class="case-info">
-              <h3>Flat Plate Boundary Layer</h3>
-              <p>The primary validation case: a thin plate angled into the flow, growing the slow boundary layer that governs wing drag.</p>
-              <span class="case-link">View case &rarr;</span>
-            </div>
-          </a>
 
           <a href="cylinder.html" class="case-card">
             <img class="case-thumb" src="assets/images/cylinder/simulations/re100/re100_contour.png"
@@ -96,61 +86,6 @@
             </div>
           </a>
 
-          <a href="step.html" class="case-card">
-            <img class="case-thumb" src="assets/images/step/simulations/re100/re100_streamlines.png"
-              alt="Step streamlines"
-              onerror="this.style.background='var(--surface)';this.alt='Backward Step'">
-            <div class="case-info">
-              <h3>Backward-Facing Step</h3>
-              <p>Flow spilling over a sudden step, separating and reattaching downstream.</p>
-              <span class="case-link">View case &rarr;</span>
-            </div>
-          </a>
-
-          <a href="orifice_plate.html" class="case-card">
-            <img class="case-thumb" src="assets/images/orifice_plate/simulations/1p3h/re100_1p3h_contour.png"
-              alt="Orifice plate velocity contour"
-              onerror="this.style.background='var(--surface)';this.alt='Orifice Plate'">
-            <div class="case-info">
-              <h3>Orifice Plate</h3>
-              <p>A plate with holes blocking a pipe, squeezing flow into a jet; the basis of pipeline flow meters.</p>
-              <span class="case-link">View case &rarr;</span>
-            </div>
-          </a>
-
-          <a href="urban.html" class="case-card">
-            <img class="case-thumb" src="assets/images/urban/simulations/side/2p_ar0.5/side_a05_contour.png"
-              alt="Urban canyon velocity contour"
-              onerror="this.style.background='var(--surface)';this.alt='Urban Canyon'">
-            <div class="case-info">
-              <h3>Urban Canyon</h3>
-              <p>Rows of buildings lining a street, trapping and recirculating the wind.</p>
-              <span class="case-link">View case &rarr;</span>
-            </div>
-          </a>
-
-          <a href="urban_citygrid.html" class="case-card">
-            <img class="case-thumb" src="assets/images/urban/simulations/city_grid/inlet_east/east_contour.png"
-              alt="Urban city grid contour"
-              onerror="this.style.background='var(--surface)';this.alt='City Grid'">
-            <div class="case-info">
-              <h3>Urban City Grid</h3>
-              <p>Seven buildings in a realistic city grid with east/west/south wind configurations.</p>
-              <span class="case-link">View case &rarr;</span>
-            </div>
-          </a>
-
-          <a href="cylinder_near_wall.html" class="case-card">
-            <img class="case-thumb" src="assets/images/cylinder_near_wall/simulation/gap20/re100_gap20_contour.png"
-              alt="Cylinder near wall contour"
-              onerror="this.style.background='var(--surface)';this.alt='Cylinder Near Wall'">
-            <div class="case-info">
-              <h3>Cylinder Near Wall</h3>
-              <p>A cylinder hovering above a floor, where the wall pushes lift upward; the ground effect.</p>
-              <span class="case-link">View case &rarr;</span>
-            </div>
-          </a>
-
           <a href="side_by_side.html" class="case-card">
             <img class="case-thumb" src="assets/images/side_by_side/simulations/sd30/re100_sd30_contour.png"
               alt="Side-by-side cylinders contour"
@@ -162,13 +97,13 @@
             </div>
           </a>
 
-          <a href="rotating_cylinder.html" class="case-card">
-            <img class="case-thumb" src="assets/images/rotating_cylinder/simulations/w10/re100_w10_contour.png"
-              alt="Rotating cylinder contour"
-              onerror="this.style.background='var(--surface)';this.alt='Rotating Cylinder'">
+          <a href="step.html" class="case-card">
+            <img class="case-thumb" src="assets/images/step/simulations/re100/re100_streamlines.png"
+              alt="Step streamlines"
+              onerror="this.style.background='var(--surface)';this.alt='Backward Step'">
             <div class="case-info">
-              <h3>Rotating Cylinder</h3>
-              <p>A spinning cylinder dragging flow to make lift: the Magnus effect behind curveballs.</p>
+              <h3>Backward-Facing Step</h3>
+              <p>Flow spilling over a sudden step, separating and reattaching downstream.</p>
               <span class="case-link">View case &rarr;</span>
             </div>
           </a>
