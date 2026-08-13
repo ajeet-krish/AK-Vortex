@@ -316,6 +316,8 @@ def _resolve_stream_cmap(cmap_arg, meta, output_dir=''):
 # Obstacle overlay helper
 # ---------------------------------------------------------------------------
 OBSTACLE_COLOR = '#000000'  # strict black
+OBSTACLE_EDGE_COLOR = 'white'
+OBSTACLE_LINEWIDTH = 0.8
 
 # Obstacle registry: maps case names to geometry definitions
 # Each entry: { 'type': 'circle'|'rectangle'|'polygon'|'buildings',
@@ -329,22 +331,22 @@ OBSTACLE_REGISTRY = {
 def _draw_circle_patch(ax, cx, cy, r, nx, ny):
     """Draw a crisp circle obstacle overlay."""
     from matplotlib.patches import Circle
-    circle = Circle((cx, cy), r, facecolor=OBSTACLE_COLOR, edgecolor='white',
-                     linewidth=0.8, zorder=5)
+    circle = Circle((cx, cy), r, facecolor=OBSTACLE_COLOR, edgecolor=OBSTACLE_EDGE_COLOR,
+                     linewidth=OBSTACLE_LINEWIDTH, zorder=5)
     ax.add_patch(circle)
 
 def _draw_rectangle_patch(ax, x0, y0, w, h, nx, ny):
     """Draw a crisp rectangle obstacle overlay."""
     from matplotlib.patches import Rectangle
-    rect = Rectangle((x0, y0), w, h, facecolor=OBSTACLE_COLOR, edgecolor='white',
-                      linewidth=0.8, zorder=5)
+    rect = Rectangle((x0, y0), w, h, facecolor=OBSTACLE_COLOR, edgecolor=OBSTACLE_EDGE_COLOR,
+                      linewidth=OBSTACLE_LINEWIDTH, zorder=5)
     ax.add_patch(rect)
 
 def _draw_polygon_patch(ax, vertices, nx, ny):
     """Draw a crisp polygon obstacle overlay."""
     from matplotlib.patches import Polygon
-    poly = Polygon(vertices, closed=True, facecolor=OBSTACLE_COLOR, edgecolor='white',
-                   linewidth=0.8, zorder=5)
+    poly = Polygon(vertices, closed=True, facecolor=OBSTACLE_COLOR, edgecolor=OBSTACLE_EDGE_COLOR,
+                   linewidth=OBSTACLE_LINEWIDTH, zorder=5)
     ax.add_patch(poly)
 
 def _read_obstacle_meta(frame_data):
@@ -421,8 +423,8 @@ def _extract_obstacle_contour(obstacle_mask, nx, ny):
     for p in paths[1:]:
         combined = Path.make_compound_path(combined, p)
 
-    return PathPatch(combined, facecolor=OBSTACLE_COLOR, edgecolor='white',
-                     linewidth=0.8, zorder=5)
+    return PathPatch(combined, facecolor=OBSTACLE_COLOR, edgecolor=OBSTACLE_EDGE_COLOR,
+                     linewidth=OBSTACLE_LINEWIDTH, zorder=5)
 
 
 def _overlay_obstacles(ax, obstacle_mask, nx=None, ny=None, geometry=None):
@@ -539,12 +541,12 @@ def save_png_combined(data, output_dir, frame, cmap_contour, cmap_stream, field=
 
     im = render_contour(ax1, vel, cmap_contour, vmin_val, vmax_val, obs, geometry=geometry, dpi=dpi)
     cbar1 = plt.colorbar(im, ax=ax1, shrink=0.8)
-    cbar1.set_label('Velocity Magnitude (m/s)', color='black')
+    cbar1.set_label('|V| (lattice units)', color='black')
 
     sp, smag = render_streamlines(ax2, u, v, cmap_stream, obs, geometry=geometry)
     if sp and smag.size > 0:
         cbar2 = plt.colorbar(sp.lines, ax=ax2, shrink=0.8)
-        cbar2.set_label('Velocity Magnitude (m/s)', color='black')
+        cbar2.set_label('|V| (lattice units)', color='black')
 
     plt.tight_layout()
     path = os.path.join(output_dir, f'frame_{int(frame):04d}.png')
@@ -579,7 +581,7 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     fig.patch.set_facecolor('white')
     im = render_contour(ax, vel, cmap_contour, vmin_val, vmax_val, obs, geometry=geometry, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('Velocity Magnitude (m/s)', color='black')
+    cbar.set_label('|V| (lattice units)', color='black')
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'contour_{int(frame):04d}.png')
@@ -594,7 +596,7 @@ def save_png_split(data, output_dir, frame, cmap_contour, cmap_stream, field='ve
     sp, smag = render_streamlines(ax, u, v, cmap_stream, obs, geometry=geometry)
     if sp and smag.size > 0:
         cbar = plt.colorbar(sp.lines, ax=ax, shrink=0.8)
-        cbar.set_label('Velocity Magnitude (m/s)', color='black')
+        cbar.set_label('|V| (lattice units)', color='black')
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'streamlines_{int(frame):04d}.png')
@@ -655,7 +657,7 @@ def render_video_overlay(data, output_dir, frame, cmap, field='velocity', dpi=30
     ax.set_facecolor('white')
 
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('Velocity Magnitude (m/s)', color='black')
+    cbar.set_label('|V| (lattice units)', color='black')
 
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
@@ -801,7 +803,7 @@ def save_vorticity_png(data, output_dir, frame, dpi=300):
     fig.patch.set_facecolor('white')
     im = render_contour(ax, omega, 'RdBu', -vmax, vmax, obs, geometry=geometry, dpi=dpi)
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('Vorticity (1/s)', color='black')
+    cbar.set_label('Vorticity', color='black')
     plt.tight_layout(pad=0.5)
     fig.subplots_adjust(right=0.92)
     path = os.path.join(output_dir, f'vorticity_{int(frame):04d}.png')

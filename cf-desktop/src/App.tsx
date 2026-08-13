@@ -624,7 +624,7 @@ function App() {
             <div style={{ color: 'var(--text-muted)', padding: '8px 0' }}>No log entries</div>
           )}
           {sim.solverLog.map((entry, i) => (
-            <div key={i} style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry}</div>
+            <div key={i} className={entry.startsWith('[LBM] DIVERGENCE') || entry.startsWith('[solver] Failed') ? 'log-error' : ''} style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry}</div>
           ))}
           <button
             onClick={() => sim.setSolverLog([])}

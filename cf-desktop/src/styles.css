@@ -923,6 +923,11 @@ canvas {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.log-error {
+  color: var(--danger) !important;
+  background: rgba(244, 67, 54, 0.08);
+}
+
 /* Static Plots Grid */
 .static-plots-section {
   width: 100%;
