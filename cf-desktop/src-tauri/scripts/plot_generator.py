@@ -165,11 +165,9 @@ def _add_colorbar(fig, ax, mappable, label: str, shrink: float = 0.82):
 
 
 def _common_setup(ax, nx: int, ny: int, config: dict, geometry):
-    """Apply axis limits, labels, and geometry overlay to all plots."""
+    """Apply axis limits and geometry overlay to all plots."""
     ax.set_xlim(0, nx)
     ax.set_ylim(0, ny)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
     ax.set_aspect("equal")
     _draw_obstacle_mask(ax, None, nx, ny)  # placeholder; caller draws obs
     _draw_geometry(ax, geometry, nx, ny, filled=False)
@@ -185,7 +183,8 @@ def plot_velocity(frame: dict, config: dict, geometry, output_dir: Path):
     vel = frame["velocity"].copy()
     vel[frame["obstacle"]] = np.nan
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    aspect = ny / nx
+    fig, ax = plt.subplots(figsize=(8, max(3, 8 * aspect)))
     im = ax.imshow(
         vel, origin="lower", cmap="jet", aspect="equal",
         extent=[0, nx, 0, ny], interpolation="bilinear",
@@ -195,8 +194,7 @@ def plot_velocity(frame: dict, config: dict, geometry, output_dir: Path):
 
     re = config.get("re", "")
     ax.set_title(f"Velocity Contour - Re={re}", fontweight="bold")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.axis("off")
     ax.set_xlim(0, nx)
     ax.set_ylim(0, ny)
     ax.set_aspect("equal")
@@ -220,7 +218,8 @@ def plot_streamlines(frame: dict, config: dict, geometry, output_dir: Path):
 
     speed = np.sqrt(u**2 + v**2)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    aspect = ny / nx
+    fig, ax = plt.subplots(figsize=(8, max(3, 8 * aspect)))
 
     # streamplot requires 1-D coordinate arrays
     xs = np.linspace(0, nx, nx, endpoint=False)
@@ -237,8 +236,7 @@ def plot_streamlines(frame: dict, config: dict, geometry, output_dir: Path):
 
     re = config.get("re", "")
     ax.set_title(f"Velocity Streamlines - Re={re}", fontweight="bold")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.axis("off")
     ax.set_xlim(0, nx)
     ax.set_ylim(0, ny)
     ax.set_aspect("equal")
@@ -276,7 +274,8 @@ def plot_pressure(frame: dict, config: dict, geometry, output_dir: Path):
     if cp_clamp == 0:
         cp_clamp = 1.0
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    aspect = ny / nx
+    fig, ax = plt.subplots(figsize=(8, max(3, 8 * aspect)))
     im = ax.imshow(
         cp, origin="lower", cmap="coolwarm", aspect="equal",
         extent=[0, nx, 0, ny], interpolation="bilinear",
@@ -287,8 +286,7 @@ def plot_pressure(frame: dict, config: dict, geometry, output_dir: Path):
 
     re = config.get("re", "")
     ax.set_title(f"Pressure Coefficient - Re={re}", fontweight="bold")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.axis("off")
     ax.set_xlim(0, nx)
     ax.set_ylim(0, ny)
     ax.set_aspect("equal")
@@ -313,7 +311,8 @@ def plot_vorticity(frame: dict, config: dict, geometry, output_dir: Path):
     if omega_clamp == 0:
         omega_clamp = 1e-6
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    aspect = ny / nx
+    fig, ax = plt.subplots(figsize=(8, max(3, 8 * aspect)))
     im = ax.imshow(
         omega, origin="lower", cmap="RdBu", aspect="equal",
         extent=[0, nx, 0, ny], interpolation="bilinear",
@@ -324,8 +323,7 @@ def plot_vorticity(frame: dict, config: dict, geometry, output_dir: Path):
 
     re = config.get("re", "")
     ax.set_title(f"Vorticity - Re={re}", fontweight="bold")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.axis("off")
     ax.set_xlim(0, nx)
     ax.set_ylim(0, ny)
     ax.set_aspect("equal")

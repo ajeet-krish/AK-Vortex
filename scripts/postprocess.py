@@ -31,6 +31,7 @@ except ImportError:
 
 try:
     from scipy import signal
+    from scipy.ndimage import gaussian_filter
     HAS_SCIPY = True
 except ImportError:
     HAS_SCIPY = False
@@ -403,7 +404,11 @@ def _extract_obstacle_contour(obstacle_mask, nx, ny):
 
     fig_tmp, ax_tmp = plt.subplots()
     obs_float = obstacle_mask.astype(float)
-    cs = ax_tmp.contour(obs_float, levels=[0.5])
+    if HAS_SCIPY:
+        obs_smooth = gaussian_filter(obs_float, sigma=2.0)
+    else:
+        obs_smooth = obs_float
+    cs = ax_tmp.contour(obs_smooth, levels=[0.5])
     plt.close(fig_tmp)
 
     paths = []
