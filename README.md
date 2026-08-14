@@ -8,56 +8,6 @@ AK-Vortex is a custom 2D CFD solver using the Lattice Boltzmann Method, packaged
 
 ---
 
-## Quick Start
-
-### Full Rebuild and Launch (one command)
-
-```bash
-cd /Users/ajeet/Projects/AK-Vortex
-
-# 1. Build C++ solver shared library
-cmake --build build --target lbm_solver_shared -j$(sysctl -n hw.ncpu)
-
-# 2. Build frontend
-cd cf-desktop && npm run build
-
-# 3. Launch desktop app
-cd src-tauri && cargo tauri dev
-```
-
-Or use the combined launcher:
-
-```bash
-cd /Users/ajeet/Projects/AK-Vortex/cf-desktop
-./launch.sh
-```
-
-### Build and Test
-
-```bash
-# Clone and build everything
-git clone https://github.com/ajeet-krish/AK-Vortex.git
-cd AK-Vortex
-cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
-
-# Run the test suite (26 tests)
-./build/LBM_Tests           # 12/12
-./build/BodyFittedGrid_Tests # 14/14
-
-# Run reference simulations
-./build/LBM_Cavity 100      # Lid-driven cavity Re=100
-./build/LBM_Step 100        # Backward-facing step Re=100
-./build/LBM_OrificePlate 100 1p1h  # Orifice plate Re=100
-```
-
-### Launch Portfolio Website
-
-```bash
-python3 -m http.server -d docs 8765
-```
-
----
-
 ## Demo
 
 ![AK-Vortex Desktop Application](docs/assets/images/cavity/simulations/re1000/re1000_contour.png)
@@ -199,6 +149,56 @@ A mesh-free Physics-Informed Neural Network that learns flow fields from the gov
 - **Build**: CMake + FetchContent
 - **CI**: GitHub Actions (Ubuntu + macOS)
 - **Post-processing**: Python (matplotlib, numpy)
+
+---
+
+## Quick Start
+
+### Full Rebuild and Launch (one command)
+
+```bash
+cd /Users/ajeet/Projects/AK-Vortex
+
+# 1. Build C++ solver shared library
+cmake --build build --target lbm_solver_shared -j$(sysctl -n hw.ncpu)
+
+# 2. Build frontend
+cd cf-desktop && npm run build
+
+# 3. Launch desktop app
+cd src-tauri && cargo tauri dev
+```
+
+Or use the combined launcher:
+
+```bash
+cd /Users/ajeet/Projects/AK-Vortex/cf-desktop
+./launch.sh
+```
+
+### Build and Test
+
+```bash
+# Clone and build everything
+git clone https://github.com/ajeet-krish/AK-Vortex.git
+cd AK-Vortex
+cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
+
+# Run the test suite (26 tests)
+./build/LBM_Tests           # 12/12
+./build/BodyFittedGrid_Tests # 14/14
+
+# Run reference simulations
+./build/LBM_Cavity 100      # Lid-driven cavity Re=100
+./build/LBM_Step 100        # Backward-facing step Re=100
+./build/LBM_OrificePlate 100 1p1h  # Orifice plate Re=100
+```
+
+### Launch Portfolio Website
+
+```bash
+python3 -m http.server -d docs 8765
+```
 
 ---
 
