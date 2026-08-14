@@ -78,17 +78,21 @@ Most commercial analysis tools are locked into specific operating systems or req
 
 Draw circles, rectangles, and polygons directly on the canvas. Design a 4-digit NACA airfoil with parametric camber, thickness, and rotation controls. Select mesh topology: Cartesian, C-grid (airfoils), or O-grid (cylinders).
 
+![Geometry Editor](docs/assets/app_demo/geometry_editor.gif)
+
 ### Simulation Control
 
-Configure grid size, Reynolds number, and inflow velocity. Press Run and watch the solver log stream in real time as the C++ backend executes the LBM timestep loop via FFI. The progress bar tracks completion while the solver runs at full native speed.
+Configure grid resolution with preset quality levels (Draft through Ultra) or enter custom dimensions. Set Reynolds number, inflow velocity, and simulation length. Press Run and watch the solver execute the LBM timestep loop via FFI at full native speed.
+
+| Grid Parameters | Physics Parameters |
+|----------------|-------------------|
+| ![Grid](docs/assets/app_demo/grid_parameters.png) | ![Physics](docs/assets/app_demo/physics_parameters.png) |
 
 ### Flow Visualization
 
-Render velocity magnitude, pressure, or vorticity fields. Toggle streamlines and quiver overlays. Probe any point to read local u, v, rho, p, and omega values. Watch the flow develop frame-by-frame from rest to steady-state.
+Render velocity magnitude, pressure, or vorticity fields in real time. Toggle streamlines and quiver overlays. Probe any point to read local u, v, rho, p, and omega values. Watch the flow develop frame-by-frame from rest to steady-state.
 
-### Parameter Studies
-
-Run parameter sweeps across Reynolds numbers and geometry configurations. Compare two simulations side-by-side. Launch a GCI grid convergence study from the same interface.
+![Flow Visualization](docs/assets/app_demo/flow_viz_demo.gif)
 
 ---
 

@@ -358,16 +358,36 @@
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--current-line);
-  aspect-ratio: 16 / 10;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
 }
 
 .walkthrough-step__media img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.walkthrough-step__media img:only-child {
+  aspect-ratio: 16 / 10;
   object-fit: cover;
+}
+
+.walkthrough-step--compact .walkthrough-step__media {
+  width: 60%;
+  margin: 0 auto;
+}
+
+.walkthrough-step--compact .walkthrough-step__media img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .walkthrough-step__media-placeholder {

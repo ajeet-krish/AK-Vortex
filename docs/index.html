@@ -68,31 +68,9 @@
       <div class="container">
         <h2 class="section-title">Desktop Application Walkthrough</h2>
 
-        <!-- Step 1: Application Overview -->
+        <!-- Geometry Editor -->
         <article class="walkthrough-step">
           <div class="walkthrough-step__content">
-            <span class="walkthrough-step__number">Step 01</span>
-            <h3>Application Overview</h3>
-            <p>
-              Launch the app and tour the interface layout: sidebar panels, canvas viewport, and solver log.
-              The feature-tree sidebar organizes geometry, solver parameters, and visualization controls
-              in a familiar CAD-style hierarchy.
-            </p>
-            <ul>
-            </ul>
-          </div>
-          <div class="walkthrough-step__media">
-            <div class="walkthrough-step__media-placeholder" style="background: var(--bg-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center;">
-              <div style="font-size: 24px; margin-bottom: 8px;">&#128247;</div>
-              <span style="color: var(--text-secondary); font-size: 13px;">Application Overview</span>
-            </div>
-          </div>
-        </article>
-
-        <!-- Step 2: Geometry Editor -->
-        <article class="walkthrough-step walkthrough-step--reverse">
-          <div class="walkthrough-step__content">
-            <span class="walkthrough-step__number">Step 02</span>
             <h3>Geometry Editor</h3>
             <p>
               Draw circles, rectangles, and polygons directly on the canvas. Design a 4-digit NACA airfoil
@@ -101,70 +79,38 @@
             </p>
           </div>
           <div class="walkthrough-step__media">
-            <div class="walkthrough-step__media-placeholder" style="background: var(--bg-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center;">
-              <div style="font-size: 24px; margin-bottom: 8px;">&#127916;</div>
-              <span style="color: var(--text-secondary); font-size: 13px;">Geometry Editor</span>
-            </div>
+            <img src="assets/app_demo/geometry_editor.gif" alt="Geometry Editor demo" loading="lazy">
           </div>
         </article>
 
-        <!-- Step 3: Simulation Control -->
-        <article class="walkthrough-step">
+        <!-- Simulation Control -->
+        <article class="walkthrough-step walkthrough-step--reverse walkthrough-step--compact">
           <div class="walkthrough-step__content">
-            <span class="walkthrough-step__number">Step 03</span>
             <h3>Simulation Control</h3>
             <p>
-              Configure grid size, Reynolds number, and inflow velocity. Press Run and watch the solver
-              log stream in real time as the C++ backend executes the LBM timestep loop via FFI.
-              The progress bar tracks completion while the solver runs at full native speed.
+              Configure grid resolution with preset quality levels (Draft through Ultra) or enter custom dimensions.
+              Set Reynolds number, inflow velocity, and simulation length. Press Run and watch the solver
+              execute the LBM timestep loop via FFI at full native speed.
             </p>
           </div>
           <div class="walkthrough-step__media">
-            <div class="walkthrough-step__media-placeholder" style="background: var(--bg-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center;">
-              <div style="font-size: 24px; margin-bottom: 8px;">&#128247;</div>
-              <span style="color: var(--text-secondary); font-size: 13px;">Simulation Control</span>
-            </div>
+            <img src="assets/app_demo/grid_parameters.png" alt="Grid parameters panel" loading="lazy">
+            <img src="assets/app_demo/physics_parameters.png" alt="Physics parameters panel" loading="lazy">
           </div>
         </article>
 
-        <!-- Step 4: Flow Visualization -->
-        <article class="walkthrough-step walkthrough-step--reverse">
+        <!-- Flow Visualization -->
+        <article class="walkthrough-step">
           <div class="walkthrough-step__content">
-            <span class="walkthrough-step__number">Step 04</span>
             <h3>Flow Visualization</h3>
             <p>
-              Render velocity magnitude, pressure, or vorticity fields. Toggle streamlines and quiver overlays. Probe
-              any point to read
+              Render velocity magnitude, pressure, or vorticity fields in real time.
+              Toggle streamlines and quiver overlays. Probe any point to read
               local u, v, rho, p, and omega values. Watch the flow develop frame-by-frame from rest to steady-state.
             </p>
           </div>
           <div class="walkthrough-step__media">
-            <div class="walkthrough-step__media-placeholder" style="background: var(--bg-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center;">
-              <div style="font-size: 24px; margin-bottom: 8px;">&#127916;</div>
-              <span style="color: var(--text-secondary); font-size: 13px;">Flow Visualization</span>
-            </div>
-          </div>
-        </article>
-
-        <!-- Step 5: Parameter Studies & PINN -->
-        <article class="walkthrough-step">
-          <div class="walkthrough-step__content">
-            <span class="walkthrough-step__number">Step 05</span>
-            <h3>Parameter Studies &amp; PINN Surrogate</h3>
-            <p>
-              Run parameter sweeps across Reynolds numbers and geometry configurations.
-              Compare two simulations side-by-side. Launch a GCI grid convergence study
-              from the same interface.
-            </p>
-            <p>Coming soon: Train and deploy Physics-Informed Neural Network
-              surrogates for real-time flow prediction.
-            </p>
-          </div>
-          <div class="walkthrough-step__media">
-            <div class="walkthrough-step__media-placeholder" style="background: var(--bg-tertiary); border: 1px dashed var(--border); border-radius: 8px; padding: 40px; text-align: center;">
-              <div style="font-size: 24px; margin-bottom: 8px;">&#128200;</div>
-              <span style="color: var(--text-secondary); font-size: 13px;">Coming soon</span>
-            </div>
+            <img src="assets/app_demo/flow_viz_demo.gif" alt="Flow visualization animation" loading="lazy">
           </div>
         </article>
 
@@ -210,12 +156,6 @@
         </a>
       </div>
     </section>
-
-    <div style="text-align: center; margin-top: 48px;">
-      <a href="https://github.com/ajeet-krish/AK-Vortex" class="btn btn--primary" target="_blank" rel="noopener">
-        View Source on GitHub
-      </a>
-    </div>
 
   </main>
 
