@@ -4,9 +4,21 @@ project(AKVortex VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Homebrew libomp path on Apple Silicon
+# Homebrew libomp on macOS (Apple Clang lacks native OpenMP support)
 if(APPLE)
-  set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
+  execute_process(
+    COMMAND brew --prefix libomp
+    OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
+  if(HOMEBREW_LIBOMP_PREFIX)
+    set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
+    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
+    set(OpenMP_C_LIB_NAMES "omp")
+    set(OpenMP_CXX_LIB_NAMES "omp")
+    set(OpenMP_omp_LIBRARY "${HOMEBREW_LIBOMP_PREFIX}/lib/libomp.dylib")
+  endif()
 endif()
 
 find_package(OpenMP REQUIRED)
